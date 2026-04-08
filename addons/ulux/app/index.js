@@ -30,7 +30,13 @@ async function main() {
   }
 
   // --- Build message dispatcher ---
-  const dispatch = createDispatcher({ config, haClient, mqttClient, log });
+  const dispatch = createDispatcher({
+    config,
+    haClient,
+    mqttClient,
+    udpSend: (host, port, buf) => udpServer.send(host, port, buf),
+    log,
+  });
 
   // --- Start UDP server ---
   const udpServer = createUdpServer({

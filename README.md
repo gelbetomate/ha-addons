@@ -21,7 +21,7 @@ Alternatively, click the badge above to add the repository automatically.
 
 | Add-on | Description |
 |--------|-------------|
-| [u::Lux UMP Bridge](addons/ulux/README.md) | UDP bridge for u::Lux Switch IP devices — receives UMP packets and publishes events to Home Assistant and/or MQTT. |
+| [u::Lux UMP Bridge](addons/ulux/README.md) | UDP bridge for u::Lux Switch IP devices — decodes UMP key events, auto-initialises switches, and publishes `ulux_event` / `ulux_key` events to Home Assistant and/or MQTT. |
 
 ## Support
 
