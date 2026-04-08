@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv sh
+#!/bin/ash
 set -e
 
 cd /app
