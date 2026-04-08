@@ -13,4 +13,6 @@ RUN npm ci --omit=dev
 # Copy application source
 COPY app/ .
 
-CMD ["node", "index.js"]
+# Register s6 service that starts the Node.js app under the base image init system
+COPY rootfs/ /
+RUN chmod a+x /etc/services.d/ulux/run
