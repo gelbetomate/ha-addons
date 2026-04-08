@@ -3,7 +3,8 @@
 const dgram = require('dgram');
 
 /**
- * Create a UDP server that receives UMP packets from u::Lux switches.
+ * Create a UDP server that receives UMP packets from u::Lux switches
+ * and can send reply datagrams back to the originating device.
  *
  * @param {object} opts
  * @param {string}   opts.host     - Bind address (e.g. '0.0.0.0')
@@ -11,7 +12,7 @@ const dgram = require('dgram');
  * @param {object[]} opts.switches - Configured switches [{name, switch_id, ip, port}]
  * @param {Function} opts.onPacket - Callback: onPacket(parsedContext) called for every datagram
  * @param {object}   opts.log      - Logger
- * @returns {{ start: Function, stop: Function }}
+ * @returns {{ start: Function, stop: Function, send: Function }}
  */
 function createUdpServer({ host, port, switches, onPacket, log }) {
   const socket = dgram.createSocket('udp4');
@@ -43,6 +44,22 @@ function createUdpServer({ host, port, switches, onPacket, log }) {
     }
   });
 
+  /**
+   * Send a datagram to a remote host (reply-to-sender).
+   * @param {string} remoteHost
+   * @param {number} remotePort
+   * @param {Buffer} buf
+   */
+  function send(remoteHost, remotePort, buf) {
+    socket.send(buf, 0, buf.length, remotePort, remoteHost, (err) => {
+      if (err) {
+        log.error(`UDP send error to ${remoteHost}:${remotePort}: ${err.message}`);
+      } else {
+        log.debug(`UDP sent ${buf.length} bytes to ${remoteHost}:${remotePort}`);
+      }
+    });
+  }
+
   return {
     start() {
       socket.bind(port, host);
@@ -50,6 +67,7 @@ function createUdpServer({ host, port, switches, onPacket, log }) {
     stop() {
       socket.close();
     },
+    send,
   };
 }
 

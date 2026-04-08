@@ -1,59 +1,71 @@
 'use strict';
 
-const { decodeFrame, frameSummary } = require('../ump/decoder');
-const handleButton = require('./button');
+const { parseTelegram, telegramSummary } = require('../ump/decoder');
+const { MessageIds } = require('../ump/messageIds');
+const handleState = require('./state');
+const handleEvent = require('./event');
 
 /**
  * Map UMP message IDs to handler functions.
- * Add entries here as new message types are supported.
- *
- * Handler signature: handler(frame, ctx, services) → void
+ * Handler signature: handler(msg, ctx, services) → void
+ *   msg      — parsed message object from parseTelegram()
+ *   ctx      — full packet context
+ *   services — { config, haClient, mqttClient, udpSend, log }
  */
 const HANDLERS = {
-  // TODO: Add message IDs once confirmed from UMP spec / packet captures
-  // 0x0001: handleButton,
+  [MessageIds.IdState]: handleState,
+  [MessageIds.IdEvent]: handleEvent,
 };
 
 /**
  * Create the central packet dispatcher.
  *
  * @param {object} services
- * @param {object}   services.config     - Full add-on config
- * @param {object|null} services.haClient  - HA WebSocket client (or null)
- * @param {object|null} services.mqttClient - MQTT client (or null)
- * @param {object}   services.log        - Logger
+ * @param {object}      services.config      - Full add-on config
+ * @param {object|null} services.haClient    - HA WebSocket client (or null)
+ * @param {object|null} services.mqttClient  - MQTT client (or null)
+ * @param {Function}    services.udpSend     - udpSend(host, port, buf) for replies
+ * @param {object}      services.log         - Logger
  * @returns {Function} dispatch(ctx) — called for each received UDP packet
  */
-function createDispatcher({ config, haClient, mqttClient, log }) {
+function createDispatcher({ config, haClient, mqttClient, udpSend, log }) {
   return function dispatch(ctx) {
     const { raw, hex, senderIp, senderPort, switch: sw, timestamp } = ctx;
 
     log.info(`Packet from ${senderIp}:${senderPort} switch="${sw.name}" (${raw.length} bytes)`);
 
-    // Decode UMP frame
-    const frame = decodeFrame(raw);
+    // Parse UMP telegram (16-byte header + messages)
+    const telegram = parseTelegram(raw);
 
-    if (!frame.valid) {
-      log.warning(`UMP decode failed: ${frame.error} | hex=${hex}`);
-      // Still emit a raw event so nothing is silently dropped
+    if (!telegram.valid) {
+      log.warning(`UMP parse failed: ${telegram.error} | hex=${hex}`);
       emitRawEvent({ hex, senderIp, sw, timestamp, haClient, mqttClient, config, log });
       return;
     }
 
-    log.debug(`UMP frame: ${frameSummary(frame)}`);
+    log.debug(`UMP telegram: ${telegramSummary(telegram)}`);
 
-    // Prefer switch ID from frame if it looks like a known switch
-    const resolvedSwitch = resolveByFrameSwitchId(frame.switchIdHex, config.switches) || sw;
+    // Resolve switch by device address embedded in the telegram header
+    const resolvedSwitch = resolveByDeviceAddress(telegram.deviceAddressHex, config.switches) || sw;
 
-    const enrichedCtx = { ...ctx, switch: resolvedSwitch, frame };
+    const enrichedCtx = { ...ctx, switch: resolvedSwitch, telegram };
 
-    // Dispatch to specific handler
-    const handler = HANDLERS[frame.msgId];
-    if (handler) {
-      handler(frame, enrichedCtx, { config, haClient, mqttClient, log });
-    } else {
-      log.debug(`No handler registered for message ID 0x${frame.msgId.toString(16).padStart(4, '0')} — emitting raw event`);
-      emitRawEvent({ hex, senderIp, sw: resolvedSwitch, timestamp, haClient, mqttClient, config, log, frame });
+    // Dispatch each message in the telegram
+    for (const msg of telegram.messages) {
+      const handler = HANDLERS[msg.msgId];
+      if (handler) {
+        try {
+          handler(msg, enrichedCtx, { config, haClient, mqttClient, udpSend, log });
+        } catch (err) {
+          log.error(`Handler error for msgId=0x${msg.msgId.toString(16)}:`, err.message);
+        }
+      } else {
+        log.debug(
+          `No handler for msgId=0x${msg.msgId.toString(16).padStart(2, '0')}` +
+          (msg.msgName ? ` (${msg.msgName})` : '') + ' — emitting raw event'
+        );
+        emitRawEvent({ hex, senderIp, sw: resolvedSwitch, timestamp, haClient, mqttClient, config, log, msgId: msg.msgId });
+      }
     }
   };
 }
@@ -61,13 +73,13 @@ function createDispatcher({ config, haClient, mqttClient, log }) {
 /**
  * Emit a raw/unhandled packet event to HA and/or MQTT.
  */
-function emitRawEvent({ hex, senderIp, sw, timestamp, haClient, mqttClient, config, log, frame }) {
+function emitRawEvent({ hex, senderIp, sw, timestamp, haClient, mqttClient, config, log, msgId }) {
   const payload = {
-    switch_id: sw.switch_id,
+    switch_id:   sw.switch_id,
     switch_name: sw.name,
-    ip: senderIp,
-    raw_msg_id: frame ? frame.msgId : null,
-    raw_hex: hex,
+    ip:          senderIp,
+    raw_msg_id:  msgId !== undefined ? msgId : null,
+    raw_hex:     hex,
     timestamp,
   };
 
@@ -84,16 +96,18 @@ function emitRawEvent({ hex, senderIp, sw, timestamp, haClient, mqttClient, conf
 }
 
 /**
- * Try to resolve a configured switch by its hardware switch ID (from the UMP frame).
- * Normalises the ID to uppercase colon-separated hex before comparing.
+ * Try to resolve a configured switch by the device address from the UMP telegram header.
+ * Normalises the address to uppercase colon-separated hex before comparing.
  *
- * @param {string}   switchIdHex - e.g. "01:23:45:67:89:AB"
+ * @param {string}   deviceAddressHex - e.g. "01:23:45:67:89:AB"
  * @param {object[]} switches
  * @returns {object|null}
  */
-function resolveByFrameSwitchId(switchIdHex, switches) {
-  if (!switchIdHex) return null;
-  const normalised = switchIdHex.toUpperCase();
+function resolveByDeviceAddress(deviceAddressHex, switches) {
+  if (!deviceAddressHex) return null;
+  const normalised = deviceAddressHex.toUpperCase();
+  // All-zeros means the field is absent; don't match that
+  if (normalised === '00:00:00:00:00:00') return null;
   return switches.find((sw) => {
     const swNorm = sw.switch_id ? sw.switch_id.toUpperCase() : '';
     return swNorm === normalised;

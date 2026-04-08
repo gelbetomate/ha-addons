@@ -6,11 +6,18 @@ over UDP (port **34988** / `0x88AC`).
 
 ## Features
 
-- Listens for inbound UMP packets from one or more u::Lux Switch IP devices.
-- Logs each received packet (hex + sender address) for diagnostics.
-- Basic UMP frame parsing (descriptor + message ID); full button-press decoding scaffolded and ready for expansion once sample packets are available.
+- Listens for inbound UMP telegrams on UDP port **34988** from one or more u::Lux Switch IP devices.
+- Decodes the UMP telegram structure (16-byte header + variable-length messages, little-endian).
+- **ID-Event (0x51)** — parses key presses/releases from the 4-key bitfield:
+  - Emits a snapshot `ulux_event` on every key-state change.
+  - Emits per-key edge events `ulux_key` (pressed/released) by tracking state per actor.
+  - On first packet after restart: only snapshot, no spurious edges.
+- **ID-State (0x01)** — parses StateFlags and auto-responds to the switch:
+  - **InitRequest** (bit 6): replies with an `ID-Control` message.
+  - **TimeRequest** (bit 5): replies with a `DateTime` message (system clock).
+  - Replies always go to **`remote.address:remote.port`** (dynamic, multi-switch safe).
 - Publishes events to Home Assistant via the native **WebSocket API** (configurable).
-- Optional **MQTT** mode: publish inbound events to MQTT and subscribe for outbound commands (see TODOs in source).
+- Optional **MQTT** mode: publish inbound events to MQTT topics (see below).
 - Supports **multiple switches** — configured by name, switch ID, IP and optional port.
 
 ## Installation
@@ -29,12 +36,12 @@ switches:
   - name: "Living Room"
     switch_id: "01:23:45:67:89:AB"
     ip: "192.168.1.100"
-    port: 34988
   - name: "Hallway"
     switch_id: "AA:BB:CC:DD:EE:FF"
     ip: "192.168.1.101"
 listen_host: "0.0.0.0"
 listen_port: 34988
+control_flags: 0
 mode:
   ha_events: true
   mqtt: false
@@ -54,9 +61,10 @@ log_level: "info"
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `switches` | `[]` | List of known u::Lux switches. Each entry requires `name`, `switch_id` and `ip`. `port` defaults to `listen_port`. |
+| `switches` | `[]` | List of known u::Lux switches. Each entry requires `name`, `switch_id` and `ip`. |
 | `listen_host` | `0.0.0.0` | Host/IP address to bind the UDP socket to. |
 | `listen_port` | `34988` | UDP port to listen on (UMP default: `0x88AC` = 34988). |
+| `control_flags` | `0` | 32-bit ControlFlags value sent to the switch during initialisation (ID-Control reply). `0` is a safe default; consult the UMP spec or your switch documentation for flag definitions. |
 | `mode.ha_events` | `true` | Publish received events to HA via the WebSocket API. |
 | `mode.mqtt` | `false` | Also publish events to MQTT (requires broker config). |
 | `ha.ws_url` | `ws://supervisor/core/websocket` | Home Assistant WebSocket URL. |
@@ -65,39 +73,81 @@ log_level: "info"
 | `mqtt.port` | `1883` | MQTT broker port. |
 | `mqtt.username` | `""` | MQTT username. |
 | `mqtt.password` | `""` | MQTT password. |
-| `mqtt.base_topic` | `ulux` | MQTT topic prefix. Events are published to `<base_topic>/<switch_id>/event/...`. |
+| `mqtt.base_topic` | `ulux` | MQTT topic prefix. |
 | `log_level` | `info` | Log verbosity: `debug`, `info`, `warning`, `error`, `fatal`. |
+
+## Initialization behaviour
+
+When a u::Lux switch powers on (or reconnects), it sends an **ID-State** message with:
+- **InitRequest** (StateFlags bit 6 = 1): the add-on immediately sends back an **ID-Control** message with the configured `control_flags` value.
+- **TimeRequest** (StateFlags bit 5 = 1): the add-on immediately sends back a **DateTime** message with the current system time.
+
+Both replies are sent to the same `IP:port` that the switch sent from.
 
 ## Home Assistant Automations
 
-When `mode.ha_events: true`, the add-on fires HA events that you can use in automations:
+When `mode.ha_events: true`, the add-on fires HA events for use in automations.
+
+### `ulux_event` — snapshot event (every key-state change and every ID-State)
 
 ```yaml
 automation:
-  - alias: "Handle u::Lux Button Press"
+  - alias: "Any u::Lux key event"
     trigger:
       platform: event
-      event_type: ulux_button
+      event_type: ulux_event
+    action:
+      - service: notify.persistent_notification
+        data:
+          message: >
+            Switch {{ trigger.event.data.switch_name }}:
+            keys_down={{ trigger.event.data.keys_down }}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `switch_id` | string | Switch ID from config (or null if unknown). |
+| `switch_name` | string | Human-readable switch name from config. |
+| `ip` | string | Sender IP address. |
+| `actor_id` | number | Actor ID from the UMP message (usually 0). |
+| `key_state_raw` | number | Raw 4-bit bitmask: bit 0=Key1, bit 1=Key2, bit 2=Key3, bit 3=Key4. *(ID-Event only)* |
+| `keys_down` | number[] | Array of key numbers (1–4) currently pressed. *(ID-Event only)* |
+| `state_flags` | number | Raw 32-bit StateFlags. *(ID-State only)* |
+| `init_request` | boolean | True if switch requested init. *(ID-State only)* |
+| `time_request` | boolean | True if switch requested time sync. *(ID-State only)* |
+| `timestamp` | string | ISO 8601 timestamp. |
+
+### `ulux_key` — edge event (key pressed or released)
+
+Fires once per key per transition, after the first ID-Event for that actor context.
+
+```yaml
+automation:
+  - alias: "Living Room Key 1 Pressed"
+    trigger:
+      platform: event
+      event_type: ulux_key
       event_data:
         switch_id: "01:23:45:67:89:AB"
+        key: 1
+        action: "pressed"
     action:
       - service: light.toggle
         target:
           entity_id: light.living_room
 ```
 
-### Event schema (`ulux_button`)
-
 | Field | Type | Description |
 |-------|------|-------------|
-| `switch_id` | string | Switch ID from config (matched by packet sender IP or UMP header). |
-| `switch_name` | string | Human-readable switch name from config. |
+| `switch_id` | string | Switch ID from config. |
+| `switch_name` | string | Switch name from config. |
 | `ip` | string | Sender IP address. |
-| `raw_msg_id` | number | Raw UMP message ID (decimal). |
-| `raw_hex` | string | Full packet as hex string. |
+| `actor_id` | number | Actor ID from the UMP message. |
+| `key` | number | Key number that changed (1–4). |
+| `action` | string | `"pressed"` or `"released"`. |
+| `key_state_raw` | number | New key state bitmask. |
+| `prev_key_state_raw` | number | Previous key state bitmask. |
 | `timestamp` | string | ISO 8601 timestamp. |
-
-> **Note:** Full button-press field decoding (key number, page, press/release) will be added once sample packets or the full UMP message spec is available.
 
 ## MQTT Topics
 
@@ -105,17 +155,18 @@ When `mode.mqtt: true`:
 
 | Topic | Direction | Description |
 |-------|-----------|-------------|
-| `ulux/<switch_id>/event/raw` | Publish | Raw UMP packet (hex + metadata) for every received packet. |
-| `ulux/<switch_id>/event/button` | Publish | Button press event (same payload as HA event). |
-| `ulux/<switch_id>/cmd/#` | Subscribe | Outbound commands to the switch (TODO: implement UMP command encoding). |
+| `ulux/<switch_id>/event/key` | Publish | Key snapshot (`ulux_event` payload for ID-Event). |
+| `ulux/<switch_id>/event/key_edge` | Publish | Key edge (`ulux_key` payload). |
+| `ulux/<switch_id>/event/state` | Publish | State event (`ulux_event` payload for ID-State). |
+| `ulux/<switch_id>/event/raw` | Publish | Raw packet for unhandled message IDs. |
 
 ## Networking
 
-The add-on runs with **host networking** so it can bind UDP/34988 and receive multicast/broadcast packets from the local network. No additional port mapping is needed.
+The add-on runs with **host networking** so it can bind UDP/34988 and receive packets from the local network. No additional port mapping is needed.
 
-Configure each u::Lux Switch IP to send UMP packets to the Home Assistant host's IP address (or broadcast, if supported by your switch firmware).
+Configure each u::Lux Switch IP to send UMP packets to the Home Assistant host's IP address.
 
 ## Protocol Reference
 
 - [u::Lux UMP Protocol PDF](https://www.u-lux.com/fileadmin/user_upload/Downloads/PDF/Technische_Downloads/en/uLux_Switch_UMP_en.pdf)
-- [Integration example (Domiq)](https://www.u-lux.com/fileadmin/user_upload/Bilder/uLux_Switch/Steuerungspartner/Domiq/CM-BL-EN-ULUX.pdf)
+- [XAMControlUlux (message ID reference)](https://github.com/evondevelop/XAMControlUlux)
