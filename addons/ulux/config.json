@@ -1,0 +1,67 @@
+{
+  "name": "u::Lux UMP Bridge",
+  "version": "0.1.0",
+  "slug": "ulux",
+  "description": "UDP bridge for u::Lux Switch IP devices. Receives UMP packets and publishes events to Home Assistant and/or MQTT.",
+  "url": "https://github.com/gelbetomate/ha-addons/tree/main/addons/ulux",
+  "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],
+  "startup": "application",
+  "boot": "auto",
+  "host_network": true,
+  "hassio_api": true,
+  "homeassistant_api": true,
+  "options": {
+    "switches": [],
+    "listen_host": "0.0.0.0",
+    "listen_port": 34988,
+    "control_flags": 0,
+    "mode": {
+      "ha_events": true,
+      "mqtt": false
+    },
+    "ha": {
+      "ws_url": "ws://supervisor/core/websocket",
+      "token": ""
+    },
+    "mqtt": {
+      "host": "core-mosquitto",
+      "port": 1883,
+      "username": "",
+      "password": "",
+      "base_topic": "ulux"
+    },
+    "log_level": "info"
+  },
+  "schema": {
+    "switches": [
+      {
+        "name": "str",
+        "switch_id": "str",
+        "ip": "str",
+        "port": "port?"
+      }
+    ],
+    "listen_host": "str?",
+    "listen_port": "port?",
+    "control_flags": "int?",
+    "mode": {
+      "ha_events": "bool?",
+      "mqtt": "bool?"
+    },
+    "ha": {
+      "ws_url": "str?",
+      "token": "str?"
+    },
+    "mqtt": {
+      "host": "str?",
+      "port": "port?",
+      "username": "str?",
+      "password": "str?",
+      "base_topic": "str?"
+    },
+    "log_level": "list(debug|info|warning|error|fatal)?"
+  },
+  "panel_icon": "mdi:light-switch",
+  "ingress": true,
+  "ingress_port": 8099
+}
