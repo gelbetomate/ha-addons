@@ -1,0 +1,17 @@
+{
+  "name": "ulux-ump-bridge",
+  "version": "0.1.0",
+  "description": "u::Lux UMP bridge add-on for Home Assistant",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.1",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
