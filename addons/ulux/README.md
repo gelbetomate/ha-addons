@@ -1,5 +1,7 @@
 # u::Lux UMP Bridge Add-on
 
+This has a very early Stage and not recommended to install in production!!!!! If it doesn't install or breaks something blame yourself.
+
 A Home Assistant add-on that bridges **u::Lux Switch IP** devices to Home Assistant via the
 [u::Lux Message Protocol (UMP)](https://www.u-lux.com/fileadmin/user_upload/Downloads/PDF/Technische_Downloads/en/uLux_Switch_UMP_en.pdf)
 over UDP (port **34988** / `0x88AC`).
