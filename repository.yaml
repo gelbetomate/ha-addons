@@ -1,4 +1,4 @@
-name: "gelbetomate Home Assistant Add-ons"
+# https://developers.home-assistant.io/docs/add-ons/repository#repository-configuration
+name: "Home Assistant add-on repository"
 url: "https://github.com/gelbetomate/ha-addons"
-maintainers:
-  - "gelbetomate"
+maintainer: "gelbetomate"
