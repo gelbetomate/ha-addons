@@ -30,20 +30,25 @@ async function main() {
   }
 
   // --- Build message dispatcher ---
-  const dispatch = createDispatcher({
-    config,
-    haClient,
-    mqttClient,
-    udpSend: (host, port, buf) => udpServer.send(host, port, buf),
-    log,
-  });
+  // Create the UDP server first so its send() function is available immediately
+  // when the dispatcher needs to reply to the switch.
+  // Use a late-bound wrapper so we can wire dispatch → udpServer in one step.
+  let dispatchFn = null;
 
   // --- Start UDP server ---
   const udpServer = createUdpServer({
     host: config.listen_host,
     port: config.listen_port,
     switches: config.switches,
-    onPacket: dispatch,
+    onPacket: (ctx) => dispatchFn && dispatchFn(ctx),
+    log,
+  });
+
+  dispatchFn = createDispatcher({
+    config,
+    haClient,
+    mqttClient,
+    udpSend: udpServer.send,
     log,
   });
 

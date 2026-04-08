@@ -110,10 +110,8 @@ function telegramSummary(telegram) {
   return `device=${telegram.deviceAddressHex} packetId=${telegram.packetId} messages=[${ids}]`;
 }
 
-// Keep legacy exports so existing code that imports MESSAGE_IDS or FRAME_OFFSETS doesn't break
-const MESSAGE_IDS = {};
-for (const [name, id] of Object.entries(MessageIds)) {
-  MESSAGE_IDS[id] = name;
-}
+// Keep legacy exports so existing code that imports MESSAGE_IDS doesn't break.
+// MessageIdNames is already the correct { id → name } map; expose it as MESSAGE_IDS.
+const MESSAGE_IDS = MessageIdNames;
 
 module.exports = { parseTelegram, telegramSummary, MESSAGE_IDS, MessageIds };
