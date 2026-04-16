@@ -23,6 +23,10 @@
 
 const { MessageIds } = require('./messageIds');
 
+const FRAME_ID_MESSAGE = 0x8601;
+const FRAME_ID_VIDEO = 0x8602;
+const FRAME_VERSION = 0x0201;
+
 // Per-module outbound packet counter; wraps at 0xFFFF.
 let _packetId = 0;
 function nextPacketId() {
@@ -84,6 +88,26 @@ function buildDateTimeMessage(date) {
   return buf;
 }
 
+/**
+ * Build a VideoStart message (MessageID=0xA2, 12 bytes).
+ *
+ * Payload layout (8 bytes):
+ *   Bytes 4-7   : Reserved (0)
+ *   Bytes 8-11  : SequenceID (UInt32LE)
+ *
+ * @param {number} sequenceId - Stream sequence identifier
+ * @returns {Buffer} 12-byte message buffer
+ */
+function buildVideoStartMessage(sequenceId) {
+  const buf = Buffer.alloc(12, 0);
+  buf.writeUInt8(0x0C, 0);                         // MessageLength
+  buf.writeUInt8(MessageIds.VideoStart, 1);        // MessageID = 0xA2
+  buf.writeUInt16LE(0x0000, 2);                    // ActorID
+  buf.writeUInt32LE(0, 4);                         // Reserved
+  buf.writeUInt32LE(sequenceId >>> 0, 8);          // SequenceID
+  return buf;
+}
+
 // ─── Telegram builder ────────────────────────────────────────────────────────
 
 /**
@@ -106,4 +130,58 @@ function buildTelegram(...messageBuffers) {
   return Buffer.concat([header, messagesBuffer]);
 }
 
-module.exports = { buildIdControlMessage, buildDateTimeMessage, buildTelegram };
+/**
+ * Build a UMP video stream telegram (FrameID=0x8602).
+ *
+ * Frame layout (little-endian):
+ *   16-byte frame header:
+ *     0-1:  FrameID (0x8602)
+ *     2-3:  FrameLength (header + stream payload)
+ *     4-5:  FrameVersion (0x0201)
+ *     6-7:  PacketID
+ *     8-15: Project/Firmware/Switch/Design IDs (all zero)
+ *   12-byte stream header:
+ *     16-19: StreamFlags (bit0 = Acknowledge)
+ *     20-23: SequenceID (UInt32LE)
+ *     24-25: StartLine (UInt16LE)
+ *     26-27: LineCount (UInt16LE)
+ *   followed by RGB565LE video bytes.
+ *
+ * @param {object} opts
+ * @param {number} opts.sequenceId
+ * @param {number} opts.startLine
+ * @param {number} opts.lineCount
+ * @param {Buffer} opts.videoData
+ * @param {boolean} [opts.acknowledge=false]
+ * @returns {Buffer}
+ */
+function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, videoData, acknowledge = false }) {
+  const data = Buffer.isBuffer(videoData) ? videoData : Buffer.from(videoData || []);
+
+  const streamHeader = Buffer.alloc(12, 0);
+  if (acknowledge) {
+    streamHeader.writeUInt8(0x01, 0);
+  }
+  streamHeader.writeUInt32LE(sequenceId >>> 0, 4);
+  streamHeader.writeUInt16LE(startLine & 0xFFFF, 8);
+  streamHeader.writeUInt16LE(lineCount & 0xFFFF, 10);
+
+  const frameLength = 16 + streamHeader.length + data.length;
+  const frameHeader = Buffer.alloc(16, 0);
+  frameHeader.writeUInt16LE(FRAME_ID_VIDEO, 0);
+  frameHeader.writeUInt16LE(frameLength, 2);
+  frameHeader.writeUInt16LE(FRAME_VERSION, 4);
+  frameHeader.writeUInt16LE(nextPacketId(), 6);
+
+  return Buffer.concat([frameHeader, streamHeader, data]);
+}
+
+module.exports = {
+  buildIdControlMessage,
+  buildDateTimeMessage,
+  buildVideoStartMessage,
+  buildTelegram,
+  buildVideoStreamTelegram,
+  FRAME_ID_MESSAGE,
+  FRAME_ID_VIDEO,
+};

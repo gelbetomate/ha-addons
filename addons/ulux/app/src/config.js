@@ -26,6 +26,12 @@ const DEFAULTS = {
     password: '',
     base_topic: 'ulux',
   },
+  stream: {
+    width: 86,
+    height: 90,
+    lines_per_packet: 5,
+    inter_packet_delay_ms: 5,
+  },
   log_level: 'info',
 };
 

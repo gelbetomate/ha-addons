@@ -56,6 +56,11 @@ mqtt:
   username: ""
   password: ""
   base_topic: "ulux"
+stream:
+  width: 86
+  height: 90
+  lines_per_packet: 5
+  inter_packet_delay_ms: 5
 log_level: "info"
 ```
 
@@ -76,6 +81,10 @@ log_level: "info"
 | `mqtt.username` | `""` | MQTT username. |
 | `mqtt.password` | `""` | MQTT password. |
 | `mqtt.base_topic` | `ulux` | MQTT topic prefix. |
+| `stream.width` | `86` | Target display width used for image scaling before streaming. |
+| `stream.height` | `90` | Target display height used for image scaling before streaming. |
+| `stream.lines_per_packet` | `5` | Number of image lines sent in each video-stream datagram. |
+| `stream.inter_packet_delay_ms` | `5` | Delay between video-stream datagrams to reduce packet drops. |
 | `log_level` | `info` | Log verbosity: `debug`, `info`, `warning`, `error`, `fatal`. |
 
 ## Initialization behaviour
@@ -161,6 +170,34 @@ When `mode.mqtt: true`:
 | `ulux/<switch_id>/event/key_edge` | Publish | Key edge (`ulux_key` payload). |
 | `ulux/<switch_id>/event/state` | Publish | State event (`ulux_event` payload for ID-State). |
 | `ulux/<switch_id>/event/raw` | Publish | Raw packet for unhandled message IDs. |
+| `ulux/<switch_id>/cmd/display/image` | Subscribe | Stream an image to the switch display. |
+
+### MQTT command: stream display image
+
+Publish to:
+
+```text
+ulux/<switch_id>/cmd/display/image
+```
+
+Payload (JSON):
+
+```json
+{
+  "url": "http://example.local/snapshot.jpg",
+  "width": 86,
+  "height": 90,
+  "lines_per_packet": 5,
+  "inter_packet_delay_ms": 5
+}
+```
+
+Image source fields (choose one):
+- `url`: HTTP/HTTPS image URL
+- `base64`: Base64-encoded image data (plain base64 or data URL)
+- `path`: Local file path inside the add-on container
+
+Per-command tuning fields are optional and override `stream.*` defaults.
 
 ## Networking
 

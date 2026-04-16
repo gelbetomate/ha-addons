@@ -5,6 +5,7 @@ const { createUdpServer } = require('./src/udp');
 const { createHaWebSocket } = require('./src/ha/websocket');
 const { createMqttClient } = require('./src/mqtt/client');
 const { createDispatcher } = require('./src/handlers/index');
+const { handleCommandMessage } = require('./src/handlers/command');
 
 async function main() {
   const config = loadConfig();
@@ -22,13 +23,6 @@ async function main() {
     haClient.connect(); // non-blocking; reconnects on failure
   }
 
-  // --- MQTT client ---
-  let mqttClient = null;
-  if (config.mode.mqtt) {
-    mqttClient = createMqttClient(config.mqtt, config.switches, log);
-    mqttClient.connect(); // non-blocking; reconnects on failure
-  }
-
   // --- Build message dispatcher ---
   // Create the UDP server first so its send() function is available immediately
   // when the dispatcher needs to reply to the switch.
@@ -43,6 +37,18 @@ async function main() {
     onPacket: (ctx) => dispatchFn && dispatchFn(ctx),
     log,
   });
+
+  // --- MQTT client ---
+  let mqttClient = null;
+  if (config.mode.mqtt) {
+    mqttClient = createMqttClient(
+      config.mqtt,
+      config.switches,
+      log,
+      (cmd) => handleCommandMessage(cmd, { config, udpSend: udpServer.send, log })
+    );
+    mqttClient.connect(); // non-blocking; reconnects on failure
+  }
 
   dispatchFn = createDispatcher({
     config,

@@ -20,9 +20,10 @@ const RECONNECT_DELAY_MS = 5000;
  * @param {object}   mqttConfig - { host, port, username, password, base_topic }
  * @param {object[]} switches   - Configured switch list (used to set up cmd subscriptions)
  * @param {object}   log        - Logger
+ * @param {Function} onCommand  - Async callback ({topic, switchId, command, payload, raw})
  * @returns {{ connect: Function, publish: Function, disconnect: Function }}
  */
-function createMqttClient(mqttConfig, switches, log) {
+function createMqttClient(mqttConfig, switches, log, onCommand) {
   let client = null;
   let connected = false;
 
@@ -114,11 +115,21 @@ function createMqttClient(mqttConfig, switches, log) {
    * @param {Buffer} message
    */
   function handleCommand(topic, message) {
-    log.info(`MQTT command received on ${topic}: ${message.toString()}`);
-    // TODO: Parse topic to extract switch_id and command type
-    // TODO: Encode UMP command datagram
-    // TODO: Send UDP datagram to switch IP:port
-    log.warning(`Command handling not yet implemented for topic: ${topic}`);
+    const decoded = decodeCommand(topic, message, mqttConfig.base_topic);
+    if (!decoded) {
+      return;
+    }
+
+    log.info(`MQTT command received on ${topic} (command=${decoded.command})`);
+
+    if (typeof onCommand !== 'function') {
+      log.warning(`No MQTT command handler registered for topic: ${topic}`);
+      return;
+    }
+
+    Promise.resolve(onCommand(decoded)).catch((err) => {
+      log.error(`MQTT command handler failed for ${topic}:`, err.message);
+    });
   }
 
   function disconnect() {
@@ -129,6 +140,37 @@ function createMqttClient(mqttConfig, switches, log) {
   }
 
   return { connect, publish, disconnect };
+}
+
+/**
+ * Decode command topics in the format:
+ *   <base_topic>/<switch_id>/cmd/<command>
+ */
+function decodeCommand(topic, message, baseTopic) {
+  const prefix = `${baseTopic}/`;
+  if (!topic.startsWith(prefix)) {
+    return null;
+  }
+
+  const parts = topic.slice(prefix.length).split('/');
+  if (parts.length < 3 || parts[1] !== 'cmd') {
+    return null;
+  }
+
+  const switchId = parts[0];
+  const command = parts.slice(2).join('/');
+  const raw = message.toString();
+
+  let payload = raw;
+  if (raw && raw.trim().startsWith('{')) {
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      // Keep raw string payload when JSON parsing fails.
+    }
+  }
+
+  return { topic, switchId, command, payload, raw };
 }
 
 module.exports = { createMqttClient };
