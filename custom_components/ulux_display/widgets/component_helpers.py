@@ -1,0 +1,264 @@
+"""Convenience component factories for common widget patterns."""
+
+from __future__ import annotations
+
+from .components import (
+    THEME_TEXT_PRIMARY,
+    THEME_TEXT_SECONDARY,
+    Adaptive,
+    Arc,
+    Bar,
+    Column,
+    Component,
+    Empty,
+    Icon,
+    IconValueDisplay,
+    Ring,
+    Row,
+    Spacer,
+    Stack,
+    Text,
+)
+
+Color = tuple[int, int, int]
+
+
+def BarGauge(
+    percent: float,
+    value: str,
+    label: str,
+    color: Color,
+    icon: str | None = None,
+    background: Color | None = None,
+    padding: int = 8,
+) -> Component:
+    """Bar gauge with header row (icon/label/value) and progress bar below."""
+    header_children: list[Component | None] = []
+    if icon:
+        header_children.append(Icon(icon, size=16, color=color))
+    header_children.extend(
+        [
+            Text(label.upper(), font="tiny", color=THEME_TEXT_SECONDARY),
+            Spacer(),
+            Text(value, font="medium", bold=True, color=THEME_TEXT_PRIMARY),
+        ]
+    )
+
+    return Column(
+        gap=6,
+        padding=padding,
+        justify="center",
+        children=[
+            Adaptive(children=[c for c in header_children if c is not None], gap=6),
+            Bar(percent=percent, color=color, background=background),
+        ],
+    )
+
+
+def RingGauge(
+    percent: float,
+    value: str,
+    label: str,
+    color: Color,
+    background: Color | None = None,
+) -> Component:
+    """Ring gauge with centered value and label overlay."""
+    return Stack(
+        children=[
+            Ring(percent=percent, color=color, background=background),
+            Column(
+                align="center",
+                justify="center",
+                gap=4,
+                children=[
+                    Text(value, font="large", color=THEME_TEXT_PRIMARY),
+                    Text(label.upper(), font="tiny", color=THEME_TEXT_SECONDARY),
+                ],
+            ),
+        ],
+    )
+
+
+def ArcGauge(
+    percent: float,
+    value: str,
+    label: str,
+    color: Color,
+    background: Color | None = None,
+) -> Component:
+    """Arc gauge (270 degrees) with centered value and label at top."""
+    return Stack(
+        children=[
+            Column(
+                justify="start",
+                align="center",
+                padding=4,
+                children=[
+                    Text(label.upper(), font="tiny", color=THEME_TEXT_SECONDARY),
+                ],
+            ),
+            Column(
+                justify="center",
+                align="center",
+                padding=12,
+                children=[
+                    Arc(percent=percent, color=color, background=background),
+                ],
+            ),
+            Column(
+                align="center",
+                justify="center",
+                children=[
+                    Text(value, font="medium", color=THEME_TEXT_PRIMARY),
+                ],
+            ),
+        ],
+    )
+
+
+def IconValue(
+    icon: str,
+    value: str,
+    label: str,
+    color: Color,
+    value_color: Color = THEME_TEXT_PRIMARY,
+    label_color: Color = THEME_TEXT_SECONDARY,
+    icon_size: int | None = None,
+) -> Component:
+    """Icon with value and label."""
+    return IconValueDisplay(
+        icon=icon,
+        value=value,
+        label=label,
+        icon_color=color,
+        value_color=value_color,
+        label_color=label_color,
+        icon_size=icon_size,
+    )
+
+
+def CenteredValue(
+    value: str,
+    label: str | None = None,
+    value_color: Color = THEME_TEXT_PRIMARY,
+    label_color: Color = THEME_TEXT_SECONDARY,
+    value_font: str = "large",
+    label_font: str = "small",
+) -> Component:
+    """Centered value with optional label below."""
+    children: list[Component] = [
+        Text(value, font=value_font, color=value_color),
+    ]
+    if label:
+        children.append(Text(label.upper(), font=label_font, color=label_color))
+
+    return Column(align="center", justify="center", gap=8, children=children)
+
+
+def LabelValue(
+    label: str,
+    value: str,
+    label_color: Color = THEME_TEXT_SECONDARY,
+    value_color: Color = THEME_TEXT_PRIMARY,
+    font: str = "small",
+) -> Component:
+    """Horizontal label + value pair that adapts to available space."""
+    return Adaptive(
+        children=[
+            Text(label, font=font, color=label_color, align="start"),
+            Spacer(),
+            Text(value, font=font, color=value_color, align="end"),
+        ],
+        gap=6,
+    )
+
+
+def StatusIndicator(
+    label: str,
+    is_on: bool,
+    on_color: Color,
+    off_color: Color,
+    on_text: str = "ON",
+    off_text: str = "OFF",
+) -> Component:
+    """Status indicator with colored dot and status text."""
+    color = on_color if is_on else off_color
+    status_text = on_text if is_on else off_text
+
+    return Row(
+        gap=10,
+        align="center",
+        justify="space-between",
+        children=[
+            Row(
+                gap=8,
+                children=[
+                    Icon("check" if is_on else "warning", size=14, color=color),
+                    Text(label, font="small", color=THEME_TEXT_PRIMARY),
+                ],
+            ),
+            Text(status_text, font="small", color=color),
+        ],
+    )
+
+
+def ProgressRow(
+    label: str,
+    value: str,
+    percent: float,
+    color: Color,
+    icon: str | None = None,
+) -> Component:
+    """Single progress row with label, value, bar, and percentage."""
+    header_children: list[Component | None] = []
+    if icon:
+        header_children.append(Icon(icon, size=14, color=color))
+    header_children.extend(
+        [
+            Text(label.upper(), font="tiny", color=THEME_TEXT_SECONDARY),
+            Spacer(),
+            Text(value, font="small", color=THEME_TEXT_PRIMARY),
+        ]
+    )
+
+    return Column(
+        gap=4,
+        children=[
+            Row(
+                gap=6,
+                justify="space-between",
+                children=[c for c in header_children if c is not None],
+            ),
+            Row(
+                gap=6,
+                children=[
+                    Bar(percent=percent, color=color, height=6),
+                    Text(f"{percent:.0f}%", font="tiny", color=THEME_TEXT_PRIMARY),
+                ],
+            ),
+        ],
+    )
+
+
+def Conditional(
+    condition: bool,
+    if_true: Component,
+    if_false: Component | None = None,
+) -> Component:
+    """Conditional component rendering."""
+    if condition:
+        return if_true
+    return if_false or Empty()
+
+
+__all__ = [
+    "ArcGauge",
+    "BarGauge",
+    "CenteredValue",
+    "Conditional",
+    "IconValue",
+    "LabelValue",
+    "ProgressRow",
+    "RingGauge",
+    "StatusIndicator",
+]
