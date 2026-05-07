@@ -1,0 +1,11 @@
+{
+  "name": "ulux-display-panel",
+  "version": "0.1.0",
+  "description": "u::lux Display sidebar panel for Home Assistant",
+  "main": "src/ulux-display-panel.js",
+  "scripts": {
+    "build": "cp src/ulux-display-panel.js dist/ulux-display-panel.js",
+    "dev": "echo 'Edit src/ulux-display-panel.js then run npm run build'"
+  },
+  "private": true
+}
