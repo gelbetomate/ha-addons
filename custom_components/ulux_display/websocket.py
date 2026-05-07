@@ -1,3 +1,4 @@
+"""WebSocket API for UluxDisplay custom panel.
 
 Provides commands for managing views, devices, and preview rendering.
 """

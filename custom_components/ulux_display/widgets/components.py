@@ -1,3 +1,4 @@
+"""Declarative component system for widget rendering.
 
 This module provides a React-like component tree system where widgets
 declare WHAT to show (component trees) and the layout system figures out

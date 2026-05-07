@@ -1,14 +1,13 @@
+"""PIL-based image renderer for UluxDisplay displays.
 
 Uses 2x supersampling for anti-aliased output.
 """
 
 from __future__ import annotations
 
-import logging
 import math
 from io import BytesIO
 from pathlib import Path
-import warnings
 from typing import TYPE_CHECKING
 
 from PIL import Image, ImageDraw, ImageFont
@@ -23,9 +22,11 @@ from .const import (
     DISPLAY_HEIGHT,
     DISPLAY_WIDTH,
 )
-from .icons import get_mdi_char
 
-DEFAULT_JPEG_QUALITY = 92  # High quality JPEG default
+# JPEG defaults (kept here since the HTTP-specific const entries were removed)
+DEFAULT_JPEG_QUALITY = 92
+_MAX_IMAGE_SIZE = 400 * 1024  # 400KB
+from .icons import get_mdi_char
 
 if TYPE_CHECKING:
     from PIL.ImageFont import FreeTypeFont
@@ -94,13 +95,6 @@ def _load_mdi_font(size: int) -> FreeTypeFont | ImageFont.ImageFont:
     Returns:
         Loaded MDI font or default font
     """
-    if not _MDI_FONT.exists():
-        warnings.warn(
-            f"MDI icon font not found at {_MDI_FONT}. Icons will render as boxes. "
-            f"See {_FONTS_DIR / 'README.md'} for installation instructions.",
-            stacklevel=2,
-        )
-        return ImageFont.load_default()
     try:
         return ImageFont.truetype(str(_MDI_FONT), size)
     except OSError:
@@ -1014,10 +1008,8 @@ class Renderer:
         Returns:
             JPEG image bytes
         """
-        from .const import MAX_IMAGE_SIZE
-
         if max_size is None:
-            max_size = MAX_IMAGE_SIZE
+            max_size = _MAX_IMAGE_SIZE
 
         # Finalize (downscale) before export
         final_img = self.finalize(img)

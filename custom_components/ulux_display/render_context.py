@@ -1,3 +1,4 @@
+"""RenderContext provides widgets with a local coordinate system.
 
 This abstraction allows widgets to work in coordinates relative to their
 container (0, 0 to width, height) instead of absolute canvas coordinates.

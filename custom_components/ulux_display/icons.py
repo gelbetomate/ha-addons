@@ -1,3 +1,4 @@
+"""Material Design Icons mapping and utilities.
 
 Provides icon name to Unicode codepoint mapping for MDI font rendering.
 Supports legacy icon names, HA MDI format (mdi:xxx), and bare MDI names.

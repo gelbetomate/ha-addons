@@ -550,25 +550,11 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             next_screen = (self._current_screen + 1) % len(self._layouts)
             await self.async_set_screen(next_screen)
 
-            # For Pro devices, also trigger device navigation to help refresh
-            if self.device.model == MODEL_PRO:
-                try:
-                    await self.device.navigate_next()
-                except Exception as err:
-                    _LOGGER.debug("Pro navigate_next failed (non-fatal): %s", err)
-
     async def async_previous_screen(self) -> None:
         """Switch to the previous screen."""
         if len(self._layouts) > 0:
             prev_screen = (self._current_screen - 1) % len(self._layouts)
             await self.async_set_screen(prev_screen)
-
-            # For Pro devices, also trigger device navigation to help refresh
-            if self.device.model == MODEL_PRO:
-                try:
-                    await self.device.navigate_previous()
-                except Exception as err:
-                    _LOGGER.debug("Pro navigate_previous failed (non-fatal): %s", err)
 
     def update_options(self, options: dict[str, Any]) -> None:
         """Update coordinator options.
@@ -685,11 +671,11 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
 
         return states
 
-    def _render_display(self) -> tuple[bytes, bytes]:
+    def _render_display(self) -> "Image.Image":
         """Render the display image (runs in executor thread).
 
         Returns:
-            Tuple of (jpeg_data, png_data)
+            Rendered PIL Image (before PNG conversion).
         """
         # Create canvas
         img, draw = self.renderer.create_canvas()
@@ -719,9 +705,8 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             widget_states = self._build_widget_states(welcome_layout)
             welcome_layout.render(self.renderer, draw, widget_states)
 
-        png_data = self.renderer.to_png(img)
-
-        return png_data
+        # Return the PIL Image directly so the device can do its own conversion
+        return self.renderer.finalize(img)
 
     async def trigger_notification(self, data: dict[str, Any]) -> None:
         """Trigger a notification on this device.
@@ -977,32 +962,35 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
 
             # Render image in executor to avoid blocking the event loop
             # (Pillow image operations are CPU-intensive)
-            png_data = await self.hass.async_add_executor_job(self._render_display)
+            img = await self.hass.async_add_executor_job(self._render_display)
 
             # Only update preview image on config changes or manual refresh
             # (prevents HA UI from refreshing during periodic updates)
             self._preview_just_updated = self._update_preview
             if self._update_preview:
+                # Convert to PNG for preview storage (in executor to avoid blocking)
+                png_data = await self.hass.async_add_executor_job(self.renderer.to_png, img)
                 self._last_image = png_data
                 self._update_preview = False
 
-            _LOGGER.debug("Rendered image: PNG=%d bytes", len(png_data))
+            _LOGGER.debug("Rendered image: %dx%d px", img.width, img.height)
 
-            await self.device.send_image(png_data)
+            # Pass PIL Image directly; device does RGB565 conversion internally
+            await self.device.send_image(img)
 
             # Track success status
             self._last_update_success = True
             self._last_update_time = time.time()
 
             _LOGGER.debug(
-                "Display update completed: screen=%s, size=%.1fKB",
+                "Display update completed: screen=%s",
                 self.current_screen_name,
-                len(png_data) / 1024,
             )
 
             return {
                 "success": True,
-                "size_kb": len(jpeg_data) / 1024,
+                "width": img.width,
+                "height": img.height,
                 "current_screen": self._current_screen,
                 "screen_name": self.current_screen_name,
             }
