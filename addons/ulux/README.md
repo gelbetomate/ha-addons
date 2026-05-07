@@ -1,10 +1,10 @@
-# u::Lux UMP Bridge Add-on
+# u::Lux UMP Bridge App
 
-[![Add Add-on Repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgelbetomate%2Fha-addons)
+[![Add App Repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgelbetomate%2Fha-addons)
 
 This has a very early Stage and not recommended to install in production!!!!! If it doesn't install or breaks something blame yourself.
 
-A Home Assistant add-on that bridges **u::Lux Switch IP** devices to Home Assistant via the
+A Home Assistant app that bridges **u::Lux Switch IP** devices to Home Assistant via the
 [u::Lux Message Protocol (UMP)](https://www.u-lux.com/fileadmin/user_upload/Downloads/PDF/Technische_Downloads/en/uLux_Switch_UMP_en.pdf)
 over UDP (port **34988** / `0x88AC`).
 
@@ -27,9 +27,9 @@ over UDP (port **34988** / `0x88AC`).
 ## Installation
 
 1. Add this repository to your Home Assistant instance (see the [repository README](../../README.md)).
-2. Search for **"u::Lux UMP Bridge"** in the Add-on Store and install it.
-3. Configure the add-on (see below).
-4. Start the add-on.
+2. Search for **"u::Lux UMP Bridge"** in the App Store and install it.
+3. Configure the app (see below).
+4. Start the app.
 
 ## Configuration
 
@@ -92,14 +92,14 @@ log_level: "info"
 ## Initialization behaviour
 
 When a u::Lux switch powers on (or reconnects), it sends an **ID-State** message with:
-- **InitRequest** (StateFlags bit 6 = 1): the add-on immediately sends back an **ID-Control** message with the configured `control_flags` value.
-- **TimeRequest** (StateFlags bit 5 = 1): the add-on immediately sends back a **DateTime** message with the current system time.
+- **InitRequest** (StateFlags bit 6 = 1): the app immediately sends back an **ID-Control** message with the configured `control_flags` value.
+- **TimeRequest** (StateFlags bit 5 = 1): the app immediately sends back a **DateTime** message with the current system time.
 
 Both replies are sent to the same `IP:port` that the switch sent from.
 
 ## Home Assistant Automations
 
-When `mode.ha_events: true`, the add-on fires HA events for use in automations.
+When `mode.ha_events: true`, the app fires HA events for use in automations.
 
 ### `ulux_event` — snapshot event (every key-state change and every ID-State)
 
@@ -197,13 +197,13 @@ Payload (JSON):
 Image source fields (choose one):
 - `url`: HTTP/HTTPS image URL
 - `base64`: Base64-encoded image data (plain base64 or data URL)
-- `path`: Local file path inside the add-on container
+- `path`: Local file path inside the app container
 
 Per-command tuning fields are optional and override `stream.*` defaults.
 
 ## Networking
 
-The add-on runs with **host networking** so it can bind UDP/34988 and receive packets from the local network. No additional port mapping is needed.
+The app runs with **host networking** so it can bind UDP/34988 and receive packets from the local network. No additional port mapping is needed.
 
 Configure each u::Lux Switch IP to send UMP packets to the Home Assistant host's IP address.
 

@@ -1,59 +1,60 @@
-# gelbetomate Home Assistant Add-ons
+# u::lux Integration Repository
 
-A collection of Home Assistant add-ons and HACS custom integrations.
+This repository provides the **u::lux Display** HACS integration and related Home Assistant Supervisor apps.
 
-Be advised, this repository is work in progress and I'm creating these integrations because I'm personally missing this integrations. Test and use on your own risk.
-
----
-
-## Add-ons
-
-[![Add Add-on Repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgelbetomate%2Fha-addons)
-
-### Available Add-ons
-
-| Add-on | Description |
-|--------|-------------|
-| [u::Lux UMP Bridge](addons/ulux/README.md) | UDP bridge for u::Lux Switch IP devices — decodes UMP key events, auto-initialises switches, and publishes `ulux_event` / `ulux_key` events to Home Assistant and/or MQTT. |
-
-### Installation
-
-1. Open your Home Assistant instance.
-2. Navigate to **Settings → Add-ons → Add-on Store**.
-3. Click the three-dot menu (⋮) in the top-right corner and select **Repositories**.
-4. Paste the following URL and click **Add**:
-   ```
-   https://github.com/gelbetomate/ha-addons
-   ```
-5. The add-ons from this repository will now appear in the Add-on Store.
-
-Alternatively, click the badge above to add the repository automatically.
+This project is work in progress and built for real-world personal use first. Please test carefully in your own environment.
 
 ---
 
-## HACS Integrations
+## HACS Integration
 
 [![Add HACS Repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=gelbetomate&repository=ha-addons&category=integration)
 
-### Available HACS Integrations
+### Available Integration
 
 | Integration | Description |
 |-------------|-------------|
-| [u::lux Display](custom_components/ulux_display/README.md) | Rich display engine for u::Lux Switch IP devices with widgets, layouts, themes, and WebSocket-powered management. |
+| [u::lux Display](custom_components/ulux_display/README.md) | Display engine for u::Lux Switch IP with widgets, layouts, themes, and bridge-backed rendering. |
 
-### Installation
+### Required Components
 
-1. Open your Home Assistant instance and navigate to **HACS** in the sidebar.
-2. Click the three-dot menu (⋮) in the top-right corner and select **Custom repositories**.
-3. Paste the following URL, set the category to **Integration**, and click **Add**:
-   ```
-   https://github.com/gelbetomate/ha-addons
-   ```
-4. Search for the integration in HACS and click **Download**.
+For a working setup, install both:
+
+- **u::lux Display** (HACS integration): handles Home Assistant entities, configuration flow, and image rendering logic.
+- **u::Lux UMP Bridge** (Supervisor app): handles device discovery and transport to u::Lux switches.
+
+Reason: the integration delegates communication to the bridge. Without the bridge, the integration cannot deliver rendered content to the physical switch.
+
+### Install via HACS
+
+1. Open HACS in Home Assistant.
+2. Open **Custom repositories**.
+3. Add `https://github.com/gelbetomate/ha-addons` with type **Integration**.
+4. Install **u::lux Display**.
 5. Restart Home Assistant.
-6. Go to **Settings → Devices & Services → Add Integration** and select the integration.
+6. Go to **Settings -> Devices & Services -> Add Integration** and select **u::lux Display**.
 
-Alternatively, click the badge above to add the repository automatically.
+---
+
+## Related Supervisor Apps
+
+[![Add App Repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgelbetomate%2Fha-addons)
+
+The same repository URL can also be added to the Supervisor App Store.
+
+### Available Apps
+
+| App | Description |
+|-----|-------------|
+| [u::Lux UMP Bridge](addons/ulux/README.md) | UDP bridge for u::Lux Switch IP devices. Decodes UMP key events, auto-initializes switches, and publishes events to Home Assistant and/or MQTT. |
+
+### Install Apps
+
+1. Open Home Assistant.
+2. Navigate to **Settings -> Apps -> App Store**.
+3. Open **Repositories** from the top-right menu.
+4. Add `https://github.com/gelbetomate/ha-addons`.
+5. Install the desired app.
 
 ---
 
