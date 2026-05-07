@@ -23,13 +23,17 @@ const { streamImageToSwitch } = require('./ump/videoStream');
  *   GET /api/health
  *     Response 200: { "ok": true }
  *
+ *   GET /api/discovery/devices
+ *     Response 200: { "devices": [...] }
+ *
  * @param {object}   opts
  * @param {object}   opts.config   - Full add-on config
  * @param {Function} opts.udpSend  - udpSend(host, port, buf) from the UDP server
+ * @param {object}   opts.discoveryRegistry - In-memory device discovery registry
  * @param {object}   opts.log      - Logger
  * @returns {{ start: Function, close: Function }}
  */
-function createApiServer({ config, udpSend, log }) {
+function createApiServer({ config, udpSend, discoveryRegistry, log }) {
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
 
@@ -57,6 +61,12 @@ function createApiServer({ config, udpSend, log }) {
     // --- GET /api/health ---
     if (method === 'GET' && url === '/api/health') {
       return respond(res, 200, { ok: true });
+    }
+
+    // --- GET /api/discovery/devices ---
+    if (method === 'GET' && url === '/api/discovery/devices') {
+      const devices = discoveryRegistry ? discoveryRegistry.list() : [];
+      return respond(res, 200, { devices });
     }
 
     // --- POST /api/display/image/:switchId ---

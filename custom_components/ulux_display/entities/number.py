@@ -29,7 +29,6 @@ async def async_setup_entry(
     coordinator: UluxDisplayCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     entities = [
-        UluxDisplayBrightnessNumber(coordinator),
         UluxDisplayRefreshIntervalNumber(coordinator),
         UluxDisplayCycleIntervalNumber(coordinator),
     ]

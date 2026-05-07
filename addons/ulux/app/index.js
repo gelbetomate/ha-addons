@@ -7,6 +7,7 @@ const { createMqttClient } = require('./src/mqtt/client');
 const { createDispatcher } = require('./src/handlers/index');
 const { handleCommandMessage } = require('./src/handlers/command');
 const { createApiServer } = require('./src/http');
+const { createDiscoveryRegistry } = require('./src/discoveryRegistry');
 
 async function main() {
   const config = loadConfig();
@@ -29,6 +30,7 @@ async function main() {
   // when the dispatcher needs to reply to the switch.
   // Use a late-bound wrapper so we can wire dispatch → udpServer in one step.
   let dispatchFn = null;
+  const discoveryRegistry = createDiscoveryRegistry();
 
   // --- Start UDP server ---
   const udpServer = createUdpServer({
@@ -55,6 +57,7 @@ async function main() {
     config,
     haClient,
     mqttClient,
+    discoveryRegistry,
     udpSend: udpServer.send,
     log,
   });
@@ -64,7 +67,12 @@ async function main() {
 
   // --- HTTP API server ---
   // Allows the u::lux Display integration to delegate image streaming to the bridge.
-  const apiServer = createApiServer({ config, udpSend: udpServer.send, log });
+  const apiServer = createApiServer({
+    config,
+    udpSend: udpServer.send,
+    discoveryRegistry,
+    log,
+  });
   apiServer.start();
 }
 

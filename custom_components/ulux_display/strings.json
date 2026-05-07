@@ -65,23 +65,43 @@
     "step": {
       "user": {
         "title": "Add u::lux Display",
-        "description": "Enter the IP address of the u::lux switch, the actor ID, and the page ID.",
+        "description": "Choose discovery or manual setup and enter the bridge URL.",
         "data": {
-          "switch_ip": "Switch IP Address",
-          "actor_id": "Actor ID",
-          "page_id": "Page ID",
+          "bridge_url": "Bridge URL",
+          "action": "Setup method"
+        }
+      },
+      "discover": {
+        "title": "Discovered u::lux Devices",
+        "description": "Select a device seen by the bridge.",
+        "data": {
+          "switch_id": "Switch ID",
+          "name": "Display name"
+        }
+      },
+      "manual": {
+        "title": "Manual u::lux Setup",
+        "description": "Enter the u::lux switch ID manually.",
+        "data": {
+          "switch_id": "Switch ID",
           "name": "Display name"
         }
       }
     },
     "error": {
+      "bridge_unreachable": "Cannot reach the u::lux bridge URL.",
+      "bridge_error": "Bridge request failed.",
+      "invalid_response": "Bridge returned an invalid discovery response.",
+      "no_devices_found": "No u::lux devices discovered yet. Trigger a key event on the switch and try again.",
+      "invalid_switch_id": "Switch ID is required.",
       "timeout": "Connection timed out. The device may be offline or unreachable.",
       "connection_refused": "Connection refused. Verify the device is powered on and the address is correct.",
       "dns_error": "Could not resolve hostname. Check the address is correct.",
       "unknown": "An unexpected error occurred while connecting."
     },
     "abort": {
-      "already_configured": "This device is already configured."
+      "already_configured": "This device is already configured.",
+      "invalid_switch_id": "Invalid switch data received during auto-discovery."
     }
   },
   "options": {

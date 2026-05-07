@@ -133,6 +133,9 @@ class UluxDevice:
     async def set_brightness(self, brightness: int) -> None:
         pass
 
+    async def set_theme(self, theme: int) -> None:
+        pass
+
     async def set_theme_custom(self) -> None:
         pass
 

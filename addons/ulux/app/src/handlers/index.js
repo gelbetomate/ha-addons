@@ -24,11 +24,12 @@ const HANDLERS = {
  * @param {object}      services.config      - Full add-on config
  * @param {object|null} services.haClient    - HA WebSocket client (or null)
  * @param {object|null} services.mqttClient  - MQTT client (or null)
+ * @param {object|null} services.discoveryRegistry - In-memory discovery registry
  * @param {Function}    services.udpSend     - udpSend(host, port, buf) for replies
  * @param {object}      services.log         - Logger
  * @returns {Function} dispatch(ctx) — called for each received UDP packet
  */
-function createDispatcher({ config, haClient, mqttClient, udpSend, log }) {
+function createDispatcher({ config, haClient, mqttClient, discoveryRegistry, udpSend, log }) {
   return function dispatch(ctx) {
     const { raw, hex, senderIp, senderPort, switch: sw, timestamp } = ctx;
 
@@ -47,6 +48,16 @@ function createDispatcher({ config, haClient, mqttClient, udpSend, log }) {
 
     // Resolve switch by device address embedded in the telegram header
     const resolvedSwitch = resolveByDeviceAddress(telegram.deviceAddressHex, config.switches) || sw;
+
+    if (discoveryRegistry) {
+      discoveryRegistry.upsert({
+        senderIp,
+        senderPort,
+        switchId: resolvedSwitch.switch_id || telegram.deviceAddressHex,
+        switchName: resolvedSwitch.name,
+        configured: resolvedSwitch.name !== 'unknown' || Boolean(resolvedSwitch.switch_id),
+      });
+    }
 
     const enrichedCtx = { ...ctx, switch: resolvedSwitch, telegram };
 
