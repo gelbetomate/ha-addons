@@ -5,7 +5,7 @@
   "codeowners": ["@gelbetomate"],
   "config_flow": true,
   "dependencies": ["http"],
-  "documentation": "https://github.com/gelbetomate/ha-addons",
+  "documentation": "https://github.com/gelbetomate/ha-addons/blob/main/custom_components/ulux_display/README.md",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/gelbetomate/ha-addons/issues",
   "requirements": ["pillow>=10.0.0", "palettable>=3.3.0"],
