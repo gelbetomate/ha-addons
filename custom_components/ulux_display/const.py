@@ -9,13 +9,10 @@ DISPLAY_HEIGHT = 240
 # Default settings
 DEFAULT_REFRESH_INTERVAL = 10  # seconds
 
-# UDP connection settings
-CONF_SWITCH_IP = "switch_ip"
-CONF_ACTOR_ID = "actor_id"
-CONF_PAGE_ID = "page_id"
-DEFAULT_ACTOR_ID = 22
-DEFAULT_PAGE_ID = 4
-DEFAULT_UDP_PORT = 34988
+# Bridge connection settings
+CONF_BRIDGE_URL = "bridge_url"
+CONF_SWITCH_ID = "switch_id"
+DEFAULT_BRIDGE_URL = "http://localhost:8099"
 
 # Backoff settings for offline device handling
 MAX_BACKOFF_MULTIPLIER = 16

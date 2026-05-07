@@ -32,6 +32,7 @@ const DEFAULTS = {
     lines_per_packet: 5,
     inter_packet_delay_ms: 5,
   },
+  api_port: 8099,
   log_level: 'info',
 };
 

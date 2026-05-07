@@ -11,11 +11,9 @@ from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 
 from .const import (
-    CONF_ACTOR_ID,
-    CONF_PAGE_ID,
-    CONF_SWITCH_IP,
-    DEFAULT_ACTOR_ID,
-    DEFAULT_PAGE_ID,
+    CONF_BRIDGE_URL,
+    CONF_SWITCH_ID,
+    DEFAULT_BRIDGE_URL,
     DOMAIN,
 )
 
@@ -23,10 +21,9 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_SWITCH_IP): str,
+        vol.Required(CONF_BRIDGE_URL, default=DEFAULT_BRIDGE_URL): str,
+        vol.Required(CONF_SWITCH_ID): str,
         vol.Optional(CONF_NAME): str,
-        vol.Optional(CONF_ACTOR_ID, default=DEFAULT_ACTOR_ID): vol.Coerce(int),
-        vol.Optional(CONF_PAGE_ID, default=DEFAULT_PAGE_ID): vol.Coerce(int),
     }
 )
 
@@ -43,24 +40,24 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            switch_ip = user_input[CONF_SWITCH_IP].strip()
-            actor_id = user_input.get(CONF_ACTOR_ID, DEFAULT_ACTOR_ID)
-            page_id = user_input.get(CONF_PAGE_ID, DEFAULT_PAGE_ID)
+            bridge_url = user_input[CONF_BRIDGE_URL].strip().rstrip("/")
+            switch_id = user_input[CONF_SWITCH_ID].strip()
 
-            if not switch_ip:
-                errors[CONF_SWITCH_IP] = "invalid_host"
+            if not bridge_url:
+                errors[CONF_BRIDGE_URL] = "invalid_host"
+            elif not switch_id:
+                errors[CONF_SWITCH_ID] = "invalid_switch_id"
             else:
-                unique_id = f"{switch_ip}_{actor_id}_{page_id}"
+                unique_id = f"{bridge_url}_{switch_id}"
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_configured()
 
-                title = user_input.get(CONF_NAME) or f"u::lux Display ({switch_ip})"
+                title = user_input.get(CONF_NAME) or f"u::lux Display ({switch_id})"
                 return self.async_create_entry(
                     title=title,
                     data={
-                        CONF_SWITCH_IP: switch_ip,
-                        CONF_ACTOR_ID: actor_id,
-                        CONF_PAGE_ID: page_id,
+                        CONF_BRIDGE_URL: bridge_url,
+                        CONF_SWITCH_ID: switch_id,
                         CONF_NAME: title,
                     },
                 )

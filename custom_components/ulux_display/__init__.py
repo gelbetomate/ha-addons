@@ -11,11 +11,9 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
 from .const import (
-    CONF_ACTOR_ID,
-    CONF_PAGE_ID,
-    CONF_SWITCH_IP,
-    DEFAULT_ACTOR_ID,
-    DEFAULT_PAGE_ID,
+    CONF_BRIDGE_URL,
+    CONF_SWITCH_ID,
+    DEFAULT_BRIDGE_URL,
     DOMAIN,
 )
 from .coordinator import UluxDisplayCoordinator
@@ -77,13 +75,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if DOMAIN not in hass.data:
         await async_setup(hass, {})
 
-    switch_ip = entry.data[CONF_SWITCH_IP]
-    actor_id = entry.data.get(CONF_ACTOR_ID, DEFAULT_ACTOR_ID)
-    page_id = entry.data.get(CONF_PAGE_ID, DEFAULT_PAGE_ID)
+    bridge_url = entry.data.get(CONF_BRIDGE_URL, DEFAULT_BRIDGE_URL)
+    switch_id = entry.data[CONF_SWITCH_ID]
 
-    _LOGGER.debug("Setting up u::lux Display integration for %s (actor=%s, page=%s)", switch_ip, actor_id, page_id)
+    _LOGGER.debug("Setting up u::lux Display integration for switch %s via bridge %s", switch_id, bridge_url)
 
-    device = UluxDevice(host=switch_ip, actor_id=actor_id, page_id=page_id)
+    device = UluxDevice(bridge_url=bridge_url, switch_id=switch_id)
 
     coordinator = UluxDisplayCoordinator(
         hass=hass,
@@ -92,7 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config_entry=entry,
     )
 
-    _LOGGER.debug("Performing first refresh for %s", switch_ip)
+    _LOGGER.debug("Performing first refresh for switch %s", switch_id)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})
@@ -102,14 +99,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    _LOGGER.info("u::lux Display integration successfully set up for %s", switch_ip)
+    _LOGGER.info("u::lux Display integration successfully set up for switch %s", switch_id)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    switch_ip = entry.data.get(CONF_SWITCH_IP, "unknown")
-    _LOGGER.debug("Unloading u::lux Display integration for %s", switch_ip)
+    switch_id = entry.data.get(CONF_SWITCH_ID, "unknown")
+    _LOGGER.debug("Unloading u::lux Display integration for switch %s", switch_id)
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
@@ -121,8 +118,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_options_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
-    switch_ip = entry.data.get(CONF_SWITCH_IP, "unknown")
-    _LOGGER.debug("Options updated for u::lux Display device %s", switch_ip)
+    switch_id = entry.data.get(CONF_SWITCH_ID, "unknown")
+    _LOGGER.debug("Options updated for u::lux Display device %s", switch_id)
     coordinator: UluxDisplayCoordinator = hass.data[DOMAIN][entry.entry_id]
     coordinator.update_options(dict(entry.options))
     await coordinator.async_request_refresh()

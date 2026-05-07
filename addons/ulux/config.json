@@ -37,6 +37,7 @@
       "lines_per_packet": 5,
       "inter_packet_delay_ms": 5
     },
+    "api_port": 8099,
     "log_level": "info"
   },
   "schema": {
@@ -72,9 +73,13 @@
       "lines_per_packet": "int?",
       "inter_packet_delay_ms": "int?"
     },
+    "api_port": "port?",
     "log_level": "list(debug|info|warning|error|fatal)?"
   },
   "panel_icon": "mdi:light-switch",
   "ingress": true,
-  "ingress_port": 8099
+  "ingress_port": 8099,
+  "ports": {
+    "8099/tcp": 8099
+  }
 }

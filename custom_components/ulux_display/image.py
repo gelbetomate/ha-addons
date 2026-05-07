@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_SWITCH_IP, DOMAIN
+from .const import CONF_SWITCH_ID, DOMAIN
 
 if TYPE_CHECKING:
     from .coordinator import UluxDisplayCoordinator
@@ -48,9 +48,9 @@ class UluxDisplayPreviewImage(ImageEntity):
         super().__init__(hass)
         self.coordinator = coordinator
         self._entry = entry
-        self._attr_unique_id = f"{entry.data[CONF_SWITCH_IP]}_preview"
+        self._attr_unique_id = f"{entry.data[CONF_SWITCH_ID]}_preview"
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.data[CONF_SWITCH_IP])},
+            "identifiers": {(DOMAIN, entry.data[CONF_SWITCH_ID])},
             "name": entry.data.get(CONF_NAME, "u::lux Display"),
             "manufacturer": "u::lux",
             "model": "Display",

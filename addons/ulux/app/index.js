@@ -6,6 +6,7 @@ const { createHaWebSocket } = require('./src/ha/websocket');
 const { createMqttClient } = require('./src/mqtt/client');
 const { createDispatcher } = require('./src/handlers/index');
 const { handleCommandMessage } = require('./src/handlers/command');
+const { createApiServer } = require('./src/http');
 
 async function main() {
   const config = loadConfig();
@@ -60,6 +61,11 @@ async function main() {
 
   udpServer.start();
   log.info(`UDP server listening on ${config.listen_host}:${config.listen_port}`);
+
+  // --- HTTP API server ---
+  // Allows the u::lux Display integration to delegate image streaming to the bridge.
+  const apiServer = createApiServer({ config, udpSend: udpServer.send, log });
+  apiServer.start();
 }
 
 /**

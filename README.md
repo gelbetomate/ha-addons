@@ -2,6 +2,8 @@
 
 A collection of Home Assistant add-ons and HACS custom integrations.
 
+Be advised, this repository is work in progress and I'm creating these integrations because I'm personally missing this integrations. Test and use on your own risk.
+
 ---
 
 ## Add-ons
