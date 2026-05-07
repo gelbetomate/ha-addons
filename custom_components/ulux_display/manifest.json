@@ -1,0 +1,13 @@
+{
+  "domain": "ulux_display",
+  "name": "u::lux Display",
+  "after_dependencies": ["frontend", "panel_custom", "recorder"],
+  "codeowners": ["@gelbetomate"],
+  "config_flow": true,
+  "dependencies": ["http"],
+  "documentation": "https://github.com/gelbetomate/ha-addons",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/gelbetomate/ha-addons/issues",
+  "requirements": ["pillow>=10.0.0", "palettable>=3.3.0"],
+  "version": "0.1.0"
+}

@@ -1,0 +1,56 @@
+notify:
+  name: Show Notification
+  description: Shows a temporary notification on the display.
+  fields:
+    device_id:
+      name: Device
+      description: The u::lux Display device(s) to show the notification on.
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+    message:
+      name: Message
+      description: The notification text. If omitted, the image/icon will be fullscreen.
+      required: false
+      selector:
+        text:
+    icon:
+      name: Icon
+      description: Icon to display (e.g. mdi:bell).
+      required: false
+      selector:
+        icon:
+    image:
+      name: Image Entity
+      description: Home Assistant entity to use for the image.
+      required: false
+      selector:
+        entity: {}
+    duration:
+      name: Duration
+      description: How long to show the notification in seconds (default 10).
+      required: false
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 300
+          unit_of_measurement: seconds
+    theme:
+      name: Theme
+      description: Visual theme for the notification (default Classic).
+      required: false
+      selector:
+        select:
+          options:
+            - classic
+            - minimal
+            - neon
+            - retro
+            - soft
+            - ocean
+            - sunset
+            - forest
+            - light
+            - candy
