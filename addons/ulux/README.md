@@ -1,5 +1,7 @@
 # u::Lux UMP Bridge Add-on
 
+[![Add Add-on Repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgelbetomate%2Fha-addons)
+
 This has a very early Stage and not recommended to install in production!!!!! If it doesn't install or breaks something blame yourself.
 
 A Home Assistant add-on that bridges **u::Lux Switch IP** devices to Home Assistant via the
