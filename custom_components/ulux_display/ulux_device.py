@@ -134,6 +134,7 @@ class UluxDevice:
         pass
 
     async def set_theme(self, theme: int) -> None:
+        """No-op for bridge-backed device client."""
         pass
 
     async def set_theme_custom(self) -> None:
