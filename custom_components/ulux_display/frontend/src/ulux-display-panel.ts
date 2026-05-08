@@ -1,158 +1,885 @@
-/**
- * u::lux Display Panel — Home Assistant sidebar panel
+﻿/**
+ * u::lux Display Panel - Main entry point
+ *
+ * Custom panel for configuring u::lux displays.
+ * Uses Home Assistant's Material Design components.
  */
 
-import { LitElement, html, css, nothing, type TemplateResult } from "lit";
+import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import type {
+  HomeAssistant,
+  PanelInfo,
+  Route,
+  UluxDisplayConfig,
+  ViewConfig,
+  DeviceConfig,
+  WidgetConfig,
+  WidgetOption,
+  ProgressItem,
+  StatusEntity,
+  ColorThreshold,
+} from "./types";
+import { rgbToHex, parseColorInput, type RGBTuple } from "./color-utils";
 import {
   resolveSelectedValue,
   buildSelectOptions,
   buildSelectOptionsWithEmpty,
 } from "./select-compat";
-import type {
-  HomeAssistant,
-  PanelInfo,
-  Route,
-  PanelConfig,
-  ViewConfig,
-  WidgetConfig,
-  WidgetOption,
-  DeviceConfig,
-} from "./types";
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+// Type declaration for Intl.supportedValuesOf (ES2022+)
+declare global {
+  namespace Intl {
+    function supportedValuesOf(key: string): string[];
+  }
+}
 
-function debounce<T extends (...args: Parameters<T>) => void>(
+// Get all IANA timezones from the browser
+const TIMEZONES: string[] = (() => {
+  try {
+    return Intl.supportedValuesOf("timeZone");
+  } catch {
+    // Fallback for older browsers
+    return [
+      "UTC",
+      "America/New_York",
+      "America/Chicago",
+      "America/Denver",
+      "America/Los_Angeles",
+      "Europe/London",
+      "Europe/Paris",
+      "Europe/Berlin",
+      "Asia/Tokyo",
+      "Asia/Shanghai",
+      "Australia/Sydney",
+    ];
+  }
+})();
+
+// Debounce helper
+function debounce<T extends (...args: unknown[]) => void>(
   fn: T,
-  ms: number,
+  delay: number
 ): (...args: Parameters<T>) => void {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timeoutId: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), ms);
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
   };
 }
 
-const BACK_ARROW =
-  "M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z";
-
-// ── Panel ─────────────────────────────────────────────────────────────────
-
-type Page = "main" | "editor" | "assign" | "settings";
-type Tab = "devices" | "views";
-
 @customElement("ulux-display-panel")
 export class UluxDisplayPanel extends LitElement {
+  // Props passed by Home Assistant
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ type: Boolean }) narrow = false;
   @property({ attribute: false }) route!: Route;
   @property({ attribute: false }) panel!: PanelInfo;
 
-  @state() private _tab: Tab = "devices";
-  @state() private _page: Page = "main";
-  @state() private _config: PanelConfig | null = null;
-  @state() private _devices: DeviceConfig[] = [];
+  // Internal state
+  @state() private _page: "main" | "editor" = "main";
+  @state() private _config: UluxDisplayConfig | null = null;
   @state() private _views: ViewConfig[] = [];
+  @state() private _devices: DeviceConfig[] = [];
   @state() private _editingView: ViewConfig | null = null;
-  @state() private _assignDevice: DeviceConfig | null = null;
-  @state() private _settingsDevice: DeviceConfig | null = null;
-  @state() private _viewPreviews: Map<string, string> = new Map();
+  @state() private _previewImage: string | null = null;
   @state() private _previewLoading = false;
   @state() private _loading = true;
   @state() private _saving = false;
-  @state() private _error: string | null = null;
+  @state() private _expandedItems: Set<string> = new Set();
+  @state() private _viewPreviews: Map<string, string> = new Map();
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  static styles = css`
+    :host {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      --mdc-theme-primary: var(--primary-color);
+      --mdc-theme-on-primary: var(--text-primary-color);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      height: 56px;
+      border-bottom: 1px solid var(--divider-color);
+      background: var(--app-header-background-color);
+    }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: 400;
+      margin-left: 8px;
+    }
+
+    .content {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+      background: var(--primary-background-color);
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+
+    /* Views Grid */
+    .views-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    ha-card {
+      --ha-card-border-radius: 12px;
+    }
+
+    .view-card {
+      cursor: pointer;
+    }
+
+    .view-card:hover {
+      --ha-card-background: var(--secondary-background-color);
+    }
+
+    .view-card-content {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .view-card-preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 80px;
+      height: 80px;
+      background: #000;
+      border-radius: 8px;
+    }
+
+    .view-preview-image {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      object-fit: contain;
+    }
+
+    .view-preview-placeholder {
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--secondary-text-color);
+    }
+
+    .view-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .view-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .view-card-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+    }
+
+    .card-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .card-content {
+      padding: 0 16px 16px;
+    }
+
+    .card-meta {
+      font-size: 14px;
+      color: var(--secondary-text-color);
+    }
+
+    .add-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      border: 2px dashed var(--divider-color);
+      border-radius: 12px;
+      cursor: pointer;
+      color: var(--secondary-text-color);
+      transition: all 0.2s;
+    }
+
+    .add-card:hover {
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    /* Sections */
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section-header {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0 0 16px 0;
+      color: var(--primary-text-color);
+    }
+
+    .empty-state-inline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      color: var(--secondary-text-color);
+      background: var(--card-background-color);
+      border-radius: 12px;
+    }
+
+    /* Editor */
+    .editor-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .editor-header ha-textfield {
+      flex: 1;
+    }
+
+    .editor-form {
+      width: 100%;
+    }
+
+    /* Preview section - above widgets */
+    .preview-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .preview-card {
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .preview-card .card-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .preview-image {
+      width: 200px;
+      height: 200px;
+      border-radius: 8px;
+      background: #000;
+      object-fit: contain;
+    }
+
+    .preview-placeholder {
+      width: 200px;
+      height: 200px;
+      border-radius: 8px;
+      background: var(--secondary-background-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--secondary-text-color);
+    }
+
+    /* Form Layout */
+    .form-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .form-row > * {
+      flex: 1;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--primary-text-color);
+      margin: 24px 0 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .section-title:first-child {
+      margin-top: 0;
+    }
+
+    /* Slots list - fluid responsive grid */
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+
+    /* Single column on mobile */
+    @media (max-width: 600px) {
+      .slots-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slot-card {
+      --ha-card-border-radius: 8px;
+    }
+
+    .slot-card .card-content {
+      padding: 16px;
+    }
+
+    .slot-header {
+      display: flex;
+      align-items: center;
+      font-weight: 500;
+      margin-bottom: 16px;
+      color: var(--primary-text-color);
+    }
+
+    /* Tiny position grid */
+    .position-grid {
+      display: inline-grid;
+      gap: 2px;
+      margin-right: 12px;
+      padding: 4px;
+      background: var(--secondary-background-color);
+      border-radius: 4px;
+    }
+
+    .position-grid.cols-2 {
+      grid-template-columns: repeat(2, 16px);
+    }
+
+    .position-grid.cols-3 {
+      grid-template-columns: repeat(3, 16px);
+    }
+
+    .position-cell {
+      width: 16px;
+      height: 16px;
+      background: var(--divider-color);
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .position-cell:hover {
+      background: var(--primary-color);
+      opacity: 0.7;
+    }
+
+    .position-cell.active {
+      background: var(--primary-color);
+    }
+
+    .position-cell.hero-main {
+      grid-column: 1 / -1;
+      width: auto;
+      height: 24px;
+    }
+
+    /* Layout Picker */
+    .layout-section {
+      margin-bottom: 16px;
+    }
+
+    .layout-section-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--secondary-text-color);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .layout-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .layout-option {
+      width: 48px;
+      height: 48px;
+      padding: 6px;
+      border: 2px solid var(--divider-color);
+      border-radius: 8px;
+      background: var(--card-background-color);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .layout-option:hover {
+      border-color: var(--primary-color);
+    }
+
+    .layout-option.selected {
+      border-color: var(--primary-color);
+      background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.1);
+    }
+
+    .layout-icon {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      gap: 2px;
+    }
+
+    .layout-icon > div {
+      background: var(--primary-text-color);
+      opacity: 0.3;
+      border-radius: 1px;
+    }
+
+    .layout-option.selected .layout-icon > div {
+      opacity: 0.6;
+    }
+
+    /* Layout icon patterns */
+    .layout-icon.full { grid-template: 1fr / 1fr; }
+    .layout-icon.g-2x2 { grid-template: 1fr 1fr / 1fr 1fr; }
+    .layout-icon.g-2x3 { grid-template: 1fr 1fr / 1fr 1fr 1fr; }
+    .layout-icon.g-3x2 { grid-template: 1fr 1fr 1fr / 1fr 1fr; }
+    .layout-icon.g-3x3 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
+    .layout-icon.s-h { grid-template: 1fr / 1fr 1fr; }
+    .layout-icon.s-v { grid-template: 1fr 1fr / 1fr; }
+    .layout-icon.s-h-12 { grid-template: 1fr / 1fr 2fr; }
+    .layout-icon.s-h-21 { grid-template: 1fr / 2fr 1fr; }
+    .layout-icon.t-col { grid-template: 1fr / 1fr 1fr 1fr; }
+    .layout-icon.t-row { grid-template: 1fr 1fr 1fr / 1fr; }
+    .layout-icon.hero { grid-template: 2fr 1fr / 1fr 1fr 1fr; }
+    .layout-icon.hero > div:first-child { grid-column: 1 / -1; }
+    .layout-icon.hero-simple { grid-template: 2fr 1fr / 1fr; }
+
+    /* Sidebar layouts */
+    .layout-icon.sb-l { grid-template: 1fr 1fr 1fr / 2fr 1fr; }
+    .layout-icon.sb-l > div:first-child { grid-row: 1 / -1; }
+
+    .layout-icon.sb-r { grid-template: 1fr 1fr 1fr / 1fr 2fr; }
+    .layout-icon.sb-r > div:nth-child(4) { grid-row: 1 / -1; }
+
+    /* Corner hero layouts - use 3x3 grid with 2x2 hero spanning */
+    .layout-icon.hc-tl { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
+    .layout-icon.hc-tl > div:first-child { grid-row: 1 / 3; grid-column: 1 / 3; }
+
+    .layout-icon.hc-tr { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
+    .layout-icon.hc-tr > div:nth-child(2) { grid-row: 1 / 3; grid-column: 2 / 4; }
+
+    .layout-icon.hc-bl { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
+    .layout-icon.hc-bl > div:nth-child(5) { grid-row: 2 / 4; grid-column: 1 / 3; }
+
+    .layout-icon.hc-br { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
+    .layout-icon.hc-br > div:nth-child(5) { grid-row: 2 / 4; grid-column: 2 / 4; }
+
+    .slot-field {
+      margin-bottom: 16px;
+    }
+
+    .slot-field:last-child {
+      margin-bottom: 0;
+    }
+
+    ha-select,
+    ha-textfield {
+      display: block;
+      width: 100%;
+    }
+
+    ha-entity-picker {
+      display: block;
+      width: 100%;
+    }
+
+    /* Widget options */
+    .widget-options {
+      border-top: 1px solid var(--divider-color);
+      padding-top: 16px;
+      margin-top: 16px;
+    }
+
+    .option-field {
+      margin-bottom: 12px;
+    }
+
+    .option-field:last-child {
+      margin-bottom: 0;
+    }
+
+    .option-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+
+    .option-row label {
+      font-size: 14px;
+      color: var(--primary-text-color);
+    }
+
+    /* Array editors */
+    .array-editor {
+      border: 1px solid var(--divider-color);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 8px;
+    }
+
+    .array-editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .array-editor-header span {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .array-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .array-item {
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .array-item-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--secondary-background-color);
+      cursor: pointer;
+    }
+
+    .array-item-header:hover {
+      background: var(--divider-color);
+    }
+
+    .array-item-title {
+      flex: 1;
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .array-item-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .array-item-content {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .array-item-content.collapsed {
+      display: none;
+    }
+
+    .add-item-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 8px;
+      border: 1px dashed var(--divider-color);
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--secondary-text-color);
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .add-item-button:hover {
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    /* Color thresholds editor */
+    .threshold-item-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px;
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+    }
+
+    .threshold-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .threshold-value {
+      width: 80px;
+    }
+
+    .threshold-color {
+      width: 60px;
+      height: 32px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .threshold-hex-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 88px; /* Align with color picker (80px value + 8px gap) */
+    }
+
+    .threshold-hex-input {
+      flex: 1;
+    }
+
+    /* Color hex input fallback (Safari compatibility) */
+    .color-hex-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .color-hex-input ha-textfield {
+      flex: 1;
+    }
+
+    .color-preview-swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      border: 1px solid var(--divider-color);
+      flex-shrink: 0;
+    }
+
+    /* Devices */
+    .devices-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 800px;
+    }
+
+    .device-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .device-name {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .device-status {
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .device-status.online {
+      background: var(--success-color, #4caf50);
+      color: white;
+    }
+
+    .device-status.offline {
+      background: var(--error-color, #f44336);
+      color: white;
+    }
+
+    .device-status a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .views-checkboxes {
+      margin-top: 16px;
+    }
+
+    .view-checkbox {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+    }
+
+    .view-checkbox ha-checkbox {
+      margin-right: 8px;
+    }
+
+    /* Empty states */
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      color: var(--secondary-text-color);
+    }
+
+    .empty-state ha-icon {
+      --mdc-icon-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+  `;
 
   protected firstUpdated(): void {
-    this._loadAll();
+    this._loadData();
   }
 
-  // ── Data loading ──────────────────────────────────────────────────────────
-
-  private _ws<T = unknown>(type: string, extra: Record<string, unknown> = {}): Promise<T> {
-    return this.hass.connection.sendMessagePromise<T>({ type, ...extra });
-  }
-
-  private async _loadAll(): Promise<void> {
+  private async _loadData(): Promise<void> {
     this._loading = true;
     try {
-      const [config, devicesRes, viewsRes] = await Promise.all([
-        this._ws<PanelConfig>("ulux_display/config"),
-        this._ws<{ devices: DeviceConfig[] }>("ulux_display/devices/list"),
-        this._ws<{ views: ViewConfig[] }>("ulux_display/views/list"),
+      const [configResult, viewsResult, devicesResult] = await Promise.all([
+        this.hass.connection.sendMessagePromise<UluxDisplayConfig>({
+          type: "ulux_display/config",
+        }),
+        this.hass.connection.sendMessagePromise<{ views: ViewConfig[] }>({
+          type: "ulux_display/views/list",
+        }),
+        this.hass.connection.sendMessagePromise<{ devices: DeviceConfig[] }>({
+          type: "ulux_display/devices/list",
+        }),
       ]);
-      this._config = config;
-      this._devices = devicesRes.devices ?? [];
-      this._views = viewsRes.views ?? [];
-      this._error = null;
+      this._config = configResult;
+      this._views = viewsResult.views;
+      this._devices = devicesResult.devices;
+
+      // Load previews for all views
       this._loadViewPreviews();
     } catch (err) {
-      this._error = `Failed to load data: ${(err as Error).message}`;
+      console.error("Failed to load u::lux Display config:", err);
     } finally {
       this._loading = false;
     }
   }
 
   private async _loadViewPreviews(): Promise<void> {
-    const results = await Promise.all(
-      this._views.map(async (view) => {
-        try {
-          const r = await this._ws<{ image: string }>("ulux_display/preview/render", {
-            view_config: view,
-          });
-          return { id: view.id, image: r.image };
-        } catch {
-          return { id: view.id, image: null };
-        }
-      }),
-    );
-    const map = new Map<string, string>();
-    for (const r of results) {
-      if (r.image) map.set(r.id, r.image);
+    // Load previews in parallel for all views
+    const previewPromises = this._views.map(async (view) => {
+      try {
+        const result = await this.hass.connection.sendMessagePromise<{
+          image: string;
+        }>({
+          type: "ulux_display/preview/render",
+          view_config: {
+            layout: view.layout,
+            theme: view.theme,
+            widgets: view.widgets,
+          },
+        });
+        return { id: view.id, image: result.image };
+      } catch (err) {
+        console.error(`Failed to load preview for view ${view.id}:`, err);
+        return { id: view.id, image: null };
+      }
+    });
+
+    const results = await Promise.all(previewPromises);
+    const newPreviews = new Map<string, string>();
+    for (const result of results) {
+      if (result.image) {
+        newPreviews.set(result.id, result.image);
+      }
     }
-    this._viewPreviews = map;
+    this._viewPreviews = newPreviews;
   }
 
-  // ── View CRUD ──────────────────────────────────────────────────────────────
-
   private async _createView(): Promise<void> {
+    const name = prompt("Enter view name:", "New View");
+    if (!name) return;
+
     try {
-      const result = await this._ws<{ view_id: string; view: ViewConfig }>(
-        "ulux_display/views/create",
-        { name: "New View", layout: "grid_2x2", theme: "classic", widgets: [] },
-      );
+      const result = await this.hass.connection.sendMessagePromise<{
+        view_id: string;
+        view: ViewConfig;
+      }>({
+        type: "ulux_display/views/create",
+        name,
+        layout: "grid_2x2",
+        theme: "classic",
+        widgets: [],
+      });
       this._views = [...this._views, result.view];
       this._editView(result.view);
     } catch (err) {
-      alert(`Failed to create view: ${(err as Error).message}`);
+      console.error("Failed to create view:", err);
     }
   }
 
   private _editView(view: ViewConfig): void {
-    this._editingView = { ...view, widgets: view.widgets.map((w) => ({ ...w })) };
+    this._editingView = { ...view, widgets: [...view.widgets] };
     this._page = "editor";
     this._refreshPreview();
   }
 
   private async _saveView(): Promise<void> {
     if (!this._editingView) return;
+
     this._saving = true;
     try {
-      const v = this._editingView;
-      await this._ws("ulux_display/views/update", {
-        view_id: v.id,
-        name: v.name,
-        layout: v.layout,
-        theme: v.theme,
-        widgets: v.widgets,
+      await this.hass.connection.sendMessagePromise({
+        type: "ulux_display/views/update",
+        view_id: this._editingView.id,
+        name: this._editingView.name,
+        layout: this._editingView.layout,
+        theme: this._editingView.theme,
+        widgets: this._editingView.widgets,
       });
-      this._views = this._views.map((vw) => (vw.id === v.id ? v : vw));
+      this._views = this._views.map((v) =>
+        v.id === this._editingView!.id ? this._editingView! : v
+      );
       this._page = "main";
       this._editingView = null;
+      // Refresh previews after save to show updated view
       this._loadViewPreviews();
     } catch (err) {
-      alert(`Save failed: ${(err as Error).message}`);
+      console.error("Failed to save view:", err);
     } finally {
       this._saving = false;
     }
@@ -160,520 +887,420 @@ export class UluxDisplayPanel extends LitElement {
 
   private async _deleteView(view: ViewConfig): Promise<void> {
     if (!confirm(`Delete view "${view.name}"?`)) return;
+
     try {
-      await this._ws("ulux_display/views/delete", { view_id: view.id });
+      await this.hass.connection.sendMessagePromise({
+        type: "ulux_display/views/delete",
+        view_id: view.id,
+      });
       this._views = this._views.filter((v) => v.id !== view.id);
-      const map = new Map(this._viewPreviews);
-      map.delete(view.id);
-      this._viewPreviews = map;
     } catch (err) {
-      alert(`Delete failed: ${(err as Error).message}`);
+      console.error("Failed to delete view:", err);
     }
-  }
-
-  private async _duplicateView(view: ViewConfig): Promise<void> {
-    try {
-      await this._ws("ulux_display/views/duplicate", { view_id: view.id });
-      const viewsRes = await this._ws<{ views: ViewConfig[] }>("ulux_display/views/list");
-      this._views = viewsRes.views ?? [];
-      this._loadViewPreviews();
-    } catch (err) {
-      alert(`Duplicate failed: ${(err as Error).message}`);
-    }
-  }
-
-  // ── Editor helpers ─────────────────────────────────────────────────────────
-
-  private _updateEditingView(patch: Partial<ViewConfig>): void {
-    if (!this._editingView) return;
-    this._editingView = { ...this._editingView, ...patch };
-    this._refreshPreview();
-  }
-
-  private _updateWidget(slot: number, patch: Partial<WidgetConfig>): void {
-    if (!this._editingView) return;
-    const widgets = [...this._editingView.widgets];
-    const idx = widgets.findIndex((w) => w.slot === slot);
-    if (idx >= 0) {
-      widgets[idx] = { ...widgets[idx], ...patch };
-    } else {
-      widgets.push({ slot, type: "", ...patch });
-    }
-    this._editingView = { ...this._editingView, widgets: [...widgets] };
-    this.requestUpdate();
-    this._refreshPreview();
-  }
-
-  private _updateWidgetOption(slot: number, key: string, value: unknown): void {
-    if (!this._editingView) return;
-    const widgets = [...this._editingView.widgets];
-    const idx = widgets.findIndex((w) => w.slot === slot);
-    if (idx >= 0) {
-      widgets[idx] = {
-        ...widgets[idx],
-        options: { ...(widgets[idx].options ?? {}), [key]: value },
-      };
-    } else {
-      widgets.push({ slot, type: "", options: { [key]: value } });
-    }
-    this._editingView = { ...this._editingView, widgets: [...widgets] };
-    this.requestUpdate();
-    this._refreshPreview();
   }
 
   private _refreshPreview = debounce(async () => {
     if (!this._editingView) return;
+
     this._previewLoading = true;
     try {
-      const r = await this._ws<{ image: string }>("ulux_display/preview/render", {
-        view_config: this._editingView,
+      const result = await this.hass.connection.sendMessagePromise<{
+        image: string;
+      }>({
+        type: "ulux_display/preview/render",
+        view_config: {
+          layout: this._editingView.layout,
+          theme: this._editingView.theme,
+          widgets: this._editingView.widgets,
+        },
       });
-      if (r.image && this._editingView) {
-        const map = new Map(this._viewPreviews);
-        map.set(this._editingView.id, r.image);
-        this._viewPreviews = map;
-      }
-    } catch {
-      // preview errors are non-fatal
+      this._previewImage = result.image;
+    } catch (err) {
+      console.error("Failed to render preview:", err);
     } finally {
       this._previewLoading = false;
     }
-  }, 800);
+  }, 500);
 
-  // ── Device helpers ─────────────────────────────────────────────────────────
+  private _updateEditingView(updates: Partial<ViewConfig>): void {
+    if (!this._editingView) return;
+    this._editingView = { ...this._editingView, ...updates };
+    this._refreshPreview();
+  }
 
-  private async _saveAssign(viewIds: string[]): Promise<void> {
-    if (!this._assignDevice) return;
+  private _updateWidget(slot: number, updates: Partial<WidgetConfig>): void {
+    if (!this._editingView) return;
+
+    // Auto-populate timezone when switching to clock widget
+    if (updates.type === "clock") {
+      const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      updates = {
+        ...updates,
+        options: { ...updates.options, timezone: browserTz },
+      };
+    }
+
+    const widgets = [...this._editingView.widgets];
+    const existingIndex = widgets.findIndex((w) => w.slot === slot);
+
+    if (existingIndex >= 0) {
+      widgets[existingIndex] = { ...widgets[existingIndex], ...updates };
+    } else {
+      widgets.push({ slot, type: "", ...updates });
+    }
+
+    // Create new object to ensure Lit detects the change
+    this._editingView = { ...this._editingView, widgets: [...widgets] };
+    this.requestUpdate();
+    this._refreshPreview();
+  }
+
+  private async _toggleDeviceView(
+    device: DeviceConfig,
+    viewId: string,
+    enabled: boolean
+  ): Promise<void> {
+    const newViews = enabled
+      ? [...device.assigned_views, viewId]
+      : device.assigned_views.filter((v) => v !== viewId);
+
     try {
-      await this._ws("ulux_display/devices/assign_views", {
-        entry_id: this._assignDevice.entry_id,
-        view_ids: viewIds,
+      await this.hass.connection.sendMessagePromise({
+        type: "ulux_display/devices/assign_views",
+        entry_id: device.entry_id,
+        view_ids: newViews,
       });
       this._devices = this._devices.map((d) =>
-        d.entry_id === this._assignDevice!.entry_id ? { ...d, assigned_views: viewIds } : d,
+        d.entry_id === device.entry_id ? { ...d, assigned_views: newViews } : d
       );
-      this._page = "main";
-      this._assignDevice = null;
     } catch (err) {
-      alert(`Save failed: ${(err as Error).message}`);
+      console.error("Failed to update device views:", err);
     }
   }
 
-  private async _saveSettings(refreshInterval: number, cycleInterval: number): Promise<void> {
-    if (!this._settingsDevice) return;
-    try {
-      await this._ws("ulux_display/devices/settings", {
-        entry_id: this._settingsDevice.entry_id,
-        refresh_interval: refreshInterval,
-        cycle_interval: cycleInterval,
-      });
-      this._devices = this._devices.map((d) =>
-        d.entry_id === this._settingsDevice!.entry_id
-          ? { ...d, refresh_interval: refreshInterval, cycle_interval: cycleInterval }
-          : d,
-      );
-      this._page = "main";
-      this._settingsDevice = null;
-    } catch (err) {
-      alert(`Save failed: ${(err as Error).message}`);
+  render() {
+    if (this._loading) {
+      return html`
+        <div class="loading">
+          <ha-circular-progress indeterminate></ha-circular-progress>
+        </div>
+      `;
     }
-  }
-
-  // ── Rendering ──────────────────────────────────────────────────────────────
-
-  protected render(): TemplateResult {
-    return html`
-      <div class="panel">
-        ${this._renderHeader()} ${this._renderBody()}
-      </div>
-    `;
-  }
-
-  private _renderHeader(): TemplateResult {
-    const showBack =
-      this._page === "editor" || this._page === "assign" || this._page === "settings";
-    const title =
-      this._page === "editor"
-        ? "Edit View"
-        : this._page === "assign"
-          ? `Assign Views — ${this._assignDevice?.name ?? ""}`
-          : this._page === "settings"
-            ? `Settings — ${this._settingsDevice?.name ?? ""}`
-            : "u::lux Display";
 
     return html`
       <div class="header">
-        ${showBack
-          ? html`<ha-icon-button
-              .path=${BACK_ARROW}
-              @click=${() => {
-                this._page = "main";
-                this._editingView = null;
-                this._assignDevice = null;
-                this._settingsDevice = null;
-              }}
-            ></ha-icon-button>`
-          : nothing}
-        <span class="header-title">${title}</span>
-        ${this._page === "main"
-          ? html`<ha-icon-button
-              .path=${"M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"}
-              title="Refresh"
-              @click=${() => this._loadAll()}
-            ></ha-icon-button>`
-          : nothing}
-        ${this._page === "editor"
-          ? html`<ha-button raised ?disabled=${this._saving} @click=${this._saveView}>
-              ${this._saving ? "Saving…" : "Save"}
-            </ha-button>`
-          : nothing}
+        <ha-menu-button
+          .hass=${this.hass}
+          .narrow=${this.narrow}
+        ></ha-menu-button>
+        <ha-icon icon="mdi:monitor-dashboard"></ha-icon>
+        <span class="header-title">u::lux Display</span>
       </div>
+      <div class="content">${this._renderPage()}</div>
     `;
   }
 
-  private _renderBody(): TemplateResult {
-    if (this._loading) {
-      return html`<div class="center"><ha-circular-progress indeterminate></ha-circular-progress></div>`;
+  private _renderPage() {
+    switch (this._page) {
+      case "main":
+        return this._renderMain();
+      case "editor":
+        return this._renderEditor();
     }
-    if (this._error) {
-      return html`<div class="error">${this._error}</div>`;
-    }
-    if (this._page === "editor" && this._editingView) return this._renderEditor();
-    if (this._page === "assign" && this._assignDevice) return this._renderAssign();
-    if (this._page === "settings" && this._settingsDevice) return this._renderSettings();
-    return this._renderMain();
   }
 
-  // ── Main ───────────────────────────────────────────────────────────────────
-
-  private _renderMain(): TemplateResult {
+  private _renderMain() {
     return html`
-      <div class="content">
-        <div class="tabs">
-          <button class="tab ${this._tab === "devices" ? "active" : ""}" @click=${() => (this._tab = "devices")}>Devices</button>
-          <button class="tab ${this._tab === "views" ? "active" : ""}" @click=${() => (this._tab = "views")}>Views</button>
-        </div>
-        ${this._tab === "devices" ? this._renderDevicesTab() : this._renderViewsTab()}
-      </div>
-    `;
-  }
-
-  private _renderDevicesTab(): TemplateResult {
-    if (!this._devices.length) {
-      return html`<div class="empty-state">
-        <ha-icon icon="mdi:monitor-off"></ha-icon>
-        <p>No devices configured. Add the u::lux Display integration first.</p>
-      </div>`;
-    }
-    return html`<div class="card-grid">${this._devices.map((d) => this._renderDeviceCard(d))}</div>`;
-  }
-
-  private _renderDeviceCard(d: DeviceConfig): TemplateResult {
-    const preview = this._viewPreviews.get(d.assigned_views[d.current_view_index ?? 0] ?? "");
-    const assignedNames =
-      d.assigned_views.map((id) => this._views.find((v) => v.id === id)?.name ?? id).join(", ") || "—";
-
-    return html`
-      <ha-card class="device-card">
-        <div class="card-content">
-          <div class="device-header">
-            <span class="device-name">${d.name}</span>
-            <span class="badge ${d.online ? "online" : "offline"}">${d.online ? "Online" : "Offline"}</span>
-          </div>
-          <div class="device-body">
-            <div class="device-preview">
-              ${preview
-                ? html`<img class="preview-img" src="data:image/png;base64,${preview}" alt="Preview" />`
-                : html`<div class="preview-placeholder"><ha-icon icon="mdi:monitor"></ha-icon></div>`}
-            </div>
-            <div class="device-meta">
-              <div class="meta-row"><span class="meta-label">Host</span><span>${d.host || "—"}</span></div>
-              <div class="meta-row"><span class="meta-label">Views</span><span class="meta-value-wrap">${assignedNames}</span></div>
-              <div class="meta-row"><span class="meta-label">Refresh</span><span>${d.refresh_interval}s</span></div>
-            </div>
-          </div>
-          <div class="card-actions">
-            <ha-button @click=${() => { this._assignDevice = d; this._page = "assign"; }}>Assign Views</ha-button>
-            <ha-button @click=${() => { this._settingsDevice = d; this._page = "settings"; }}>Settings</ha-button>
-          </div>
-        </div>
-      </ha-card>
-    `;
-  }
-
-  private _renderViewsTab(): TemplateResult {
-    return html`
+      <!-- Devices Section -->
       <div class="section">
-        <div class="section-header">
-          <h2 class="section-title">Views</h2>
-          <ha-button raised @click=${this._createView}>Add View</ha-button>
-        </div>
-        ${!this._views.length
-          ? html`<div class="empty-state">
-              <ha-icon icon="mdi:view-dashboard-outline"></ha-icon>
-              <p>No views yet. Create one to get started.</p>
-            </div>`
-          : html`<div class="views-grid">${this._views.map((v) => this._renderViewCard(v))}</div>`}
-      </div>
-    `;
-  }
-
-  private _renderViewCard(v: ViewConfig): TemplateResult {
-    const preview = this._viewPreviews.get(v.id);
-    const deviceNames =
-      this._devices.filter((d) => d.assigned_views.includes(v.id)).map((d) => d.name).join(", ") || "—";
-    const layoutInfo = this._config?.layout_types[v.layout];
-    const themeName = this._config?.themes[v.theme] ?? v.theme;
-
-    return html`
-      <ha-card class="view-card" @click=${() => this._editView(v)}>
-        <div class="view-card-content">
-          <div class="view-preview">
-            ${preview
-              ? html`<img class="view-preview-img" src="data:image/png;base64,${preview}" alt="${v.name}" />`
-              : html`<div class="view-preview-placeholder"><ha-icon icon="mdi:image-outline"></ha-icon></div>`}
-          </div>
-          <div class="view-info">
-            <div class="view-card-header">
-              <h3 class="view-name">${v.name}</h3>
-              <ha-icon-button
-                .path=${"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"}
-                @click=${(e: Event) => { e.stopPropagation(); this._deleteView(v); }}
-              ></ha-icon-button>
-            </div>
-            <p class="view-meta">${layoutInfo?.name ?? v.layout} &bull; ${themeName}</p>
-            <p class="view-meta">${v.widgets.length} widget${v.widgets.length !== 1 ? "s" : ""}</p>
-            <p class="view-meta muted">Devices: ${deviceNames}</p>
-          </div>
-        </div>
-        <div class="view-card-actions" @click=${(e: Event) => e.stopPropagation()}>
-          <ha-button @click=${() => this._editView(v)}>Edit</ha-button>
-          <ha-button @click=${() => this._duplicateView(v)}>Duplicate</ha-button>
-        </div>
-      </ha-card>
-    `;
-  }
-
-  // ── Assign ─────────────────────────────────────────────────────────────────
-
-  private _renderAssign(): TemplateResult {
-    const device = this._assignDevice!;
-    const assigned = new Set(device.assigned_views);
-    const getChecked = (): string[] =>
-      [...(this.shadowRoot?.querySelectorAll<HTMLInputElement>(".assign-cb:checked") ?? [])].map(
-        (cb) => cb.value,
-      );
-
-    return html`
-      <div class="content">
-        ${!this._views.length
-          ? html`<div class="empty-state"><p>No views available. Create a view first.</p></div>`
+        <h2 class="section-header">Devices</h2>
+        ${this._devices.length === 0
+          ? html`
+              <div class="empty-state-inline">
+                <ha-icon icon="mdi:monitor-off"></ha-icon>
+                <span>No devices configured. Add a device through Settings -> Devices & Services.</span>
+              </div>
+            `
           : html`
-            <div class="assign-list">
-              ${this._views.map((v) => html`
-                <label class="assign-row">
-                  <ha-checkbox class="assign-cb" .value=${v.id} .checked=${assigned.has(v.id)}></ha-checkbox>
-                  <div class="assign-info">
-                    <span class="assign-name">${v.name}</span>
-                    <span class="assign-meta">
-                      ${this._config?.layout_types[v.layout]?.name ?? v.layout} &bull;
-                      ${this._config?.themes[v.theme] ?? v.theme}
-                    </span>
+              <div class="devices-list">
+                ${this._devices.map(
+                  (device) => html`
+                    <ha-card>
+                      <div class="card-content" style="padding-top: 16px;">
+                        <div class="device-header">
+                          <span class="device-name">${device.name}</span>
+                          <span class="device-status ${device.online ? "online" : "offline"}">
+                            <a href="http://${device.host}" target="_blank" rel="noopener noreferrer">${device.online ? "Online" : "Offline"}</a>
+                          </span>
+                        </div>
+                        <div class="views-checkboxes">
+                          ${this._views.length === 0
+                            ? html`<p style="color: var(--secondary-text-color); margin: 8px 0 0;">
+                                No views available. Create a view below.
+                              </p>`
+                            : this._views.map(
+                                (view) => html`
+                                  <label class="view-checkbox">
+                                    <ha-checkbox
+                                      .checked=${device.assigned_views.includes(view.id)}
+                                      @change=${(e: Event) =>
+                                        this._toggleDeviceView(
+                                          device,
+                                          view.id,
+                                          (e.target as HTMLInputElement).checked
+                                        )}
+                                    ></ha-checkbox>
+                                    ${view.name}
+                                  </label>
+                                `
+                              )}
+                        </div>
+                      </div>
+                    </ha-card>
+                  `
+                )}
+              </div>
+            `}
+      </div>
+
+      <!-- Views Section -->
+      <div class="section">
+        <h2 class="section-header">Views</h2>
+        <div class="views-grid">
+          ${this._views.map(
+            (view) => html`
+              <ha-card class="view-card" @click=${() => this._editView(view)}>
+                <div class="view-card-content">
+                  <div class="view-card-preview">
+                    ${this._viewPreviews.has(view.id)
+                      ? html`<img
+                          class="view-preview-image"
+                          src="data:image/png;base64,${this._viewPreviews.get(view.id)}"
+                          alt="${view.name}"
+                        />`
+                      : html`<div class="view-preview-placeholder">
+                          <ha-circular-progress indeterminate size="small"></ha-circular-progress>
+                        </div>`}
                   </div>
-                </label>
-              `)}
-            </div>
-            <div class="page-actions">
-              <ha-button raised @click=${() => this._saveAssign(getChecked())}>Save</ha-button>
-              <ha-button @click=${() => { this._page = "main"; this._assignDevice = null; }}>Cancel</ha-button>
-            </div>
-          `}
-      </div>
-    `;
-  }
-
-  // ── Settings ───────────────────────────────────────────────────────────────
-
-  private _renderSettings(): TemplateResult {
-    const device = this._settingsDevice!;
-    let refresh = device.refresh_interval;
-    let cycle = device.cycle_interval;
-
-    return html`
-      <div class="content">
-        <div class="settings-form">
-          <ha-textfield label="Refresh interval (s)" type="number" min="1" max="300"
-            .value=${String(refresh)}
-            @input=${(e: Event) => { refresh = parseInt((e.target as HTMLInputElement).value) || refresh; }}
-          ></ha-textfield>
-          <ha-textfield label="Cycle interval (s)" helper="0 = manual" type="number" min="0" max="3600"
-            .value=${String(cycle)}
-            @input=${(e: Event) => { cycle = parseInt((e.target as HTMLInputElement).value) ?? cycle; }}
-          ></ha-textfield>
-        </div>
-        <div class="page-actions">
-          <ha-button raised @click=${() => this._saveSettings(refresh, cycle)}>Save</ha-button>
-          <ha-button @click=${() => { this._page = "main"; this._settingsDevice = null; }}>Cancel</ha-button>
+                  <div class="view-card-info">
+                    <div class="view-card-header">
+                      <h3>${view.name}</h3>
+                      <ha-icon-button
+                        .path=${"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"}
+                        @click=${(e: Event) => {
+                          e.stopPropagation();
+                          this._deleteView(view);
+                        }}
+                      ></ha-icon-button>
+                    </div>
+                    <div class="card-meta">
+                      ${this._config?.layout_types[view.layout]?.name || view.layout}
+                      &bull; ${this._config?.themes[view.theme] || view.theme}
+                      &bull; ${view.widgets.length} widgets
+                    </div>
+                  </div>
+                </div>
+              </ha-card>
+            `
+          )}
+          <div class="add-card" @click=${this._createView}>
+            <ha-icon icon="mdi:plus"></ha-icon>
+            <span style="margin-left: 8px">Add View</span>
+          </div>
         </div>
       </div>
     `;
   }
 
-  // ── Editor ─────────────────────────────────────────────────────────────────
+  private _renderEditor() {
+    if (!this._editingView || !this._config) return nothing;
 
-  private _renderEditor(): TemplateResult {
-    if (!this._editingView || !this._config) return html``;
-    const v = this._editingView;
-    const slotCount = this._config.layout_types[v.layout]?.slots ?? 4;
-    const preview = this._viewPreviews.get(v.id);
-    const themeKeys = Object.keys(this._config.themes);
+    const slotCount =
+      this._config.layout_types[this._editingView.layout]?.slots || 4;
 
     return html`
-      <div class="content editor-content">
-        <div class="editor-header">
-          <ha-textfield
-            .value=${v.name}
-            placeholder="View name"
-            @input=${(e: Event) => this._updateEditingView({ name: (e.target as HTMLInputElement).value })}
-          ></ha-textfield>
-        </div>
+      <div class="editor-header">
+        <ha-icon-button
+          .path=${"M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"}
+          @click=${() => (this._page = "main")}
+        ></ha-icon-button>
+        <ha-textfield
+          .value=${this._editingView.name}
+          @input=${(e: Event) =>
+            this._updateEditingView({
+              name: (e.target as HTMLInputElement).value,
+            })}
+          placeholder="View name"
+        ></ha-textfield>
+        <ha-button raised ?disabled=${this._saving} @click=${this._saveView}>
+          ${this._saving ? "Saving..." : "Save"}
+        </ha-button>
+      </div>
 
-        <!-- Preview -->
+      <div class="editor-form">
+        <!-- Preview at top -->
         <div class="preview-section">
           <ha-card class="preview-card">
             <div class="card-header">
               <h3>Preview</h3>
-              ${this._previewLoading
-                ? html`<ha-circular-progress indeterminate size="small"></ha-circular-progress>`
-                : html`<ha-icon-button
-                    .path=${"M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"}
-                    @click=${() => this._refreshPreview()}
-                  ></ha-icon-button>`}
+              <ha-icon-button
+                .path=${"M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"}
+                @click=${() => this._refreshPreview()}
+              ></ha-icon-button>
             </div>
-            <div class="card-content preview-content">
-              ${preview
-                ? html`<img class="preview-image" src="data:image/png;base64,${preview}" alt="Preview" />`
-                : html`<div class="preview-placeholder"><ha-icon icon="mdi:image-outline"></ha-icon><p>No preview</p></div>`}
+            <div class="card-content">
+              ${this._previewLoading
+                ? html`<div class="preview-placeholder">
+                    <ha-circular-progress indeterminate></ha-circular-progress>
+                  </div>`
+                : this._previewImage
+                  ? html`<img
+                      class="preview-image"
+                      src="data:image/png;base64,${this._previewImage}"
+                      alt="Preview"
+                    />`
+                  : html`<div class="preview-placeholder">No preview</div>`}
             </div>
           </ha-card>
         </div>
 
-        <!-- Layout -->
+        <!-- Layout picker -->
         <div class="layout-section">
           <span class="layout-section-label">Layout</span>
           <div class="layout-picker">
             ${Object.entries(this._config.layout_types).map(
               ([key, info]) => html`
                 <button
-                  class="layout-option ${v.layout === key ? "selected" : ""}"
-                  title="${info.name} (${info.slots} slots)"
+                  class="layout-option ${this._editingView?.layout === key
+                    ? "selected"
+                    : ""}"
                   @click=${() => this._updateEditingView({ layout: key })}
+                  title="${info.name} (${info.slots} slots)"
                 >
-                  ${this._renderLayoutIcon(key, info.slots)}
+                  ${this._renderLayoutIcon(key)}
                 </button>
-              `,
+              `
             )}
           </div>
         </div>
 
-        <!-- Theme -->
+        <!-- Theme selector -->
         <div class="form-row">
           <ha-select
             label="Theme"
-            .value=${v.theme}
-            .options=${buildSelectOptions(this._config.themes)}
+            .value=${this._editingView.theme}
+            .options=${buildSelectOptions(this._config!.themes)}
             @selected=${(e: CustomEvent) => {
-              const val = resolveSelectedValue(e.detail, themeKeys);
-              if (val) this._updateEditingView({ theme: val });
+              const value = resolveSelectedValue(
+                e.detail,
+                Object.keys(this._config!.themes)
+              );
+              if (value) this._updateEditingView({ theme: value });
             }}
             @closed=${(e: Event) => e.stopPropagation()}
           >
-            ${themeKeys.map(
-              (key) => html`<mwc-list-item value=${key}>${this._config!.themes[key]}</mwc-list-item>`,
+            ${Object.entries(this._config.themes).map(
+              ([key, name]) => html`
+                <mwc-list-item value=${key}>${name}</mwc-list-item>
+              `
             )}
           </ha-select>
         </div>
 
-        <!-- Widgets -->
+        <!-- Widget slots -->
         <div class="section-title">Widgets</div>
         <div class="slots-grid">
-          ${Array.from({ length: slotCount }, (_, i) => this._renderSlotEditor(i, slotCount, v.layout))}
+          ${Array.from({ length: slotCount }, (_, i) =>
+            this._renderSlotEditor(i, slotCount)
+          )}
         </div>
       </div>
     `;
   }
 
-  private _renderSlotEditor(slot: number, slotCount: number, layout: string): TemplateResult {
-    if (!this._config || !this._editingView) return html``;
-    const widget = this._editingView.widgets.find((w) => w.slot === slot);
-    const widgetType = widget?.type ?? "";
-    const schema = this._config.widget_types[widgetType];
+  private _renderSlotEditor(slot: number, slotCount: number) {
+    if (!this._config || !this._editingView) return nothing;
 
-    const widgetTypeOptions = buildSelectOptionsWithEmpty(
-      "— Empty —",
-      Object.fromEntries(Object.entries(this._config.widget_types).map(([k, v]) => [k, v.name])),
-    );
-    const widgetTypeKeys = ["", ...Object.keys(this._config.widget_types)];
+    const widget = this._editingView.widgets.find((w) => w.slot === slot);
+    const widgetType = widget?.type || "";
+    const schema = this._config.widget_types[widgetType];
+    const layout = this._editingView.layout;
 
     return html`
       <ha-card class="slot-card">
         <div class="card-content">
           <div class="slot-header">
             ${this._renderPositionGrid(slot, slotCount, layout)}
-            <span style="flex:1">Slot ${slot + 1}</span>
+            <span style="flex: 1;">Slot ${slot + 1}</span>
           </div>
 
           <div class="slot-field">
             <ha-select
               label="Widget Type"
               .value=${widgetType}
-              .options=${widgetTypeOptions}
+              .options=${buildSelectOptionsWithEmpty(
+                "-- Empty --",
+                Object.fromEntries(
+                  Object.entries(this._config!.widget_types).map(
+                    ([key, info]) => [key, info.name]
+                  )
+                )
+              )}
               @selected=${(e: CustomEvent) => {
-                const val = resolveSelectedValue(e.detail, widgetTypeKeys) ?? "";
-                if (val !== widgetType) this._updateWidget(slot, { type: val, options: {} });
+                const keys = ["", ...Object.keys(this._config!.widget_types)];
+                const value = resolveSelectedValue(e.detail, keys) ?? "";
+                this._updateWidget(slot, { type: value });
               }}
               @closed=${(e: Event) => e.stopPropagation()}
             >
-              <mwc-list-item value="">— Empty —</mwc-list-item>
+              <mwc-list-item value="">-- Empty --</mwc-list-item>
               ${Object.entries(this._config.widget_types).map(
-                ([key, info]) => html`<mwc-list-item value=${key}>${info.name}</mwc-list-item>`,
+                ([key, info]) => html`
+                  <mwc-list-item value=${key}>${info.name}</mwc-list-item>
+                `
               )}
             </ha-select>
           </div>
 
-          ${schema
+          ${schema?.needs_entity
             ? html`
-                ${schema.needs_entity
-                  ? html`
-                      <div class="slot-field">
-                        <ha-selector
-                          .hass=${this.hass}
-                          .selector=${{
-                            entity: schema.entity_domains ? { domain: schema.entity_domains } : {},
-                          }}
-                          .value=${widget?.entity_id ?? ""}
-                          .label=${"Entity"}
-                          @value-changed=${(e: CustomEvent) =>
-                            this._updateWidget(slot, { entity_id: (e.detail as { value: string }).value })}
-                        ></ha-selector>
-                      </div>
-                    `
-                  : nothing}
-
                 <div class="slot-field">
-                  <ha-textfield
-                    label="Label (optional)"
-                    .value=${widget?.label ?? ""}
-                    @input=${(e: Event) =>
-                      this._updateWidget(slot, { label: (e.target as HTMLInputElement).value })}
-                  ></ha-textfield>
+                  <ha-selector
+                    .hass=${this.hass}
+                    .selector=${{
+                      entity: schema.entity_domains
+                        ? { domain: schema.entity_domains }
+                        : {},
+                    }}
+                    .value=${widget?.entity_id || ""}
+                    .label=${"Entity"}
+                    @value-changed=${(e: CustomEvent) =>
+                      this._updateWidget(slot, {
+                        entity_id: e.detail.value,
+                      })}
+                  ></ha-selector>
                 </div>
+              `
+            : nothing}
 
-                ${schema.options?.length
-                  ? html`<div class="widget-options">
-                      ${schema.options.map((opt) => this._renderOptionField(slot, widget, opt))}
-                    </div>`
-                  : nothing}
+          <div class="slot-field">
+            <ha-textfield
+              label="Label (optional)"
+              .value=${widget?.label || ""}
+              @input=${(e: Event) =>
+                this._updateWidget(slot, {
+                  label: (e.target as HTMLInputElement).value,
+                })}
+            ></ha-textfield>
+          </div>
+
+          ${schema?.options?.length
+            ? html`
+                <div class="widget-options">
+                  ${schema.options.map((opt) =>
+                    this._renderOptionField(slot, widget, opt)
+                  )}
+                </div>
               `
             : nothing}
         </div>
@@ -684,20 +1311,49 @@ export class UluxDisplayPanel extends LitElement {
   private _renderOptionField(
     slot: number,
     widget: WidgetConfig | undefined,
-    opt: WidgetOption,
-  ): TemplateResult {
+    opt: WidgetOption
+  ) {
     const value = widget?.options?.[opt.key] ?? opt.default;
 
     switch (opt.type) {
       case "boolean":
         return html`
-          <div class="option-field option-row">
+          <div class="option-row">
             <label>${opt.label}</label>
             <ha-switch
-              .checked=${Boolean(value)}
+              .checked=${!!value}
               @change=${(e: Event) =>
-                this._updateWidgetOption(slot, opt.key, (e.target as HTMLInputElement).checked)}
+                this._updateWidgetOption(
+                  slot,
+                  opt.key,
+                  (e.target as HTMLInputElement).checked
+                )}
             ></ha-switch>
+          </div>
+        `;
+
+      case "select":
+        return html`
+          <div class="option-field">
+            <ha-select
+              .label=${opt.label}
+              .value=${value || opt.default || ""}
+              .options=${opt.options || []}
+              @selected=${(e: CustomEvent) => {
+                const selected = resolveSelectedValue(
+                  e.detail,
+                  opt.options || []
+                );
+                if (selected !== undefined) {
+                  this._updateWidgetOption(slot, opt.key, selected);
+                }
+              }}
+              @closed=${(e: Event) => e.stopPropagation()}
+            >
+              ${opt.options?.map(
+                (o) => html`<mwc-list-item value=${o}>${o}</mwc-list-item>`
+              )}
+            </ha-select>
           </div>
         `;
 
@@ -706,52 +1362,49 @@ export class UluxDisplayPanel extends LitElement {
           <div class="option-field">
             <ha-textfield
               type="number"
-              label=${opt.label}
+              .label=${opt.label}
               .value=${value !== undefined ? String(value) : ""}
               .min=${opt.min !== undefined ? String(opt.min) : ""}
               .max=${opt.max !== undefined ? String(opt.max) : ""}
+              @input=${(e: Event) => {
+                const val = (e.target as HTMLInputElement).value;
+                this._updateWidgetOption(
+                  slot,
+                  opt.key,
+                  val ? parseFloat(val) : undefined
+                );
+              }}
+            ></ha-textfield>
+          </div>
+        `;
+
+      case "text":
+        return html`
+          <div class="option-field">
+            <ha-textfield
+              .label=${opt.label}
+              .value=${value || ""}
+              .placeholder=${opt.placeholder || ""}
               @input=${(e: Event) =>
                 this._updateWidgetOption(
-                  slot, opt.key, parseFloat((e.target as HTMLInputElement).value),
+                  slot,
+                  opt.key,
+                  (e.target as HTMLInputElement).value
                 )}
             ></ha-textfield>
           </div>
         `;
 
-      case "select": {
-        const selectOpts = opt.options ? buildSelectOptions(opt.options) : [];
-        const selectKeys = opt.options ? Object.keys(opt.options) : [];
+      case "icon":
         return html`
           <div class="option-field">
-            <ha-select
-              .label=${opt.label}
-              .value=${value !== undefined ? String(value) : ""}
-              .options=${selectOpts}
-              @selected=${(e: CustomEvent) => {
-                const val = resolveSelectedValue(e.detail, selectKeys);
-                if (val !== undefined) this._updateWidgetOption(slot, opt.key, val);
-              }}
-              @closed=${(e: Event) => e.stopPropagation()}
-            >
-              ${selectKeys.map(
-                (k) => html`<mwc-list-item value=${k}>${opt.options![k]}</mwc-list-item>`,
-              )}
-            </ha-select>
-          </div>
-        `;
-      }
-
-      case "entity":
-        return html`
-          <div class="option-field">
-            <ha-selector
+            <ha-icon-picker
               .hass=${this.hass}
-              .selector=${{ entity: opt.entity_domains ? { domain: opt.entity_domains } : {} }}
-              .value=${value !== undefined ? String(value) : ""}
               .label=${opt.label}
+              .value=${value || ""}
               @value-changed=${(e: CustomEvent) =>
-                this._updateWidgetOption(slot, opt.key, (e.detail as { value: string }).value)}
-            ></ha-selector>
+                this._updateWidgetOption(slot, opt.key, e.detail.value)}
+            ></ha-icon-picker>
           </div>
         `;
 
@@ -764,257 +1417,591 @@ export class UluxDisplayPanel extends LitElement {
               .value=${value}
               .label=${opt.label}
               @value-changed=${(e: CustomEvent) =>
-                this._updateWidgetOption(slot, opt.key, (e.detail as { value: unknown }).value)}
+                this._updateWidgetOption(slot, opt.key, e.detail.value)}
             ></ha-selector>
+            <div class="color-hex-input">
+              <div
+                class="color-preview-swatch"
+                style="background-color: ${rgbToHex(value as RGBTuple)}"
+              ></div>
+              <ha-textfield
+                .value=${rgbToHex(value as RGBTuple)}
+                .label=${"Hex (fallback)"}
+                placeholder="#FF5500 or 255,85,0"
+                @change=${(e: Event) => {
+                  const parsed = parseColorInput(
+                    (e.target as HTMLInputElement).value
+                  );
+                  if (parsed) {
+                    this._updateWidgetOption(slot, opt.key, parsed);
+                  }
+                }}
+              ></ha-textfield>
+            </div>
           </div>
         `;
 
-      case "icon":
+      case "entity":
         return html`
           <div class="option-field">
             <ha-selector
               .hass=${this.hass}
-              .selector=${{ icon: {} }}
-              .value=${value !== undefined ? String(value) : ""}
+              .selector=${{ entity: {} }}
+              .value=${value || ""}
               .label=${opt.label}
               @value-changed=${(e: CustomEvent) =>
-                this._updateWidgetOption(slot, opt.key, (e.detail as { value: string }).value)}
+                this._updateWidgetOption(slot, opt.key, e.detail.value)}
             ></ha-selector>
           </div>
         `;
 
-      default:
+      case "thresholds":
+        return this._renderThresholdsEditor(slot, opt.key, value as ColorThreshold[] | undefined);
+
+      case "progress_items":
+        return this._renderProgressItemsEditor(slot, opt.key, value as ProgressItem[] | undefined);
+
+      case "status_entities":
+        return this._renderStatusEntitiesEditor(slot, opt.key, value as StatusEntity[] | undefined);
+
+      case "timezone":
         return html`
           <div class="option-field">
-            <ha-textfield
-              label=${opt.label}
-              .value=${value !== undefined ? String(value) : ""}
-              @input=${(e: Event) =>
-                this._updateWidgetOption(slot, opt.key, (e.target as HTMLInputElement).value)}
-            ></ha-textfield>
+            <ha-combo-box
+              .hass=${this.hass}
+              .label=${opt.label}
+              .value=${value || ""}
+              .items=${TIMEZONES.map((tz) => ({ value: tz, label: tz }))}
+              item-value-path="value"
+              item-label-path="label"
+              allow-custom-value
+              @value-changed=${(e: CustomEvent) =>
+                this._updateWidgetOption(slot, opt.key, e.detail.value)}
+            ></ha-combo-box>
           </div>
         `;
+
+      default:
+        return nothing;
     }
   }
 
-  // ── Layout helpers ─────────────────────────────────────────────────────────
+  private _updateWidgetOption(slot: number, key: string, value: unknown): void {
+    if (!this._editingView) return;
 
-  private _renderLayoutIcon(key: string, slots: number): TemplateResult {
-    const map: Record<string, string> = {
-      fullscreen: "full", grid_2x2: "g-2x2", grid_2x3: "g-2x3", grid_3x2: "g-3x2",
-      grid_3x3: "g-3x3", split_horizontal: "s-h", split_vertical: "s-v",
-      split_h_1_2: "s-h-12", split_h_2_1: "s-h-21", three_column: "t-col",
-      three_row: "t-row", hero: "hero", hero_simple: "hero-simple",
-      sidebar_left: "sb-l", sidebar_right: "sb-r",
-      hero_corner_tl: "hc-tl", hero_corner_tr: "hc-tr",
-      hero_corner_bl: "hc-bl", hero_corner_br: "hc-br",
-    };
-    const cls = map[key] ?? "full";
-    const cells = Array.from({ length: slots }, () => html`<div></div>`);
-    return html`<div class="layout-icon ${cls}">${cells}</div>`;
+    const widgets = [...this._editingView.widgets];
+    const idx = widgets.findIndex((w) => w.slot === slot);
+
+    if (idx >= 0) {
+      const widget = widgets[idx];
+      widgets[idx] = {
+        ...widget,
+        options: { ...(widget.options || {}), [key]: value },
+      };
+    } else {
+      // Create new widget with this option
+      widgets.push({
+        slot,
+        type: "",
+        options: { [key]: value },
+      });
+    }
+
+    this._editingView = { ...this._editingView, widgets: [...widgets] };
+    this.requestUpdate();
+    this._refreshPreview();
   }
 
-  private _renderPositionGrid(currentSlot: number, slotCount: number, layout: string): TemplateResult {
+  private _renderThresholdsEditor(
+    slot: number,
+    key: string,
+    thresholds: ColorThreshold[] | undefined
+  ) {
+    const items = thresholds || [];
+
+    return html`
+      <div class="option-field">
+        <div class="array-editor">
+          <div class="array-editor-header">
+            <span>Color Thresholds</span>
+          </div>
+          <div class="array-items">
+            ${items.map(
+              (item, idx) => html`
+                <div class="threshold-item-container">
+                  <div class="threshold-item">
+                    <ha-textfield
+                      class="threshold-value"
+                      type="number"
+                      label="Value"
+                      .value=${String(item.value)}
+                      @input=${(e: Event) => {
+                        const newItems = [...items];
+                        newItems[idx] = {
+                          ...item,
+                          value: parseFloat((e.target as HTMLInputElement).value) || 0,
+                        };
+                        this._updateWidgetOption(slot, key, newItems);
+                      }}
+                    ></ha-textfield>
+                    <ha-selector
+                      .hass=${this.hass}
+                      .selector=${{ color_rgb: {} }}
+                      .value=${item.color}
+                      @value-changed=${(e: CustomEvent) => {
+                        const newItems = [...items];
+                        newItems[idx] = { ...item, color: e.detail.value };
+                        this._updateWidgetOption(slot, key, newItems);
+                      }}
+                    ></ha-selector>
+                    <ha-icon-button
+                      .path=${"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"}
+                      @click=${() => {
+                        const newItems = items.filter((_, i) => i !== idx);
+                        this._updateWidgetOption(slot, key, newItems);
+                      }}
+                    ></ha-icon-button>
+                  </div>
+                  <div class="threshold-hex-row">
+                    <div
+                      class="color-preview-swatch"
+                      style="background-color: ${rgbToHex(item.color as RGBTuple)}"
+                    ></div>
+                    <ha-textfield
+                      class="threshold-hex-input"
+                      .value=${rgbToHex(item.color as RGBTuple)}
+                      label="Hex (fallback)"
+                      placeholder="#FF5500"
+                      @change=${(e: Event) => {
+                        const parsed = parseColorInput(
+                          (e.target as HTMLInputElement).value
+                        );
+                        if (parsed) {
+                          const newItems = [...items];
+                          newItems[idx] = { ...item, color: parsed };
+                          this._updateWidgetOption(slot, key, newItems);
+                        }
+                      }}
+                    ></ha-textfield>
+                  </div>
+                </div>
+              `
+            )}
+            <div
+              class="add-item-button"
+              @click=${() => {
+                const newItems = [...items, { value: 0, color: [255, 255, 0] as [number, number, number] }];
+                this._updateWidgetOption(slot, key, newItems);
+              }}
+            >
+              <ha-icon icon="mdi:plus"></ha-icon>
+              Add Threshold
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderProgressItemsEditor(
+    slot: number,
+    key: string,
+    items: ProgressItem[] | undefined
+  ) {
+    const progressItems = items || [];
+
+    return html`
+      <div class="option-field">
+        <div class="array-editor">
+          <div class="array-editor-header">
+            <span>Progress Items (${progressItems.length})</span>
+          </div>
+          <div class="array-items">
+            ${progressItems.map((item, idx) => {
+              const itemKey = `${slot}-progress-${idx}`;
+              const isExpanded = this._expandedItems.has(itemKey);
+
+              return html`
+                <div class="array-item">
+                  <div
+                    class="array-item-header"
+                    @click=${() => this._toggleItemExpanded(itemKey)}
+                  >
+                    <span class="array-item-title">
+                      ${item.label || item.entity_id || `Item ${idx + 1}`}
+                    </span>
+                    <div class="array-item-actions">
+                      <ha-icon-button
+                        .path=${idx > 0
+                          ? "M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z"
+                          : ""}
+                        @click=${(e: Event) => {
+                          e.stopPropagation();
+                          if (idx > 0) this._moveArrayItem(slot, key, progressItems, idx, -1);
+                        }}
+                      ></ha-icon-button>
+                      <ha-icon-button
+                        .path=${idx < progressItems.length - 1
+                          ? "M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"
+                          : ""}
+                        @click=${(e: Event) => {
+                          e.stopPropagation();
+                          if (idx < progressItems.length - 1)
+                            this._moveArrayItem(slot, key, progressItems, idx, 1);
+                        }}
+                      ></ha-icon-button>
+                      <ha-icon-button
+                        .path=${"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"}
+                        @click=${(e: Event) => {
+                          e.stopPropagation();
+                          const newItems = progressItems.filter((_, i) => i !== idx);
+                          this._updateWidgetOption(slot, key, newItems);
+                        }}
+                      ></ha-icon-button>
+                    </div>
+                  </div>
+                  <div class="array-item-content ${isExpanded ? "" : "collapsed"}">
+                    <ha-selector
+                      .hass=${this.hass}
+                      .selector=${{ entity: {} }}
+                      .value=${item.entity_id || ""}
+                      .label=${"Entity"}
+                      @value-changed=${(e: CustomEvent) =>
+                        this._updateArrayItem(slot, key, progressItems, idx, {
+                          entity_id: e.detail.value,
+                        })}
+                    ></ha-selector>
+                    <ha-textfield
+                      label="Label"
+                      .value=${item.label || ""}
+                      @input=${(e: Event) =>
+                        this._updateArrayItem(slot, key, progressItems, idx, {
+                          label: (e.target as HTMLInputElement).value,
+                        })}
+                    ></ha-textfield>
+                    <ha-textfield
+                      type="number"
+                      label="Target"
+                      .value=${item.target !== undefined ? String(item.target) : "100"}
+                      @input=${(e: Event) =>
+                        this._updateArrayItem(slot, key, progressItems, idx, {
+                          target: parseFloat((e.target as HTMLInputElement).value) || 100,
+                        })}
+                    ></ha-textfield>
+                    <ha-icon-picker
+                      .hass=${this.hass}
+                      label="Icon"
+                      .value=${item.icon || ""}
+                      @value-changed=${(e: CustomEvent) =>
+                        this._updateArrayItem(slot, key, progressItems, idx, {
+                          icon: e.detail.value,
+                        })}
+                    ></ha-icon-picker>
+                    <ha-selector
+                      .hass=${this.hass}
+                      .selector=${{ color_rgb: {} }}
+                      .value=${item.color}
+                      .label=${"Color"}
+                      @value-changed=${(e: CustomEvent) =>
+                        this._updateArrayItem(slot, key, progressItems, idx, {
+                          color: e.detail.value,
+                        })}
+                    ></ha-selector>
+                  </div>
+                </div>
+              `;
+            })}
+            <div
+              class="add-item-button"
+              @click=${() => {
+                const newItems = [...progressItems, { entity_id: "", target: 100 }];
+                this._updateWidgetOption(slot, key, newItems);
+                // Auto-expand the new item
+                this._expandedItems.add(`${slot}-progress-${newItems.length - 1}`);
+                this.requestUpdate();
+              }}
+            >
+              <ha-icon icon="mdi:plus"></ha-icon>
+              Add Progress Item
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderStatusEntitiesEditor(
+    slot: number,
+    key: string,
+    items: StatusEntity[] | undefined
+  ) {
+    const statusEntities = items || [];
+
+    return html`
+      <div class="option-field">
+        <div class="array-editor">
+          <div class="array-editor-header">
+            <span>Status Entities (${statusEntities.length})</span>
+          </div>
+          <div class="array-items">
+            ${statusEntities.map((item, idx) => {
+              const itemKey = `${slot}-status-${idx}`;
+              const isExpanded = this._expandedItems.has(itemKey);
+
+              return html`
+                <div class="array-item">
+                  <div
+                    class="array-item-header"
+                    @click=${() => this._toggleItemExpanded(itemKey)}
+                  >
+                    <span class="array-item-title">
+                      ${item.label || item.entity_id || `Entity ${idx + 1}`}
+                    </span>
+                    <div class="array-item-actions">
+                      <ha-icon-button
+                        .path=${idx > 0
+                          ? "M7.41,15.41L12,10.83L16.59,15.41L18,14L12,8L6,14L7.41,15.41Z"
+                          : ""}
+                        @click=${(e: Event) => {
+                          e.stopPropagation();
+                          if (idx > 0) this._moveArrayItem(slot, key, statusEntities, idx, -1);
+                        }}
+                      ></ha-icon-button>
+                      <ha-icon-button
+                        .path=${idx < statusEntities.length - 1
+                          ? "M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"
+                          : ""}
+                        @click=${(e: Event) => {
+                          e.stopPropagation();
+                          if (idx < statusEntities.length - 1)
+                            this._moveArrayItem(slot, key, statusEntities, idx, 1);
+                        }}
+                      ></ha-icon-button>
+                      <ha-icon-button
+                        .path=${"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"}
+                        @click=${(e: Event) => {
+                          e.stopPropagation();
+                          const newItems = statusEntities.filter((_, i) => i !== idx);
+                          this._updateWidgetOption(slot, key, newItems);
+                        }}
+                      ></ha-icon-button>
+                    </div>
+                  </div>
+                  <div class="array-item-content ${isExpanded ? "" : "collapsed"}">
+                    <ha-selector
+                      .hass=${this.hass}
+                      .selector=${{ entity: {} }}
+                      .value=${item.entity_id || ""}
+                      .label=${"Entity"}
+                      @value-changed=${(e: CustomEvent) =>
+                        this._updateArrayItem(slot, key, statusEntities, idx, {
+                          entity_id: e.detail.value,
+                        })}
+                    ></ha-selector>
+                    <ha-textfield
+                      label="Label"
+                      .value=${item.label || ""}
+                      @input=${(e: Event) =>
+                        this._updateArrayItem(slot, key, statusEntities, idx, {
+                          label: (e.target as HTMLInputElement).value,
+                        })}
+                    ></ha-textfield>
+                    <ha-icon-picker
+                      .hass=${this.hass}
+                      label="Icon"
+                      .value=${item.icon || ""}
+                      @value-changed=${(e: CustomEvent) =>
+                        this._updateArrayItem(slot, key, statusEntities, idx, {
+                          icon: e.detail.value,
+                        })}
+                    ></ha-icon-picker>
+                  </div>
+                </div>
+              `;
+            })}
+            <div
+              class="add-item-button"
+              @click=${() => {
+                const newItems = [...statusEntities, { entity_id: "" }];
+                this._updateWidgetOption(slot, key, newItems);
+                // Auto-expand the new item
+                this._expandedItems.add(`${slot}-status-${newItems.length - 1}`);
+                this.requestUpdate();
+              }}
+            >
+              <ha-icon icon="mdi:plus"></ha-icon>
+              Add Status Entity
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private _toggleItemExpanded(key: string): void {
+    if (this._expandedItems.has(key)) {
+      this._expandedItems.delete(key);
+    } else {
+      this._expandedItems.add(key);
+    }
+    this._expandedItems = new Set(this._expandedItems);
+  }
+
+  private _updateArrayItem<T extends object>(
+    slot: number,
+    key: string,
+    items: T[],
+    idx: number,
+    updates: Partial<T>
+  ): void {
+    const newItems = [...items];
+    newItems[idx] = { ...newItems[idx], ...updates };
+    this._updateWidgetOption(slot, key, newItems);
+  }
+
+  private _moveArrayItem<T>(
+    slot: number,
+    key: string,
+    items: T[],
+    idx: number,
+    direction: -1 | 1
+  ): void {
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= items.length) return;
+
+    const newItems = [...items];
+    [newItems[idx], newItems[newIdx]] = [newItems[newIdx], newItems[idx]];
+    this._updateWidgetOption(slot, key, newItems);
+  }
+
+  private _renderPositionGrid(
+    currentSlot: number,
+    slotCount: number,
+    layout: string
+  ) {
+    // Determine grid dimensions based on layout
     let cols = 2;
+    let rows = 2;
+    let isHero = false;
+
     switch (layout) {
-      case "fullscreen": case "split_vertical": case "three_row": cols = 1; break;
-      case "three_column": case "grid_2x3": case "grid_3x3": case "hero": cols = 3; break;
+      case "fullscreen":
+        cols = 1;
+        rows = 1;
+        break;
+      case "grid_2x2":
+        cols = 2;
+        rows = 2;
+        break;
+      case "grid_2x3":
+        cols = 3;
+        rows = 2;
+        break;
+      case "grid_3x2":
+        cols = 2;
+        rows = 3;
+        break;
+      case "hero":
+        cols = 3;
+        rows = 2;
+        isHero = true;
+        break;
+      case "split":
+        cols = 2;
+        rows = 1;
+        break;
+      case "three_column":
+        cols = 3;
+        rows = 1;
+        break;
+      default:
+        cols = 2;
+        rows = Math.ceil(slotCount / 2);
     }
-    const cells = Array.from({ length: slotCount }, (_, i) => html`
-      <div class="position-cell ${currentSlot === i ? "active" : ""}" title="Slot ${i + 1}"></div>
-    `);
-    return html`<div class="position-grid cols-${cols}">${cells}</div>`;
+
+    // Generate grid cells
+    const cells = [];
+
+    if (isHero) {
+      // Hero layout: slot 0 is the big hero, slots 1-3 are footer
+      cells.push(html`
+        <div
+          class="position-cell hero-main ${currentSlot === 0 ? "active" : ""}"
+          @click=${() => this._swapSlots(currentSlot, 0)}
+          title="Hero (main)"
+        ></div>
+      `);
+      for (let i = 1; i <= 3; i++) {
+        cells.push(html`
+          <div
+            class="position-cell ${currentSlot === i ? "active" : ""}"
+            @click=${() => this._swapSlots(currentSlot, i)}
+            title="Footer ${i}"
+          ></div>
+        `);
+      }
+    } else {
+      for (let i = 0; i < slotCount; i++) {
+        cells.push(html`
+          <div
+            class="position-cell ${currentSlot === i ? "active" : ""}"
+            @click=${() => this._swapSlots(currentSlot, i)}
+            title="Slot ${i + 1}"
+          ></div>
+        `);
+      }
+    }
+
+    return html`
+      <div class="position-grid cols-${cols}">${cells}</div>
+    `;
   }
 
-  // ── Styles ─────────────────────────────────────────────────────────────────
+  private _renderLayoutIcon(key: string) {
+    // Map layout key to CSS class and cell count
+    const layoutConfig: Record<string, { cls: string; cells: number }> = {
+      fullscreen: { cls: "full", cells: 1 },
+      grid_2x2: { cls: "g-2x2", cells: 4 },
+      grid_2x3: { cls: "g-2x3", cells: 6 },
+      grid_3x2: { cls: "g-3x2", cells: 6 },
+      grid_3x3: { cls: "g-3x3", cells: 9 },
+      split_horizontal: { cls: "s-h", cells: 2 },
+      split_vertical: { cls: "s-v", cells: 2 },
+      split_h_1_2: { cls: "s-h-12", cells: 2 },
+      split_h_2_1: { cls: "s-h-21", cells: 2 },
+      three_column: { cls: "t-col", cells: 3 },
+      three_row: { cls: "t-row", cells: 3 },
+      hero: { cls: "hero", cells: 4 },
+      hero_simple: { cls: "hero-simple", cells: 2 },
+      sidebar_left: { cls: "sb-l", cells: 4 },
+      sidebar_right: { cls: "sb-r", cells: 4 },
+      hero_corner_tl: { cls: "hc-tl", cells: 6 },
+      hero_corner_tr: { cls: "hc-tr", cells: 6 },
+      hero_corner_bl: { cls: "hc-bl", cells: 6 },
+      hero_corner_br: { cls: "hc-br", cells: 6 },
+    };
 
-  static styles = css`
-    :host {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      --mdc-theme-primary: var(--primary-color);
-      --mdc-theme-on-primary: var(--text-primary-color);
-    }
+    const config = layoutConfig[key] || { cls: "", cells: 4 };
+    const cells = Array.from({ length: config.cells }, () => html`<div></div>`);
 
-    .header {
-      display: flex;
-      align-items: center;
-      padding: 0 8px 0 4px;
-      height: 56px;
-      border-bottom: 1px solid var(--divider-color);
-      background: var(--app-header-background-color);
-      color: var(--app-header-text-color, white);
-      flex-shrink: 0;
-      gap: 4px;
-    }
-    .header ha-icon-button { color: inherit; }
-    .header-title {
-      flex: 1; font-size: 20px; font-weight: 400; margin-left: 8px;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
+    return html`<div class="layout-icon ${config.cls}">${cells}</div>`;
+  }
 
-    .panel { display: flex; flex-direction: column; height: 100%; }
-    .content { flex: 1; overflow-y: auto; padding: 16px; background: var(--primary-background-color); }
-    .editor-content { display: flex; flex-direction: column; }
-    .center { display: flex; align-items: center; justify-content: center; height: 100%; }
-    .error { color: var(--error-color, #d32f2f); padding: 24px; text-align: center; }
+  private _swapSlots(fromSlot: number, toSlot: number): void {
+    if (fromSlot === toSlot || !this._editingView) return;
 
-    .tabs { display: flex; border-bottom: 1px solid var(--divider-color); margin-bottom: 20px; }
-    .tab {
-      background: none; border: none; padding: 10px 18px;
-      font-size: 14px; font-weight: 500; cursor: pointer;
-      color: var(--secondary-text-color);
-      border-bottom: 2px solid transparent; margin-bottom: -1px;
-    }
-    .tab:hover { color: var(--primary-color); }
-    .tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    const widgets = [...this._editingView.widgets];
+    const fromWidget = widgets.find((w) => w.slot === fromSlot);
+    const toWidget = widgets.find((w) => w.slot === toSlot);
 
-    .empty-state { text-align: center; padding: 48px 16px; color: var(--secondary-text-color); }
-    .empty-state ha-icon { --mdc-icon-size: 48px; margin-bottom: 12px; opacity: 0.4; display: block; }
+    // Swap slot assignments
+    if (fromWidget) fromWidget.slot = toSlot;
+    if (toWidget) toWidget.slot = fromSlot;
 
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-    .device-card .card-content { padding: 16px; }
-    .device-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .device-name { font-size: 16px; font-weight: 500; }
-    .badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 500; }
-    .badge.online { background: var(--success-color, #4caf50); color: white; }
-    .badge.offline { background: var(--error-color, #f44336); color: white; }
-    .device-body { display: flex; gap: 12px; margin-bottom: 12px; }
-    .preview-img { display: block; width: 80px; height: 80px; border-radius: 8px; object-fit: cover; }
-    .preview-placeholder {
-      width: 80px; height: 80px; border-radius: 8px;
-      background: var(--secondary-background-color);
-      display: flex; align-items: center; justify-content: center; color: var(--secondary-text-color);
-    }
-    .device-meta { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-    .meta-row { display: flex; gap: 8px; font-size: 13px; flex-wrap: wrap; }
-    .meta-label { color: var(--secondary-text-color); min-width: 52px; }
-    .meta-value-wrap { flex: 1; word-break: break-word; }
-    .card-actions { display: flex; gap: 6px; padding-top: 8px; border-top: 1px solid var(--divider-color); }
-
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-    .section-title { font-size: 18px; font-weight: 500; margin: 0; }
-    .views-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-    .view-card { cursor: pointer; }
-    .view-card:hover { --ha-card-background: var(--secondary-background-color); }
-    .view-card-content { display: flex; align-items: center; padding: 16px; gap: 16px; }
-    .view-preview { flex-shrink: 0; width: 80px; height: 80px; background: #000; border-radius: 8px; overflow: hidden; }
-    .view-preview-img { display: block; width: 80px; height: 80px; object-fit: contain; }
-    .view-preview-placeholder {
-      width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;
-      color: var(--secondary-text-color); opacity: 0.4;
-    }
-    .view-info { flex: 1; min-width: 0; }
-    .view-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-    .view-name { margin: 0; font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .view-meta { margin: 2px 0; font-size: 12px; color: var(--secondary-text-color); }
-    .view-meta.muted { opacity: 0.7; }
-    .view-card-actions { display: flex; gap: 6px; padding: 8px 16px 12px; border-top: 1px solid var(--divider-color); }
-
-    .assign-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-    .assign-row {
-      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
-      background: var(--card-background-color, var(--secondary-background-color));
-      border-radius: 12px; cursor: pointer;
-    }
-    .assign-info { display: flex; flex-direction: column; gap: 2px; }
-    .assign-name { font-weight: 500; font-size: 15px; }
-    .assign-meta { font-size: 12px; color: var(--secondary-text-color); }
-    .page-actions { display: flex; gap: 8px; }
-
-    .settings-form { display: flex; flex-direction: column; gap: 16px; max-width: 480px; margin-bottom: 20px; }
-
-    /* Editor */
-    .editor-header { margin-bottom: 24px; }
-    .editor-header ha-textfield { display: block; width: 100%; }
-
-    .preview-section { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
-    .preview-card { width: 100%; max-width: 300px; }
-    .card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; }
-    .card-header h3 { margin: 0; font-size: 16px; font-weight: 500; }
-    .card-content { padding: 0 16px 16px; }
-    .preview-content { display: flex; align-items: center; justify-content: center; }
-    .preview-image { width: 200px; height: 200px; border-radius: 8px; background: #000; object-fit: contain; display: block; }
-    .preview-placeholder {
-      width: 200px; height: 200px; border-radius: 8px;
-      background: var(--secondary-background-color);
-      display: flex; align-items: center; justify-content: center;
-      color: var(--secondary-text-color); flex-direction: column;
-    }
-
-    .layout-section { margin-bottom: 16px; }
-    .layout-section-label { font-size: 12px; font-weight: 500; color: var(--secondary-text-color); margin-bottom: 8px; display: block; }
-    .layout-picker { display: flex; flex-wrap: wrap; gap: 8px; }
-    .layout-option {
-      width: 48px; height: 48px; padding: 6px;
-      border: 2px solid var(--divider-color); border-radius: 8px;
-      background: var(--card-background-color); cursor: pointer; transition: all 0.15s;
-    }
-    .layout-option:hover { border-color: var(--primary-color); }
-    .layout-option.selected { border-color: var(--primary-color); background: rgba(var(--rgb-primary-color, 3,169,244), 0.1); }
-
-    .layout-icon { width: 100%; height: 100%; display: grid; gap: 2px; }
-    .layout-icon > div { background: var(--primary-text-color); opacity: 0.3; border-radius: 1px; }
-    .layout-option.selected .layout-icon > div { opacity: 0.6; }
-    .layout-icon.full  { grid-template: 1fr / 1fr; }
-    .layout-icon.g-2x2 { grid-template: 1fr 1fr / 1fr 1fr; }
-    .layout-icon.g-2x3 { grid-template: 1fr 1fr / 1fr 1fr 1fr; }
-    .layout-icon.g-3x2 { grid-template: 1fr 1fr 1fr / 1fr 1fr; }
-    .layout-icon.g-3x3 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
-    .layout-icon.s-h   { grid-template: 1fr / 1fr 1fr; }
-    .layout-icon.s-v   { grid-template: 1fr 1fr / 1fr; }
-    .layout-icon.s-h-12 { grid-template: 1fr / 1fr 2fr; }
-    .layout-icon.s-h-21 { grid-template: 1fr / 2fr 1fr; }
-    .layout-icon.t-col { grid-template: 1fr / 1fr 1fr 1fr; }
-    .layout-icon.t-row { grid-template: 1fr 1fr 1fr / 1fr; }
-    .layout-icon.hero  { grid-template: 2fr 1fr / 1fr 1fr 1fr; }
-    .layout-icon.hero > div:first-child { grid-column: 1 / -1; }
-    .layout-icon.hero-simple { grid-template: 2fr 1fr / 1fr; }
-    .layout-icon.sb-l  { grid-template: 1fr 1fr 1fr / 2fr 1fr; }
-    .layout-icon.sb-l > div:first-child { grid-row: 1 / -1; }
-    .layout-icon.sb-r  { grid-template: 1fr 1fr 1fr / 1fr 2fr; }
-    .layout-icon.sb-r > div:nth-child(4) { grid-row: 1 / -1; }
-    .layout-icon.hc-tl { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
-    .layout-icon.hc-tl > div:first-child { grid-row: 1 / 3; grid-column: 1 / 3; }
-    .layout-icon.hc-tr { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
-    .layout-icon.hc-tr > div:nth-child(2) { grid-row: 1 / 3; grid-column: 2 / 4; }
-    .layout-icon.hc-bl { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
-    .layout-icon.hc-bl > div:nth-child(5) { grid-row: 2 / 4; grid-column: 1 / 3; }
-    .layout-icon.hc-br { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
-    .layout-icon.hc-br > div:nth-child(5) { grid-row: 2 / 4; grid-column: 2 / 4; }
-
-    .form-row { display: flex; gap: 16px; margin-bottom: 16px; }
-    .form-row > * { flex: 1; }
-    .section-title {
-      font-size: 14px; font-weight: 500; text-transform: uppercase;
-      letter-spacing: 0.5px; margin: 24px 0 16px; color: var(--primary-text-color);
-    }
-
-    .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; width: 100%; }
-    @media (max-width: 600px) { .slots-grid { grid-template-columns: 1fr; } }
-    .slot-card { --ha-card-border-radius: 8px; }
-    .slot-card .card-content { padding: 16px; }
-    .slot-header { display: flex; align-items: center; font-weight: 500; margin-bottom: 16px; color: var(--primary-text-color); }
-    .slot-field { margin-bottom: 16px; }
-    .slot-field:last-child { margin-bottom: 0; }
-
-    ha-select, ha-textfield { display: block; width: 100%; }
-    ha-selector { display: block; width: 100%; }
-
-    .widget-options { border-top: 1px solid var(--divider-color); padding-top: 16px; margin-top: 16px; }
-    .option-field { margin-bottom: 12px; }
-    .option-field:last-child { margin-bottom: 0; }
-    .option-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
-    .option-row label { font-size: 14px; color: var(--primary-text-color); }
-
-    .position-grid { display: inline-grid; gap: 2px; margin-right: 12px; padding: 4px; background: var(--secondary-background-color); border-radius: 4px; }
-    .position-grid.cols-1 { grid-template-columns: repeat(1, 16px); }
-    .position-grid.cols-2 { grid-template-columns: repeat(2, 16px); }
-    .position-grid.cols-3 { grid-template-columns: repeat(3, 16px); }
-    .position-cell { width: 16px; height: 16px; background: var(--divider-color); border-radius: 2px; }
-    .position-cell.active { background: var(--primary-color); }
-  `;
+    this._editingView = { ...this._editingView, widgets: [...widgets] };
+    this.requestUpdate();
+    this._refreshPreview();
+  }
 }
 
 declare global {
@@ -1022,3 +2009,4 @@ declare global {
     "ulux-display-panel": UluxDisplayPanel;
   }
 }
+

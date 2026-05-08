@@ -1,27 +1,35 @@
-/**
- * TypeScript type definitions for the u::lux Display panel.
+﻿/**
+ * TypeScript type definitions for u::lux Display panel.
  */
 
-// ── Home Assistant types (subset) ──────────────────────────────────────────
-
+// Home Assistant types (subset of what we need)
 export interface HomeAssistant {
-  connection: {
-    sendMessagePromise<T = unknown>(msg: Record<string, unknown>): Promise<T>;
-  };
+  connection: Connection;
   states: Record<string, HassEntity>;
+  user?: HassUser;
   language: string;
   locale: HassLocale;
-  user: HassUser;
+}
+
+export interface Connection {
+  sendMessagePromise<T>(message: MessageBase): Promise<T>;
+}
+
+export interface MessageBase {
+  type: string;
+  [key: string]: unknown;
 }
 
 export interface HassEntity {
   entity_id: string;
   state: string;
   attributes: Record<string, unknown>;
-  friendly_name?: string;
+  last_changed: string;
+  last_updated: string;
 }
 
 export interface HassUser {
+  id: string;
   name: string;
   is_admin: boolean;
 }
@@ -31,56 +39,21 @@ export interface HassLocale {
   number_format: string;
 }
 
+// Panel info passed by HA
 export interface PanelInfo {
-  config: { domain: string } | null;
+  config: Record<string, unknown>;
   url_path: string;
-  title: string | null;
+  title: string;
+  icon: string;
 }
 
+// Route info
 export interface Route {
   path: string;
   prefix: string;
 }
 
-// ── u::lux Display domain types ───────────────────────────────────────────
-
-export interface WidgetOption {
-  key: string;
-  type: "boolean" | "number" | "string" | "icon" | "select" | "color" | "entity";
-  label: string;
-  default?: unknown;
-  min?: number;
-  max?: number;
-  options?: Record<string, string>;
-  entity_domains?: string[] | null;
-}
-
-export interface WidgetTypeSchema {
-  name: string;
-  needs_entity: boolean;
-  entity_domains: string[] | null;
-  options: WidgetOption[];
-}
-
-export interface LayoutTypeInfo {
-  slots: number;
-  name: string;
-}
-
-export interface PanelConfig {
-  widget_types: Record<string, WidgetTypeSchema>;
-  layout_types: Record<string, LayoutTypeInfo>;
-  themes: Record<string, string>;
-}
-
-export interface WidgetConfig {
-  slot: number;
-  type: string;
-  entity_id?: string;
-  label?: string;
-  options?: Record<string, unknown>;
-}
-
+// u::lux Display specific types
 export interface ViewConfig {
   id: string;
   name: string;
@@ -91,13 +64,124 @@ export interface ViewConfig {
   updated_at?: string;
 }
 
+export interface WidgetConfig {
+  type: string;
+  slot: number;
+  entity_id?: string;
+  label?: string;
+  color?: [number, number, number];
+  options?: Record<string, unknown>;
+}
+
 export interface DeviceConfig {
   entry_id: string;
   name: string;
   host: string;
-  online: boolean;
   assigned_views: string[];
   current_view_index: number;
+  brightness: number;
   refresh_interval: number;
   cycle_interval: number;
+  online: boolean;
 }
+
+export interface WidgetTypeSchema {
+  name: string;
+  needs_entity: boolean;
+  entity_domains?: string[];
+  options: WidgetOption[];
+}
+
+export interface WidgetOption {
+  key: string;
+  type:
+    | "boolean"
+    | "select"
+    | "number"
+    | "text"
+    | "icon"
+    | "color"
+    | "entity"
+    | "timezone"
+    | "thresholds"
+    | "progress_items"
+    | "status_entities";
+  label: string;
+  default?: unknown;
+  options?: string[];
+  min?: number;
+  max?: number;
+  placeholder?: string;
+}
+
+// Complex option types for array editors
+export interface ProgressItem {
+  entity_id: string;
+  label?: string;
+  target?: number;
+  color?: [number, number, number];
+  icon?: string;
+  unit?: string;
+}
+
+export interface StatusEntity {
+  entity_id: string;
+  label?: string;
+  icon?: string;
+}
+
+export interface ColorThreshold {
+  value: number;
+  color: [number, number, number];
+}
+
+export interface LayoutTypeInfo {
+  slots: number;
+  name: string;
+}
+
+export interface UluxDisplayConfig {
+  widget_types: Record<string, WidgetTypeSchema>;
+  layout_types: Record<string, LayoutTypeInfo>;
+  themes: Record<string, string>;
+}
+
+export interface EntityInfo {
+  entity_id: string;
+  name: string;
+  state: string;
+  unit?: string;
+  device_class?: string;
+  area?: string;
+  device?: string;
+  domain: string;
+  icon?: string;
+}
+
+// WebSocket response types
+export interface ViewsListResponse {
+  views: ViewConfig[];
+}
+
+export interface ViewResponse {
+  view: ViewConfig;
+  view_id?: string;
+}
+
+export interface DevicesListResponse {
+  devices: DeviceConfig[];
+}
+
+export interface PreviewResponse {
+  image: string;
+  content_type: string;
+  width: number;
+  height: number;
+}
+
+export interface EntitiesListResponse {
+  entities: EntityInfo[];
+  total: number;
+  has_more: boolean;
+}
+
