@@ -2,7 +2,7 @@
 
 [![Add HACS Repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=gelbetomate&repository=ha-addons&category=integration)
 
-A Home Assistant custom integration that renders rich, customisable dashboards on the **u::lux Switch IP** (a 240×240 pixel wall-mounted smart display). It bridges Home Assistant entity state with live visuals through a flexible widget/layout system and the UMP (u::lux Message Protocol) over UDP.
+A Home Assistant custom integration that renders rich, customisable dashboards on the **u::lux Switch IP** (a 240×240 pixel wall-mounted smart display). It bridges Home Assistant entity state with live visuals through a flexible widget/layout system. Rendered images are pushed to the **ulux UMP Bridge** add-on via HTTP, which handles all UMP/UDP communication with the physical device.
 
 ---
 
@@ -17,7 +17,7 @@ A Home Assistant custom integration that renders rich, customisable dashboards o
 | **Widgets** | 16 widget types |
 | **Multi-screen** | Multiple screens per device with optional auto-cycling |
 | **Global views** | Shared views assignable to multiple devices |
-| **Transport** | UMP over UDP (port 34988) — fully local, no cloud |
+| **Transport** | HTTP → UMP Bridge add-on → UMP/UDP (port 34988) — fully local, no cloud |
 | **IOT class** | `local_polling` |
 
 ---
@@ -48,15 +48,24 @@ Copy the `custom_components/ulux_display/` folder into your Home Assistant `conf
 
 ---
 
+## Requirements
+
+### UMP Bridge add-on
+
+This integration does **not** communicate directly with the u::lux Switch IP hardware. It delegates all device communication to the **ulux UMP Bridge** Home Assistant add-on, which must be installed and running first. The bridge exposes a local HTTP API (default port **8099**) that the integration uses to push rendered images.
+
+Install the bridge add-on from the same HACS repository before setting up this integration.
+
+---
+
 ## Configuration
 
 Setup is fully UI-driven via the config flow. You will be prompted for:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `switch_ip` | — | IP address of the u::lux Switch IP device |
-| `actor_id` | `22` | UMP actor ID |
-| `page_id` | `4` | Page index on the device |
+| `bridge_url` | `http://localhost:8099` | Base URL of the UMP Bridge add-on HTTP API |
+| `switch_id` | — | Switch identifier as reported by the bridge (e.g. `AA:BB:CC:DD:EE:FF`) — discovered automatically or entered manually |
 | `refresh_interval` | `10` s | How often to re-render and push the display |
 | `screen_cycle_interval` | `0` s | Auto-cycle interval between screens (0 = manual) |
 
@@ -159,13 +168,28 @@ Views can be created once and shared across multiple devices. They are stored in
 
 ## Technical Details
 
-### Transport — UMP over UDP
+### Architecture — integration → bridge → device
 
-All communication uses the **u::lux Message Protocol** (UMP) over UDP port 34988. Images are encoded as **RGB565** (5-bit red, 6-bit green, 5-bit blue, little-endian) and streamed line-by-line with stop-and-wait flow control. The integration uses `asyncio.DatagramProtocol` for non-blocking I/O.
+The integration does **not** speak UMP or UDP directly. Instead it follows a two-hop path:
+
+```
+HA Integration  ──HTTP POST──▶  UMP Bridge add-on  ──UMP/UDP──▶  u::lux Switch IP
+ (Python/PIL)                    (Node.js, port 8099)             (port 34988)
+```
+
+1. **Render** — The coordinator renders the current screen into a 240×240 PIL image (with 2× supersampling for anti-aliased text and graphics).
+2. **Push to bridge** — The rendered image is base64-encoded as a PNG and sent to the bridge via:
+   ```
+   POST <bridge_url>/api/display/image/<switch_id>
+   Body: { "base64": "<png>", "width": 240, "height": 240 }
+   ```
+3. **UMP streaming** — The bridge decodes the PNG, converts it to **RGB565** (5-bit red, 6-bit green, 5-bit blue, little-endian) and streams it line-by-line to the physical device over UDP (port 34988) using stop-and-wait flow control.
+
+The bridge also exposes `GET /api/discovery/devices`, which the config flow uses to discover switches that have announced themselves over UDP.
 
 ### Smart Backoff
 
-When a device is unreachable the integration backs off exponentially (1×, 2×, 4×, 8×… up to 16× the refresh interval) to avoid log spam and reduce network overhead. It recovers automatically when the device comes back online.
+When the bridge is unreachable (HTTP connection error) the integration backs off exponentially (1×, 2×, 4×, 8×… up to 16× the refresh interval) to avoid log spam and reduce network overhead. It recovers automatically as soon as the bridge responds again.
 
 ---
 
