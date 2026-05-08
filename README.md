@@ -2,7 +2,7 @@
 
 This repository provides the **u::lux Display** HACS integration and the **u::Lux UMP Bridge** Supervisor add-on for Home Assistant.
 
-This project is work in progress and built for real-world personal use first. Please test carefully in your own environment.
+***This project is work in progress and built for real-world personal use first. Please test carefully in your own environment.***
 
 ---
 
