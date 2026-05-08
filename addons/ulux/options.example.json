@@ -1,0 +1,35 @@
+{
+  "switches": [
+    {
+      "name": "Living Room",
+      "switch_id": "AA:BB:CC:DD:EE:FF",
+      "ip": "192.168.1.100"
+    }
+  ],
+  "listen_host": "0.0.0.0",
+  "listen_port": 34988,
+  "control_flags": 0,
+  "api_port": 8099,
+  "stream": {
+    "width": 240,
+    "height": 240,
+    "lines_per_packet": 5,
+    "inter_packet_delay_ms": 5
+  },
+  "mode": {
+    "ha_events": true,
+    "mqtt": false
+  },
+  "ha": {
+    "ws_url": "ws://192.168.1.X:8123/api/websocket",
+    "token": "your-long-lived-access-token-here"
+  },
+  "mqtt": {
+    "host": "mqtt-broker-hostname",
+    "port": 1883,
+    "username": "",
+    "password": "",
+    "base_topic": "ulux"
+  },
+  "log_level": "info"
+}
