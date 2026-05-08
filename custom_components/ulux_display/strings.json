@@ -81,9 +81,10 @@
       },
       "manual": {
         "title": "Manual u::lux Setup",
-        "description": "Enter the u::lux switch ID manually.",
+        "description": "Enter the switch MAC address and its IP address on your local network.",
         "data": {
-          "switch_id": "Switch ID",
+          "switch_id": "Switch ID (MAC address)",
+          "host": "Switch IP address",
           "name": "Display name"
         }
       }
@@ -94,6 +95,7 @@
       "invalid_response": "Bridge returned an invalid discovery response.",
       "no_devices_found": "No u::lux devices discovered yet. Trigger a key event on the switch and try again.",
       "invalid_switch_id": "Switch ID is required.",
+      "invalid_host": "IP address is required.",
       "timeout": "Connection timed out. The device may be offline or unreachable.",
       "connection_refused": "Connection refused. Verify the device is powered on and the address is correct.",
       "dns_error": "Could not resolve hostname. Check the address is correct.",

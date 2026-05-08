@@ -18,8 +18,12 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_BRIDGE_URL,
+    CONF_HOST,
+    CONF_NAME,
     CONF_REFRESH_INTERVAL,
     CONF_SCREEN_CYCLE_INTERVAL,
+    CONF_SWITCH_ID,
     DEFAULT_REFRESH_INTERVAL,
     DEFAULT_SCREEN_CYCLE_INTERVAL,
     DOMAIN,
@@ -284,8 +288,65 @@ def ws_devices_list(
 ) -> None:
     """Get all UluxDisplay devices with their assignments."""
     devices = []
+
+    # Primary source: configured entries (works even when coordinator setup failed/offline).
+    entry_ids: set[str] = set()
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        entry_ids.add(entry.entry_id)
+        coordinator = _get_coordinator(hass, entry.entry_id)
+
+        if coordinator is not None:
+            devices.append(
+                {
+                    "entry_id": entry.entry_id,
+                    "name": coordinator.device_name,
+                    "host": coordinator.device.host,
+                    "assigned_views": coordinator.options.get("assigned_views", []),
+                    "current_view_index": coordinator.current_screen,
+                    "brightness": coordinator.brightness,
+                    "refresh_interval": coordinator.options.get(
+                        CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL
+                    ),
+                    "cycle_interval": coordinator.options.get(
+                        CONF_SCREEN_CYCLE_INTERVAL, DEFAULT_SCREEN_CYCLE_INTERVAL
+                    ),
+                    "online": coordinator.last_update_success,
+                }
+            )
+            continue
+
+        # Fallback: show entry even when coordinator is not available.
+        bridge_url = str(entry.data.get(CONF_BRIDGE_URL, "")).rstrip("/")
+        switch_id = str(entry.data.get(CONF_SWITCH_ID, "")).upper()
+        stored_host = str(entry.data.get(CONF_HOST, "")).strip()
+        fallback_name = (
+            entry.title
+            or str(entry.data.get(CONF_NAME, "")).strip()
+            or (f"u::lux Display ({switch_id})" if switch_id else "u::lux Display")
+        )
+        host = stored_host or switch_id or bridge_url or "unknown"
+
+        devices.append(
+            {
+                "entry_id": entry.entry_id,
+                "name": fallback_name,
+                "host": host,
+                "assigned_views": entry.options.get("assigned_views", []),
+                "current_view_index": 0,
+                "brightness": entry.options.get("brightness", 100),
+                "refresh_interval": entry.options.get(
+                    CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL
+                ),
+                "cycle_interval": entry.options.get(
+                    CONF_SCREEN_CYCLE_INTERVAL, DEFAULT_SCREEN_CYCLE_INTERVAL
+                ),
+                "online": False,
+            }
+        )
+
+    # Secondary source: coordinators without a matching entry (legacy edge-case).
     for key, data in hass.data.get(DOMAIN, {}).items():
-        if key == "store" or not hasattr(data, "device"):
+        if key == "store" or not hasattr(data, "device") or key in entry_ids:
             continue
         coordinator: UluxDisplayCoordinator = data
         devices.append(
@@ -305,6 +366,7 @@ def ws_devices_list(
                 "online": coordinator.last_update_success,
             }
         )
+
     connection.send_result(msg["id"], {"devices": devices})
 
 
@@ -325,11 +387,7 @@ async def ws_devices_assign_views(
     entry_id = msg["entry_id"]
 
     coordinator = _get_coordinator(hass, entry_id)
-    if not coordinator:
-        connection.send_error(msg["id"], "not_found", "Device not found")
-        return
-
-    entry = coordinator.config_entry
+    entry = coordinator.config_entry if coordinator else _get_entry(hass, entry_id)
     if entry is None:
         connection.send_error(msg["id"], "not_found", "Config entry not found")
         return
@@ -361,11 +419,7 @@ async def ws_devices_settings(
     entry_id = msg["entry_id"]
 
     coordinator = _get_coordinator(hass, entry_id)
-    if not coordinator:
-        connection.send_error(msg["id"], "not_found", "Device not found")
-        return
-
-    entry = coordinator.config_entry
+    entry = coordinator.config_entry if coordinator else _get_entry(hass, entry_id)
     if entry is None:
         connection.send_error(msg["id"], "not_found", "Config entry not found")
         return
@@ -374,7 +428,8 @@ async def ws_devices_settings(
 
     if "brightness" in msg:
         new_options["brightness"] = msg["brightness"]
-        await coordinator.async_set_brightness(msg["brightness"])
+        if coordinator is not None:
+            await coordinator.async_set_brightness(msg["brightness"])
 
     if "refresh_interval" in msg:
         new_options[CONF_REFRESH_INTERVAL] = msg["refresh_interval"]
@@ -814,6 +869,23 @@ def _get_coordinator(hass: HomeAssistant, entry_id: str) -> UluxDisplayCoordinat
     data = hass.data.get(DOMAIN, {}).get(entry_id)
     if data and hasattr(data, "device"):
         return data
+
+    # Fallback lookup by config entry id in case keying changed.
+    for data in hass.data.get(DOMAIN, {}).values():
+        if not hasattr(data, "device"):
+            continue
+        coordinator: UluxDisplayCoordinator = data
+        if coordinator.config_entry and coordinator.config_entry.entry_id == entry_id:
+            return coordinator
+
+    return None
+
+
+def _get_entry(hass: HomeAssistant, entry_id: str):
+    """Get config entry for this integration by entry id."""
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        if entry.entry_id == entry_id:
+            return entry
     return None
 
 

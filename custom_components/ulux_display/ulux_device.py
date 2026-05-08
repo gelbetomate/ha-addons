@@ -51,12 +51,13 @@ class UluxDevice:
         self,
         bridge_url: str,
         switch_id: str,
+        host: str = "",
         session: "ClientSession | None" = None,
     ) -> None:
         self.bridge_url = bridge_url.rstrip("/")
         self.switch_id = switch_id
-        # Expose `.host` so coordinator log messages still work.
-        self.host = switch_id
+        # Use configured IP when available, fall back to switch_id (MAC) for log messages.
+        self.host = host or switch_id
         self._session = session
         self._display_width: int = 240
         self._display_height: int = 240

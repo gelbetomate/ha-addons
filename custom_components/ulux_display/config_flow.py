@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import (
     CONF_BRIDGE_URL,
+    CONF_HOST,
     CONF_SWITCH_ID,
     DEFAULT_BRIDGE_URL,
     DOMAIN,
@@ -82,10 +83,13 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
             if not switch_id:
                 errors[CONF_SWITCH_ID] = "invalid_switch_id"
             else:
+                # Carry IP from the discovery payload so it's stored in the entry.
+                device_meta = self._discovered_devices.get(switch_id, {})
                 return await self._async_create_switch_entry(
                     bridge_url=self._bridge_url,
                     switch_id=switch_id,
                     name=user_input.get(CONF_NAME),
+                    host=device_meta.get("ip"),
                 )
 
         try:
@@ -125,18 +129,22 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_manual(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Manually enter a switch ID."""
+        """Manually enter a switch ID and IP address."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
             switch_id = user_input[CONF_SWITCH_ID].strip().upper()
+            host = user_input[CONF_HOST].strip()
             if not switch_id:
                 errors[CONF_SWITCH_ID] = "invalid_switch_id"
+            elif not host:
+                errors[CONF_HOST] = "invalid_host"
             else:
                 return await self._async_create_switch_entry(
                     bridge_url=self._bridge_url,
                     switch_id=switch_id,
                     name=user_input.get(CONF_NAME),
+                    host=host,
                 )
 
         return self.async_show_form(
@@ -144,6 +152,7 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_SWITCH_ID): str,
+                    vol.Required(CONF_HOST): str,
                     vol.Optional(CONF_NAME): str,
                 }
             ),
@@ -169,6 +178,7 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
         bridge_url: str,
         switch_id: str,
         name: str | None,
+        host: str | None = None,
     ) -> ConfigFlowResult:
         """Create config entry for chosen switch."""
         unique_id = f"{bridge_url}_{switch_id}"
@@ -181,6 +191,7 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
             data={
                 CONF_BRIDGE_URL: bridge_url,
                 CONF_SWITCH_ID: switch_id,
+                CONF_HOST: host or "",
                 CONF_NAME: title,
             },
         )

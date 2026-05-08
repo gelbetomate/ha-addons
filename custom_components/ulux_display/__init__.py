@@ -16,6 +16,7 @@ from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     CONF_BRIDGE_URL,
+    CONF_HOST,
     CONF_SWITCH_ID,
     DEFAULT_BRIDGE_URL,
     DOMAIN,
@@ -176,10 +177,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     bridge_url = entry.data.get(CONF_BRIDGE_URL, DEFAULT_BRIDGE_URL)
     switch_id = entry.data[CONF_SWITCH_ID]
+    host = str(entry.data.get(CONF_HOST, "")).strip()
 
     _LOGGER.debug("Setting up u::lux Display integration for switch %s via bridge %s", switch_id, bridge_url)
 
-    device = UluxDevice(bridge_url=bridge_url, switch_id=switch_id)
+    device = UluxDevice(bridge_url=bridge_url, switch_id=switch_id, host=host)
 
     coordinator = UluxDisplayCoordinator(
         hass=hass,

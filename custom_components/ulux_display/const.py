@@ -20,6 +20,7 @@ BACKOFF_LOG_INTERVAL = 30
 
 # Config keys
 CONF_NAME = "name"
+CONF_HOST = "host"  # IP address of the switch
 CONF_REFRESH_INTERVAL = "refresh_interval"
 CONF_LAYOUT = "layout"
 CONF_WIDGETS = "widgets"
