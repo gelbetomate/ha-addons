@@ -73,7 +73,7 @@ log_level: "info"
 | `switches` | `[]` | List of known u::Lux switches. Each entry requires `name`, `switch_id` and `ip`. |
 | `listen_host` | `0.0.0.0` | Host/IP address to bind the UDP socket to. |
 | `listen_port` | `34988` | UDP port to listen on (UMP default: `0x88AC` = 34988). |
-| `control_flags` | `0` | 32-bit ControlFlags value sent to the switch during initialisation (ID-Control reply). `0` is a safe default; consult the UMP spec or your switch documentation for flag definitions. |
+| `control_flags` | `0` | 32-bit ControlFlags value sent to the switch during initialisation (ID-Control reply). `0` is a safe default; consult the UMP spec or your switch documentation for flag details. |
 | `mode.ha_events` | `true` | Publish received events to HA via the WebSocket API. |
 | `mode.mqtt` | `false` | Also publish events to MQTT (requires broker config). |
 | `ha.ws_url` | `ws://supervisor/core/websocket` | Home Assistant WebSocket URL. |
@@ -356,19 +356,36 @@ Bridge                              Switch
   │ ─────────────────────────────────▶│
 ```
 
-Pixels are encoded as **RGB565 little-endian**: 5 red bits, 6 green bits, 5 blue bits, packed into a UInt16LE per pixel, sent row by row. The number of lines per datagram and the inter-packet delay are tunable via `stream.lines_per_packet` and `stream.inter_packet_delay_ms`.
+Pixels are encoded as **RGB565 little-endian**: 5 red bits, 6 green bits, 5 blue bits, packed into a UInt16LE per pixel, sent row by row. The number of lines per datagram and the inter-packet delay are configurable via `stream.lines_per_packet` and `stream.inter_packet_delay_ms`.
 
 ---
 
 ## Standalone Docker
 
-Use this deployment method when you are **not** running the Home Assistant Supervisor (e.g. HA Container, HA Core, a NAS, or any plain Linux/Docker host), but you still want the UMP Bridge running alongside your HA instance.
+Use this deployment method when you are **not** running the Home Assistant Supervisor (e.g. HA Container, HA Core, a NAS, or any plain Linux/Docker host), but you still want the UMP Bridge running as a normal container.
 
 ### Prerequisites
 
 - Docker and Docker Compose installed on the host
-- The host must run **Linux** — `network_mode: host` is required for UDP to work correctly.  
+- The host should be **Linux** — `network_mode: host` is required for UDP to work correctly.
   On macOS or Windows Docker Desktop, host networking behaves differently and UDP port binding may not work as expected.
+
+### Bridge authentication modes
+
+The bridge can run in multiple modes:
+
+- **HA-integrated mode**: `mode.ha_events: true`
+  - The bridge connects to Home Assistant via WebSocket and publishes `ulux_event` / `ulux_key` events.
+  - You need a valid `ha.ws_url` and `ha.token`.
+
+- **MQTT mode**: `mode.mqtt: true`
+  - The bridge publishes inbound events to MQTT topics.
+  - Home Assistant WebSocket access is optional.
+
+- **No-HA-token / display-only mode**: `mode.ha_events: false`
+  - The bridge does **not** connect to Home Assistant WebSocket.
+  - Image streaming, UMP/UDP handling, and the HTTP API still work.
+  - This is the mode to use if you only want the display bridge and/or if you control automation elsewhere.
 
 ### Step-by-step setup
 
@@ -393,11 +410,10 @@ Use this deployment method when you are **not** running the Home Assistant Super
    | `switches[].ip` | Local IP address of the switch |
    | `stream.width` / `stream.height` | `240` — the u::Lux Switch IP display is 240×240 |
 
-3. **Choose a Home Assistant integration mode** (or disable HA events entirely):
+3. **Choose a mode:**
 
-   **Option A — with HA long-lived access token** (most common for standalone):
+   **A. With HA WebSocket events**
 
-   Set in `options.json`:
    ```json
    "mode": { "ha_events": true, "mqtt": false },
    "ha": {
@@ -405,11 +421,19 @@ Use this deployment method when you are **not** running the Home Assistant Super
      "token": "<long-lived-access-token>"
    }
    ```
-   In HA go to **Profile → Security → Long-Lived Access Tokens → Create Token**, copy the token and paste it into `ha.token`.
 
-   **Option B — MQTT only, no HA token required**:
+   Create a long-lived token in Home Assistant: **Profile → Security → Long-Lived Access Tokens → Create Token**.
 
-   Set in `options.json`:
+   **B. Without HA token**
+
+   ```json
+   "mode": { "ha_events": false, "mqtt": false }
+   ```
+
+   The bridge runs without any Home Assistant WebSocket connection. This is useful for display-only setups or when another system handles automation.
+
+   **C. MQTT only**
+
    ```json
    "mode": { "ha_events": false, "mqtt": true },
    "mqtt": {
@@ -418,15 +442,8 @@ Use this deployment method when you are **not** running the Home Assistant Super
      "base_topic": "ulux"
    }
    ```
+
    Key events are published to MQTT topics; no HA WebSocket connection is established.
-
-   **Option C — HTTP API only** (use the `ulux_display` HACS integration or custom clients):
-
-   Set in `options.json`:
-   ```json
-   "mode": { "ha_events": false, "mqtt": false }
-   ```
-   The bridge still listens for UMP packets and exposes the HTTP API, but does not push events anywhere automatically. Push images via `POST /api/display/image/<switchId>`.
 
 4. **Start the bridge:**
 
@@ -444,7 +461,7 @@ Use this deployment method when you are **not** running the Home Assistant Super
 
 ### HTTP API and the `ulux_display` HACS integration
 
-The bridge HTTP API runs on port **8099** (configurable via `api_port`).  
+The bridge HTTP API runs on port **8099** (configurable via `api_port`).
 The [`ulux_display` HACS integration](https://github.com/gelbetomate/ha-addons/tree/main/custom_components/ulux_display) uses this API to push display images to the switch.
 
 When running standalone, set the **Bridge URL** in the integration config flow to:
@@ -465,9 +482,10 @@ http://<docker-host-ip>:8099
 
 ### macOS / Windows note
 
-`network_mode: host` **only works on Linux Docker hosts**. On macOS or Windows running Docker Desktop, the container is inside a Linux VM and host networking does not expose the host's physical network interfaces. UDP port 34988 may not receive packets from the switch. A Linux server or NAS is the recommended deployment target.
+`network_mode: host` **only works on Linux Docker hosts**. On macOS or Windows running Docker Desktop, the container is inside a Linux VM and host networking does not expose the host's physical network in the same way. If UDP 34988 does not work there, use a Linux host or a VM with bridged networking.
 
-## Protocol Reference
+---
 
-- [u::Lux UMP Protocol PDF](https://www.u-lux.com/fileadmin/user_upload/Downloads/PDF/Technische_Downloads/en/uLux_Switch_UMP_en.pdf)
-- [XAMControlUlux (message ID reference)](https://github.com/evondevelop/XAMControlUlux)
+## Support
+
+Open an issue at <https://github.com/gelbetomate/ha-addons/issues>.
