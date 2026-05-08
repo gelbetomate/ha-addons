@@ -160,8 +160,8 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def _async_fetch_discovered_devices(self, bridge_url: str) -> list[dict[str, Any]]:
-        """Fetch discovered devices from bridge API."""
-        url = f"{bridge_url}/api/discovery/devices"
+        """Fetch devices from bridge registry (primary source of truth)."""
+        url = f"{bridge_url}/api/registry/devices"
         timeout = aiohttp.ClientTimeout(total=5)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url) as response:
@@ -170,8 +170,40 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
 
         devices = data.get("devices")
         if not isinstance(devices, list):
-            raise ValueError("Invalid discovery response shape")
+            raise ValueError("Invalid registry response shape")
         return [d for d in devices if isinstance(d, dict)]
+
+    async def _async_register_device_in_bridge(
+        self,
+        bridge_url: str,
+        switch_id: str,
+        name: str,
+        host: str,
+    ) -> None:
+        """Register device in bridge registry."""
+        url = f"{bridge_url}/api/registry/devices"
+        timeout = aiohttp.ClientTimeout(total=5)
+        payload = {
+            "switch_id": switch_id,
+            "name": name,
+            "ip": host,
+            "port": 50000,
+        }
+
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(url, json=payload) as response:
+                    # 201 Created or 200 OK (update)
+                    if response.status not in (200, 201):
+                        body = await response.text()
+                        _LOGGER.warning(
+                            "Failed to register device in bridge: HTTP %s — %s",
+                            response.status,
+                            body,
+                        )
+        except aiohttp.ClientError as err:
+            _LOGGER.warning("Failed to register device in bridge: %s", err)
+            # Don't fail the config flow if bridge registration fails
 
     async def _async_create_switch_entry(
         self,
@@ -180,12 +212,22 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
         name: str | None,
         host: str | None = None,
     ) -> ConfigFlowResult:
-        """Create config entry for chosen switch."""
+        """Create config entry for chosen switch and register in bridge."""
         unique_id = f"{bridge_url}_{switch_id}"
         await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured()
 
         title = name or f"u::lux Display ({switch_id})"
+
+        # Auto-register device in bridge registry (if IP is provided)
+        if host:
+            await self._async_register_device_in_bridge(
+                bridge_url=bridge_url,
+                switch_id=switch_id,
+                name=title,
+                host=host,
+            )
+
         return self.async_create_entry(
             title=title,
             data={

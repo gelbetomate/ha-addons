@@ -1,6 +1,8 @@
 'use strict';
 
 const { createServer } = require('http');
+const fs = require('fs');
+const path = require('path');
 const { streamImageToSwitch } = require('./ump/videoStream');
 
 /**
@@ -10,6 +12,33 @@ const { streamImageToSwitch } = require('./ump/videoStream');
  * delegate image streaming to the bridge, keeping all UMP/UDP logic in one place.
  *
  * Endpoints:
+ *   GET /api/health
+ *     Response 200: { "ok": true }
+ *
+ *   GET /api/discovery/devices
+ *     Response 200: { "devices": [...] }
+ *
+ *   GET /api/registry/devices
+ *     Response 200: { "devices": [...] }
+ *
+ *   GET /api/registry/devices/:switchId
+ *     Response 200: { "device": {...} }
+ *     Response 404: { "error": "Device not found" }
+ *
+ *   POST /api/registry/devices
+ *     Body (JSON): { "switch_id": "XX:XX:XX:XX:XX:XX", "name": "...", "ip": "...", "port": ... }
+ *     Response 201: { "device": {...} }
+ *     Response 400: { "error": "..." }
+ *
+ *   PUT /api/registry/devices/:switchId
+ *     Body (JSON): { "name": "...", "ip": "...", "port": ... }
+ *     Response 200: { "device": {...} }
+ *     Response 400: { "error": "..." }
+ *
+ *   DELETE /api/registry/devices/:switchId
+ *     Response 204: (no body)
+ *     Response 404: { "error": "Device not found" }
+ *
  *   POST /api/display/image/:switchId
  *     Body (JSON): {
  *       "base64": "<base64-encoded PNG or other image>",
@@ -20,16 +49,10 @@ const { streamImageToSwitch } = require('./ump/videoStream');
  *     Response 404: { "error": "Unknown switch_id: <id>" }
  *     Response 500: { "error": "<message>" }
  *
- *   GET /api/health
- *     Response 200: { "ok": true }
- *
- *   GET /api/discovery/devices
- *     Response 200: { "devices": [...] }
- *
  * @param {object}   opts
  * @param {object}   opts.config   - Full add-on config
  * @param {Function} opts.udpSend  - udpSend(host, port, buf) from the UDP server
- * @param {object}   opts.discoveryRegistry - In-memory device discovery registry
+ * @param {object}   opts.discoveryRegistry - Device discovery/registry manager
  * @param {object}   opts.log      - Logger
  * @returns {{ start: Function, close: Function }}
  */
@@ -38,6 +61,13 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
   const streamCfg = config.stream || {};
 
   function respond(res, status, body) {
+    // Handle 204 No Content and other responses with no body
+    if (body === undefined) {
+      res.writeHead(status);
+      res.end();
+      return;
+    }
+
     const json = JSON.stringify(body);
     res.writeHead(status, {
       'Content-Type': 'application/json',
@@ -58,6 +88,23 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
   async function handleRequest(req, res) {
     const { method, url } = req;
 
+    // --- GET / (serve registry UI) ---
+    if (method === 'GET' && url === '/') {
+      const uiPath = path.join(__dirname, 'ui', 'registry.html');
+      try {
+        const html = fs.readFileSync(uiPath, 'utf8');
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Length': Buffer.byteLength(html),
+        });
+        res.end(html);
+        return;
+      } catch (err) {
+        log.error(`Failed to load UI: ${err.message}`);
+        return respond(res, 500, { error: 'UI not available' });
+      }
+    }
+
     // --- GET /api/health ---
     if (method === 'GET' && url === '/api/health') {
       return respond(res, 200, { ok: true });
@@ -67,6 +114,98 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
     if (method === 'GET' && url === '/api/discovery/devices') {
       const devices = discoveryRegistry ? discoveryRegistry.list() : [];
       return respond(res, 200, { devices });
+    }
+
+    // --- GET /api/registry/devices ---
+    if (method === 'GET' && url === '/api/registry/devices') {
+      const registryStore = discoveryRegistry?.getStore?.();
+      if (!registryStore) {
+        return respond(res, 500, { error: 'Registry not available' });
+      }
+      const devices = registryStore.getAll();
+      return respond(res, 200, { devices });
+    }
+
+    // --- GET /api/registry/devices/:switchId ---
+    const registryGetMatch = url && url.match(/^\/api\/registry\/devices\/([^/?]+)$/);
+    if (method === 'GET' && registryGetMatch) {
+      const switchId = decodeURIComponent(registryGetMatch[1]);
+      const registryStore = discoveryRegistry?.getStore?.();
+      if (!registryStore) {
+        return respond(res, 500, { error: 'Registry not available' });
+      }
+      const device = registryStore.get(switchId);
+      if (!device) {
+        return respond(res, 404, { error: `Device not found: ${switchId}` });
+      }
+      return respond(res, 200, { device });
+    }
+
+    // --- POST /api/registry/devices ---
+    if (method === 'POST' && url === '/api/registry/devices') {
+      const registryStore = discoveryRegistry?.getStore?.();
+      if (!registryStore) {
+        return respond(res, 500, { error: 'Registry not available' });
+      }
+
+      let payload;
+      try {
+        const body = await readBody(req);
+        payload = JSON.parse(body);
+      } catch (err) {
+        return respond(res, 400, { error: `Invalid JSON body: ${err.message}` });
+      }
+
+      try {
+        const device = registryStore.upsert(payload);
+        log.info(`HTTP API: registered device "${device.switch_id}" (${device.ip})`);
+        return respond(res, 201, { device });
+      } catch (err) {
+        return respond(res, 400, { error: err.message });
+      }
+    }
+
+    // --- PUT /api/registry/devices/:switchId ---
+    const registryUpdateMatch = url && url.match(/^\/api\/registry\/devices\/([^/?]+)$/);
+    if (method === 'PUT' && registryUpdateMatch) {
+      const switchId = decodeURIComponent(registryUpdateMatch[1]);
+      const registryStore = discoveryRegistry?.getStore?.();
+      if (!registryStore) {
+        return respond(res, 500, { error: 'Registry not available' });
+      }
+
+      let payload;
+      try {
+        const body = await readBody(req);
+        payload = JSON.parse(body);
+      } catch (err) {
+        return respond(res, 400, { error: `Invalid JSON body: ${err.message}` });
+      }
+
+      try {
+        const device = registryStore.upsert({ ...payload, switch_id: switchId });
+        log.info(`HTTP API: updated device "${device.switch_id}"`);
+        return respond(res, 200, { device });
+      } catch (err) {
+        return respond(res, 400, { error: err.message });
+      }
+    }
+
+    // --- DELETE /api/registry/devices/:switchId ---
+    const registryDeleteMatch = url && url.match(/^\/api\/registry\/devices\/([^/?]+)$/);
+    if (method === 'DELETE' && registryDeleteMatch) {
+      const switchId = decodeURIComponent(registryDeleteMatch[1]);
+      const registryStore = discoveryRegistry?.getStore?.();
+      if (!registryStore) {
+        return respond(res, 500, { error: 'Registry not available' });
+      }
+
+      const removed = registryStore.remove(switchId);
+      if (!removed) {
+        return respond(res, 404, { error: `Device not found: ${switchId}` });
+      }
+      log.info(`HTTP API: removed device "${switchId}"`);
+      return respond(res, 204);
     }
 
     // --- POST /api/display/image/:switchId ---

@@ -8,11 +8,16 @@ const RECONNECT_DELAY_MS = 5000;
  * Create an MQTT client for the ulux bridge.
  *
  * Publishes inbound UMP events and subscribes for outbound commands.
- * Command handling is stubbed — implement UMP command encoding before enabling.
  *
  * Topic scheme:
  *   Publish:   <base_topic>/<switch_id>/event/<type>   (JSON payload)
- *   Subscribe: <base_topic>/<switch_id>/cmd/#          (TODO: encode → UMP UDP)
+ *   Subscribe: <base_topic>/<switch_id>/cmd/#          (command)
+ *   Subscribe: <base_topic>/registry/#                 (registry commands)
+ *
+ * Registry command topics:
+ *   <base_topic>/registry/add_device     { "switch_id": "...", "name": "...", "ip": "...", "port": ... }
+ *   <base_topic>/registry/update_device  { "switch_id": "...", "name": "...", "ip": "...", "port": ... }
+ *   <base_topic>/registry/delete_device  { "switch_id": "..." }
  *
  * If the connection fails the client retries automatically so the rest of the
  * add-on keeps running.
@@ -20,10 +25,11 @@ const RECONNECT_DELAY_MS = 5000;
  * @param {object}   mqttConfig - { host, port, username, password, base_topic }
  * @param {object[]} switches   - Configured switch list (used to set up cmd subscriptions)
  * @param {object}   log        - Logger
- * @param {Function} onCommand  - Async callback ({topic, switchId, command, payload, raw})
+ * @param {Function} onCommand  - Async callback for switch commands ({topic, switchId, command, payload, raw})
+ * @param {Function} onRegistryCommand - Async callback for registry commands ({action, payload})
  * @returns {{ connect: Function, publish: Function, disconnect: Function }}
  */
-function createMqttClient(mqttConfig, switches, log, onCommand) {
+function createMqttClient(mqttConfig, switches, log, onCommand, onRegistryCommand) {
   let client = null;
   let connected = false;
 
@@ -53,6 +59,7 @@ function createMqttClient(mqttConfig, switches, log, onCommand) {
       connected = true;
       log.info('MQTT broker connected');
       subscribeCommandTopics();
+      subscribeRegistryTopics();
     });
 
     client.on('reconnect', () => {
@@ -69,7 +76,26 @@ function createMqttClient(mqttConfig, switches, log, onCommand) {
     });
 
     client.on('message', (topic, message) => {
-      handleCommand(topic, message);
+      // Route to appropriate handler
+      if (topic.startsWith(`${mqttConfig.base_topic}/registry/`)) {
+        handleRegistryCommand(topic, message);
+      } else {
+        handleCommand(topic, message);
+      }
+    });
+  }
+
+  /**
+   * Subscribe to registry management topics.
+   */
+  function subscribeRegistryTopics() {
+    const topic = `${mqttConfig.base_topic}/registry/#`;
+    client.subscribe(topic, { qos: 0 }, (err) => {
+      if (err) {
+        log.error(`Failed to subscribe to ${topic}:`, err.message);
+      } else {
+        log.info(`Subscribed to MQTT registry topic: ${topic}`);
+      }
     });
   }
 
@@ -103,6 +129,48 @@ function createMqttClient(mqttConfig, switches, log, onCommand) {
         }
       });
     }
+  }
+
+  /**
+   * Handle an inbound MQTT registry command message.
+   *
+   * Topics:
+   *   <base_topic>/registry/add_device
+   *   <base_topic>/registry/update_device
+   *   <base_topic>/registry/delete_device
+   *
+   * @param {string} topic
+   * @param {Buffer} message
+   */
+  function handleRegistryCommand(topic, message) {
+    const prefix = `${mqttConfig.base_topic}/registry/`;
+    if (!topic.startsWith(prefix)) {
+      return;
+    }
+
+    const action = topic.slice(prefix.length);
+    const raw = message.toString();
+
+    let payload = raw;
+    if (raw && raw.trim().startsWith('{')) {
+      try {
+        payload = JSON.parse(raw);
+      } catch (err) {
+        log.warning(`Invalid JSON in registry command ${action}: ${err.message}`);
+        return;
+      }
+    }
+
+    log.info(`MQTT registry command received: action=${action}`);
+
+    if (typeof onRegistryCommand !== 'function') {
+      log.warning(`No registry command handler registered for action: ${action}`);
+      return;
+    }
+
+    Promise.resolve(onRegistryCommand({ action, payload })).catch((err) => {
+      log.error(`MQTT registry command handler failed for ${action}:`, err.message);
+    });
   }
 
   /**
