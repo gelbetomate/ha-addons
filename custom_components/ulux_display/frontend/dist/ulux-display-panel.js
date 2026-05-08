@@ -3,7 +3,7 @@
  * Copyright 2019 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const R = globalThis, Z = R.ShadowRoot && (R.ShadyCSS === void 0 || R.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, F = Symbol(), J = /* @__PURE__ */ new WeakMap();
+const N = globalThis, Z = N.ShadowRoot && (N.ShadyCSS === void 0 || N.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, F = Symbol(), J = /* @__PURE__ */ new WeakMap();
 let le = class {
   constructor(e, t, i) {
     if (this._$cssResult$ = !0, i !== F) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
@@ -32,7 +32,7 @@ const ue = (s) => new le(typeof s == "string" ? s : s + "", void 0, F), ge = (s,
 }, ve = (s, e) => {
   if (Z) s.adoptedStyleSheets = e.map((t) => t instanceof CSSStyleSheet ? t : t.styleSheet);
   else for (const t of e) {
-    const i = document.createElement("style"), r = R.litNonce;
+    const i = document.createElement("style"), r = N.litNonce;
     r !== void 0 && i.setAttribute("nonce", r), i.textContent = t.cssText, s.appendChild(i);
   }
 }, Q = Z ? (s) => s : (s) => s instanceof CSSStyleSheet ? ((e) => {
@@ -316,8 +316,8 @@ class M {
     for (; (r = x.nextNode()) !== null && l.length < o; ) {
       if (r.nodeType === 1) {
         if (r.hasAttributes()) for (const h of r.getAttributeNames()) if (h.endsWith(ce)) {
-          const f = v[n++], m = r.getAttribute(h).split(w), N = /([.?@])?(.*)/.exec(f);
-          l.push({ type: 1, index: a, name: N[2], strings: m, ctor: N[1] === "." ? ke : N[1] === "?" ? Ce : N[1] === "@" ? Ve : z }), r.removeAttribute(h);
+          const f = v[n++], m = r.getAttribute(h).split(w), R = /([.?@])?(.*)/.exec(f);
+          l.push({ type: 1, index: a, name: R[2], strings: m, ctor: R[1] === "." ? ke : R[1] === "?" ? Ce : R[1] === "@" ? Ve : z }), r.removeAttribute(h);
         } else h.startsWith(w) && (l.push({ type: 6, index: a }), r.removeAttribute(h));
         if (he.test(r.tagName)) {
           const h = r.textContent.split(w), f = h.length - 1;
@@ -364,7 +364,7 @@ class Pe {
     for (; l !== void 0; ) {
       if (n === l.index) {
         let p;
-        l.type === 2 ? p = new U(a, a.nextSibling, this, e) : l.type === 1 ? p = new l.ctor(a, l.name, l.strings, this, e) : l.type === 6 && (p = new De(a, this, e)), this._$AV.push(p), l = i[++o];
+        l.type === 2 ? p = new T(a, a.nextSibling, this, e) : l.type === 1 ? p = new l.ctor(a, l.name, l.strings, this, e) : l.type === 6 && (p = new De(a, this, e)), this._$AV.push(p), l = i[++o];
       }
       n !== (l == null ? void 0 : l.index) && (a = x.nextNode(), n++);
     }
@@ -375,7 +375,7 @@ class Pe {
     for (const i of this._$AV) i !== void 0 && (i.strings !== void 0 ? (i._$AI(e, i, t), t += i.strings.length - 2) : i._$AI(e[t])), t++;
   }
 }
-class U {
+class T {
   get _$AU() {
     var e;
     return ((e = this._$AM) == null ? void 0 : e._$AU) ?? this._$Cv;
@@ -423,7 +423,7 @@ class U {
     G(this._$AH) || (this._$AH = [], this._$AR());
     const t = this._$AH;
     let i, r = 0;
-    for (const a of e) r === t.length ? t.push(i = new U(this.O(O()), this.O(O()), this, this.options)) : i = t[r], i._$AI(a), r++;
+    for (const a of e) r === t.length ? t.push(i = new T(this.O(O()), this.O(O()), this, this.options)) : i = t[r], i._$AI(a), r++;
     r < t.length && (this._$AR(i && i._$AB.nextSibling, r), t.length = r);
   }
   _$AR(e = this._$AA.nextSibling, t) {
@@ -505,13 +505,13 @@ class De {
   }
 }
 const I = V.litHtmlPolyfillSupport;
-I == null || I(M, U), (V.litHtmlVersions ?? (V.litHtmlVersions = [])).push("3.3.2");
+I == null || I(M, T), (V.litHtmlVersions ?? (V.litHtmlVersions = [])).push("3.3.2");
 const Oe = (s, e, t) => {
   const i = (t == null ? void 0 : t.renderBefore) ?? e;
   let r = i._$litPart$;
   if (r === void 0) {
     const a = (t == null ? void 0 : t.renderBefore) ?? null;
-    i._$litPart$ = r = new U(e.insertBefore(O(), a), a, void 0, t ?? {});
+    i._$litPart$ = r = new T(e.insertBefore(O(), a), a, void 0, t ?? {});
   }
   return r._$AI(s), r;
 };
@@ -566,7 +566,7 @@ const He = (s) => (e, t) => {
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const Me = { attribute: !0, type: String, converter: j, reflect: !1, hasChanged: K }, Ue = (s = Me, e, t) => {
+const Me = { attribute: !0, type: String, converter: j, reflect: !1, hasChanged: K }, Te = (s = Me, e, t) => {
   const { kind: i, metadata: r } = t;
   let a = globalThis.litPropertyMetadata.get(r);
   if (a === void 0 && globalThis.litPropertyMetadata.set(r, a = /* @__PURE__ */ new Map()), i === "setter" && ((s = Object.create(s)).wrapped = !0), a.set(t.name, s), i === "accessor") {
@@ -587,8 +587,8 @@ const Me = { attribute: !0, type: String, converter: j, reflect: !1, hasChanged:
   }
   throw Error("Unsupported decorator location: " + i);
 };
-function T(s) {
-  return (e, t) => typeof t == "object" ? Ue(s, e, t) : ((i, r, a) => {
+function U(s) {
+  return (e, t) => typeof t == "object" ? Te(s, e, t) : ((i, r, a) => {
     const n = r.hasOwnProperty(a);
     return r.constructor.createProperty(a, i), n ? Object.getOwnPropertyDescriptor(r, a) : void 0;
   })(s, e, t);
@@ -599,14 +599,14 @@ function T(s) {
  * SPDX-License-Identifier: BSD-3-Clause
  */
 function _(s) {
-  return T({ ...s, state: !0, attribute: !1 });
+  return U({ ...s, state: !0, attribute: !1 });
 }
-var Te = Object.defineProperty, Ne = Object.getOwnPropertyDescriptor, g = (s, e, t, i) => {
-  for (var r = i > 1 ? void 0 : i ? Ne(e, t) : e, a = s.length - 1, n; a >= 0; a--)
+var Ue = Object.defineProperty, Re = Object.getOwnPropertyDescriptor, g = (s, e, t, i) => {
+  for (var r = i > 1 ? void 0 : i ? Re(e, t) : e, a = s.length - 1, n; a >= 0; a--)
     (n = s[a]) && (r = (i ? n(e, t, r) : n(r)) || r);
-  return i && r && Te(e, t, r), r;
+  return i && r && Ue(e, t, r), r;
 };
-function Re(s, e) {
+function Ne(s, e) {
   let t;
   return (...i) => {
     clearTimeout(t), t = setTimeout(() => s(...i), e);
@@ -615,7 +615,7 @@ function Re(s, e) {
 const je = "M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z";
 let u = class extends D {
   constructor() {
-    super(...arguments), this.narrow = !1, this._tab = "devices", this._page = "main", this._config = null, this._devices = [], this._views = [], this._editingView = null, this._assignDevice = null, this._settingsDevice = null, this._viewPreviews = /* @__PURE__ */ new Map(), this._previewLoading = !1, this._loading = !0, this._saving = !1, this._error = null, this._refreshPreview = Re(async () => {
+    super(...arguments), this.narrow = !1, this._tab = "devices", this._page = "main", this._config = null, this._devices = [], this._views = [], this._editingView = null, this._assignDevice = null, this._settingsDevice = null, this._viewPreviews = /* @__PURE__ */ new Map(), this._previewLoading = !1, this._loading = !0, this._saving = !1, this._error = null, this._refreshPreview = Ne(async () => {
       if (this._editingView) {
         this._previewLoading = !0;
         try {
@@ -636,6 +636,13 @@ let u = class extends D {
   // ── Lifecycle ────────────────────────────────────────────────────────────
   firstUpdated() {
     this._loadAll();
+  }
+  updated() {
+    var s;
+    (s = this.shadowRoot) == null || s.querySelectorAll("ha-select").forEach((e) => {
+      var t;
+      (t = e.layout) == null || t.call(e);
+    });
   }
   // ── Data loading ─────────────────────────────────────────────────────────
   _ws(s, e = {}) {
@@ -1150,8 +1157,8 @@ let u = class extends D {
                 <ha-select
                   label="Theme"
                   .value=${s.theme}
-                  @change=${(a) => {
-      const n = a.target.value;
+                  @selected=${(a) => {
+      const n = a.currentTarget.value;
       n && this._updateEditingView({ theme: n });
     }}
                   @closed=${(a) => a.stopPropagation()}
@@ -1191,8 +1198,8 @@ let u = class extends D {
           <ha-select
             label="Widget type"
             .value=${r}
-            @change=${(o) => {
-      const l = o.target.value;
+            @selected=${(o) => {
+      const l = o.currentTarget.value;
       this._updateWidget(s, { type: l, options: {} });
     }}
             @closed=${(o) => o.stopPropagation()}
@@ -1267,8 +1274,8 @@ let u = class extends D {
           <ha-select
             label=${t.label}
             .value=${i !== void 0 ? String(i) : ""}
-            @change=${(a) => {
-          const n = a.target.value;
+            @selected=${(a) => {
+          const n = a.currentTarget.value;
           n !== void 0 && this._updateWidgetOption(s, t.key, n);
         }}
             @closed=${(a) => a.stopPropagation()}
@@ -1763,16 +1770,16 @@ u.styles = ge`
     .pos-cell.active { background: var(--primary-color); }
   `;
 g([
-  T({ attribute: !1 })
+  U({ attribute: !1 })
 ], u.prototype, "hass", 2);
 g([
-  T({ type: Boolean })
+  U({ type: Boolean })
 ], u.prototype, "narrow", 2);
 g([
-  T({ attribute: !1 })
+  U({ attribute: !1 })
 ], u.prototype, "route", 2);
 g([
-  T({ attribute: !1 })
+  U({ attribute: !1 })
 ], u.prototype, "panel", 2);
 g([
   _()

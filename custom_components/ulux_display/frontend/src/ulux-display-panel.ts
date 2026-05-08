@@ -68,6 +68,14 @@ export class UluxDisplayPanel extends LitElement {
     this._loadAll();
   }
 
+  protected updated(): void {
+    // mwc-select requires calling layout() after its list items are rendered
+    // otherwise the initial .value binding is silently ignored.
+    this.shadowRoot?.querySelectorAll("ha-select").forEach((el) => {
+      (el as HTMLElement & { layout?: () => void }).layout?.();
+    });
+  }
+
   // ── Data loading ─────────────────────────────────────────────────────────
 
   private _ws<T = unknown>(type: string, extra: Record<string, unknown> = {}): Promise<T> {
@@ -742,8 +750,8 @@ export class UluxDisplayPanel extends LitElement {
                 <ha-select
                   label="Theme"
                   .value=${v.theme}
-                  @change=${(e: Event) => {
-                    const val = (e.target as EventTarget & { value: string }).value;
+                  @selected=${(e: CustomEvent) => {
+                    const val = (e.currentTarget as HTMLElement & { value: string }).value;
                     if (val) this._updateEditingView({ theme: val });
                   }}
                   @closed=${(e: Event) => e.stopPropagation()}
@@ -788,8 +796,8 @@ export class UluxDisplayPanel extends LitElement {
           <ha-select
             label="Widget type"
             .value=${widgetType}
-            @change=${(e: Event) => {
-              const val = (e.target as EventTarget & { value: string }).value;
+            @selected=${(e: CustomEvent) => {
+              const val = (e.currentTarget as HTMLElement & { value: string }).value;
               this._updateWidget(slot, { type: val, options: {} });
             }}
             @closed=${(e: Event) => e.stopPropagation()}
@@ -879,8 +887,8 @@ export class UluxDisplayPanel extends LitElement {
           <ha-select
             label=${opt.label}
             .value=${value !== undefined ? String(value) : ""}
-            @change=${(e: Event) => {
-              const val = (e.target as EventTarget & { value: string }).value;
+            @selected=${(e: CustomEvent) => {
+              const val = (e.currentTarget as HTMLElement & { value: string }).value;
               if (val !== undefined) this._updateWidgetOption(slot, opt.key, val);
             }}
             @closed=${(e: Event) => e.stopPropagation()}
