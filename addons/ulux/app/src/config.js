@@ -62,6 +62,12 @@ function loadConfig() {
     config.ha.token = process.env.SUPERVISOR_TOKEN || '';
   }
 
+  // If token is still empty, disable HA integration so we don't spam auth errors
+  if (!config.ha.token) {
+    console.warn('No HA token found (via options or SUPERVISOR_TOKEN). HA event integration disabled.');
+    config.mode.ha_events = false;
+  }
+
   return config;
 }
 

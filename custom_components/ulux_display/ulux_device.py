@@ -92,6 +92,15 @@ class UluxDevice:
             async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
                 if resp.status != 200:
                     body = await resp.text()
+                    # 404 "Unknown switch_id" means the bridge hasn't discovered this switch yet
+                    # (normal for manually-added devices). Log as warning and continue.
+                    if resp.status == 404 and "Unknown switch_id" in body:
+                        _LOGGER.warning(
+                            "Switch %s not yet discovered by bridge (powered off or no activity). "
+                            "Image will be sent once the device is discovered.",
+                            self.switch_id,
+                        )
+                        return
                     _LOGGER.error(
                         "Bridge API error for switch %s: HTTP %s — %s",
                         self.switch_id, resp.status, body,
