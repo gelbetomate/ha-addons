@@ -3,7 +3,7 @@
  * Copyright 2019 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const N = globalThis, Z = N.ShadowRoot && (N.ShadyCSS === void 0 || N.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, F = Symbol(), J = /* @__PURE__ */ new WeakMap();
+const R = globalThis, Z = R.ShadowRoot && (R.ShadyCSS === void 0 || R.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, F = Symbol(), J = /* @__PURE__ */ new WeakMap();
 let le = class {
   constructor(e, t, i) {
     if (this._$cssResult$ = !0, i !== F) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
@@ -32,7 +32,7 @@ const ue = (s) => new le(typeof s == "string" ? s : s + "", void 0, F), ge = (s,
 }, ve = (s, e) => {
   if (Z) s.adoptedStyleSheets = e.map((t) => t instanceof CSSStyleSheet ? t : t.styleSheet);
   else for (const t of e) {
-    const i = document.createElement("style"), r = N.litNonce;
+    const i = document.createElement("style"), r = R.litNonce;
     r !== void 0 && i.setAttribute("nonce", r), i.textContent = t.cssText, s.appendChild(i);
   }
 }, Q = Z ? (s) => s : (s) => s instanceof CSSStyleSheet ? ((e) => {
@@ -316,8 +316,8 @@ class M {
     for (; (r = x.nextNode()) !== null && l.length < o; ) {
       if (r.nodeType === 1) {
         if (r.hasAttributes()) for (const h of r.getAttributeNames()) if (h.endsWith(ce)) {
-          const f = v[n++], m = r.getAttribute(h).split(w), R = /([.?@])?(.*)/.exec(f);
-          l.push({ type: 1, index: a, name: R[2], strings: m, ctor: R[1] === "." ? ke : R[1] === "?" ? Ce : R[1] === "@" ? Ve : z }), r.removeAttribute(h);
+          const f = v[n++], m = r.getAttribute(h).split(w), N = /([.?@])?(.*)/.exec(f);
+          l.push({ type: 1, index: a, name: N[2], strings: m, ctor: N[1] === "." ? ke : N[1] === "?" ? Ce : N[1] === "@" ? Ve : z }), r.removeAttribute(h);
         } else h.startsWith(w) && (l.push({ type: 6, index: a }), r.removeAttribute(h));
         if (he.test(r.tagName)) {
           const h = r.textContent.split(w), f = h.length - 1;
@@ -601,12 +601,12 @@ function U(s) {
 function _(s) {
   return U({ ...s, state: !0, attribute: !1 });
 }
-var Ue = Object.defineProperty, Re = Object.getOwnPropertyDescriptor, g = (s, e, t, i) => {
-  for (var r = i > 1 ? void 0 : i ? Re(e, t) : e, a = s.length - 1, n; a >= 0; a--)
+var Ue = Object.defineProperty, Ne = Object.getOwnPropertyDescriptor, g = (s, e, t, i) => {
+  for (var r = i > 1 ? void 0 : i ? Ne(e, t) : e, a = s.length - 1, n; a >= 0; a--)
     (n = s[a]) && (r = (i ? n(e, t, r) : n(r)) || r);
   return i && r && Ue(e, t, r), r;
 };
-function Ne(s, e) {
+function Re(s, e) {
   let t;
   return (...i) => {
     clearTimeout(t), t = setTimeout(() => s(...i), e);
@@ -615,7 +615,7 @@ function Ne(s, e) {
 const je = "M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z";
 let u = class extends D {
   constructor() {
-    super(...arguments), this.narrow = !1, this._tab = "devices", this._page = "main", this._config = null, this._devices = [], this._views = [], this._editingView = null, this._assignDevice = null, this._settingsDevice = null, this._viewPreviews = /* @__PURE__ */ new Map(), this._previewLoading = !1, this._loading = !0, this._saving = !1, this._error = null, this._refreshPreview = Ne(async () => {
+    super(...arguments), this.narrow = !1, this._tab = "devices", this._page = "main", this._config = null, this._devices = [], this._views = [], this._editingView = null, this._assignDevice = null, this._settingsDevice = null, this._viewPreviews = /* @__PURE__ */ new Map(), this._previewLoading = !1, this._loading = !0, this._saving = !1, this._error = null, this._refreshPreview = Re(async () => {
       if (this._editingView) {
         this._previewLoading = !0;
         try {
@@ -636,13 +636,6 @@ let u = class extends D {
   // ── Lifecycle ────────────────────────────────────────────────────────────
   firstUpdated() {
     this._loadAll();
-  }
-  updated() {
-    var s;
-    (s = this.shadowRoot) == null || s.querySelectorAll("ha-select").forEach((e) => {
-      var t;
-      (t = e.layout) == null || t.call(e);
-    });
   }
   // ── Data loading ─────────────────────────────────────────────────────────
   _ws(s, e = {}) {
@@ -1156,16 +1149,15 @@ let u = class extends D {
               <div class="card-content">
                 <ha-select
                   label="Theme"
-                  .value=${s.theme}
                   @selected=${(a) => {
       const n = a.currentTarget.value;
-      n && this._updateEditingView({ theme: n });
+      n && n !== s.theme && this._updateEditingView({ theme: n });
     }}
                   @closed=${(a) => a.stopPropagation()}
                 >
                   ${this._config ? Object.entries(this._config.themes).map(
       ([a, n]) => c`
-                          <mwc-list-item value=${a}>${n}</mwc-list-item>
+                          <mwc-list-item value=${a} ?selected=${s.theme === a}>${n}</mwc-list-item>
                         `
     ) : d}
                 </ha-select>
@@ -1197,17 +1189,16 @@ let u = class extends D {
           <!-- Widget type -->
           <ha-select
             label="Widget type"
-            .value=${r}
             @selected=${(o) => {
       const l = o.currentTarget.value;
-      this._updateWidget(s, { type: l, options: {} });
+      l !== r && this._updateWidget(s, { type: l, options: {} });
     }}
             @closed=${(o) => o.stopPropagation()}
           >
-            <mwc-list-item value="">— Empty —</mwc-list-item>
+            <mwc-list-item value="" ?selected=${r === ""}>— Empty —</mwc-list-item>
             ${Object.entries(this._config.widget_types).map(
       ([o, l]) => c`
-                <mwc-list-item value=${o}>${l.name}</mwc-list-item>
+                <mwc-list-item value=${o} ?selected=${r === o}>${l.name}</mwc-list-item>
               `
     )}
           </ha-select>
@@ -1273,15 +1264,14 @@ let u = class extends D {
         return c`
           <ha-select
             label=${t.label}
-            .value=${i !== void 0 ? String(i) : ""}
             @selected=${(a) => {
-          const n = a.currentTarget.value;
-          n !== void 0 && this._updateWidgetOption(s, t.key, n);
+          const n = a.currentTarget.value, o = i !== void 0 ? String(i) : "";
+          n !== void 0 && n !== o && this._updateWidgetOption(s, t.key, n);
         }}
             @closed=${(a) => a.stopPropagation()}
           >
             ${t.options ? Object.entries(t.options).map(
-          ([a, n]) => c`<mwc-list-item value=${a}>${n}</mwc-list-item>`
+          ([a, n]) => c`<mwc-list-item value=${a} ?selected=${String(i) === a}>${n}</mwc-list-item>`
         ) : d}
           </ha-select>
         `;

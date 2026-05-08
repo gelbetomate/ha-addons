@@ -68,14 +68,6 @@ export class UluxDisplayPanel extends LitElement {
     this._loadAll();
   }
 
-  protected updated(): void {
-    // mwc-select requires calling layout() after its list items are rendered
-    // otherwise the initial .value binding is silently ignored.
-    this.shadowRoot?.querySelectorAll("ha-select").forEach((el) => {
-      (el as HTMLElement & { layout?: () => void }).layout?.();
-    });
-  }
-
   // ── Data loading ─────────────────────────────────────────────────────────
 
   private _ws<T = unknown>(type: string, extra: Record<string, unknown> = {}): Promise<T> {
@@ -749,17 +741,16 @@ export class UluxDisplayPanel extends LitElement {
               <div class="card-content">
                 <ha-select
                   label="Theme"
-                  .value=${v.theme}
                   @selected=${(e: CustomEvent) => {
                     const val = (e.currentTarget as HTMLElement & { value: string }).value;
-                    if (val) this._updateEditingView({ theme: val });
+                    if (val && val !== v.theme) this._updateEditingView({ theme: val });
                   }}
                   @closed=${(e: Event) => e.stopPropagation()}
                 >
                   ${this._config
                     ? Object.entries(this._config.themes).map(
                         ([key, name]) => html`
-                          <mwc-list-item value=${key}>${name}</mwc-list-item>
+                          <mwc-list-item value=${key} ?selected=${v.theme === key}>${name}</mwc-list-item>
                         `,
                       )
                     : nothing}
@@ -795,17 +786,16 @@ export class UluxDisplayPanel extends LitElement {
           <!-- Widget type -->
           <ha-select
             label="Widget type"
-            .value=${widgetType}
             @selected=${(e: CustomEvent) => {
               const val = (e.currentTarget as HTMLElement & { value: string }).value;
-              this._updateWidget(slot, { type: val, options: {} });
+              if (val !== widgetType) this._updateWidget(slot, { type: val, options: {} });
             }}
             @closed=${(e: Event) => e.stopPropagation()}
           >
-            <mwc-list-item value="">— Empty —</mwc-list-item>
+            <mwc-list-item value="" ?selected=${widgetType === ""}>— Empty —</mwc-list-item>
             ${Object.entries(this._config.widget_types).map(
               ([key, info]) => html`
-                <mwc-list-item value=${key}>${info.name}</mwc-list-item>
+                <mwc-list-item value=${key} ?selected=${widgetType === key}>${info.name}</mwc-list-item>
               `,
             )}
           </ha-select>
@@ -886,16 +876,16 @@ export class UluxDisplayPanel extends LitElement {
         return html`
           <ha-select
             label=${opt.label}
-            .value=${value !== undefined ? String(value) : ""}
             @selected=${(e: CustomEvent) => {
               const val = (e.currentTarget as HTMLElement & { value: string }).value;
-              if (val !== undefined) this._updateWidgetOption(slot, opt.key, val);
+              const cur = value !== undefined ? String(value) : "";
+              if (val !== undefined && val !== cur) this._updateWidgetOption(slot, opt.key, val);
             }}
             @closed=${(e: Event) => e.stopPropagation()}
           >
             ${opt.options
               ? Object.entries(opt.options).map(
-                  ([key, label]) => html`<mwc-list-item value=${key}>${label}</mwc-list-item>`,
+                  ([key, label]) => html`<mwc-list-item value=${key} ?selected=${String(value) === key}>${label}</mwc-list-item>`,
                 )
               : nothing}
           </ha-select>
