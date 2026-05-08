@@ -60,6 +60,10 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
 
+  function isApiPath(pathname) {
+    return pathname === '/api' || pathname.startsWith('/api/');
+  }
+
   function respond(res, status, body) {
     // Handle 204 No Content and other responses with no body
     if (body === undefined) {
@@ -85,11 +89,47 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
     });
   }
 
+  async function readJsonBody(req) {
+    const raw = await readBody(req);
+    if (!raw || !raw.trim()) {
+      throw new Error('Request body must not be empty');
+    }
+    return JSON.parse(raw);
+  }
+
+  function getSwitchTarget(switchId) {
+    const store = discoveryRegistry?.getStore?.();
+    const fromRegistry = store?.get?.(switchId);
+    if (fromRegistry) {
+      return {
+        switch_id: fromRegistry.switch_id,
+        ip: fromRegistry.ip,
+        port: fromRegistry.port,
+      };
+    }
+
+    const fromConfig = (config.switches || []).find(
+      (s) => String(s.switch_id || '').toLowerCase() === switchId.toLowerCase()
+    );
+
+    if (!fromConfig) {
+      return null;
+    }
+
+    return {
+      switch_id: fromConfig.switch_id,
+      ip: fromConfig.ip,
+      port: fromConfig.port,
+    };
+  }
+
   async function handleRequest(req, res) {
-    const { method, url } = req;
+    const { method } = req;
+    const parsedUrl = new URL(req.url || '/', 'http://127.0.0.1');
+    const pathname = parsedUrl.pathname;
 
     // --- GET / (serve registry UI) ---
-    if (method === 'GET' && url === '/') {
+    if (method === 'GET' && pathname === '/') {
       const uiPath = path.join(__dirname, 'ui', 'registry.html');
       try {
         const html = fs.readFileSync(uiPath, 'utf8');
@@ -106,18 +146,18 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
     }
 
     // --- GET /api/health ---
-    if (method === 'GET' && url === '/api/health') {
+    if (method === 'GET' && pathname === '/api/health') {
       return respond(res, 200, { ok: true });
     }
 
     // --- GET /api/discovery/devices ---
-    if (method === 'GET' && url === '/api/discovery/devices') {
+    if (method === 'GET' && pathname === '/api/discovery/devices') {
       const devices = discoveryRegistry ? discoveryRegistry.list() : [];
       return respond(res, 200, { devices });
     }
 
     // --- GET /api/registry/devices ---
-    if (method === 'GET' && url === '/api/registry/devices') {
+    if (method === 'GET' && pathname === '/api/registry/devices') {
       const registryStore = discoveryRegistry?.getStore?.();
       if (!registryStore) {
         return respond(res, 500, { error: 'Registry not available' });
@@ -127,7 +167,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
     }
 
     // --- GET /api/registry/devices/:switchId ---
-    const registryGetMatch = url && url.match(/^\/api\/registry\/devices\/([^/?]+)$/);
+    const registryGetMatch = pathname.match(/^\/api\/registry\/devices\/([^/]+)$/);
     if (method === 'GET' && registryGetMatch) {
       const switchId = decodeURIComponent(registryGetMatch[1]);
       const registryStore = discoveryRegistry?.getStore?.();
@@ -142,7 +182,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
     }
 
     // --- POST /api/registry/devices ---
-    if (method === 'POST' && url === '/api/registry/devices') {
+    if (method === 'POST' && pathname === '/api/registry/devices') {
       const registryStore = discoveryRegistry?.getStore?.();
       if (!registryStore) {
         return respond(res, 500, { error: 'Registry not available' });
@@ -150,8 +190,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
 
       let payload;
       try {
-        const body = await readBody(req);
-        payload = JSON.parse(body);
+        payload = await readJsonBody(req);
       } catch (err) {
         return respond(res, 400, { error: `Invalid JSON body: ${err.message}` });
       }
@@ -166,7 +205,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
     }
 
     // --- PUT /api/registry/devices/:switchId ---
-    const registryUpdateMatch = url && url.match(/^\/api\/registry\/devices\/([^/?]+)$/);
+    const registryUpdateMatch = pathname.match(/^\/api\/registry\/devices\/([^/]+)$/);
     if (method === 'PUT' && registryUpdateMatch) {
       const switchId = decodeURIComponent(registryUpdateMatch[1]);
       const registryStore = discoveryRegistry?.getStore?.();
@@ -176,8 +215,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
 
       let payload;
       try {
-        const body = await readBody(req);
-        payload = JSON.parse(body);
+        payload = await readJsonBody(req);
       } catch (err) {
         return respond(res, 400, { error: `Invalid JSON body: ${err.message}` });
       }
@@ -192,7 +230,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
     }
 
     // --- DELETE /api/registry/devices/:switchId ---
-    const registryDeleteMatch = url && url.match(/^\/api\/registry\/devices\/([^/?]+)$/);
+    const registryDeleteMatch = pathname.match(/^\/api\/registry\/devices\/([^/]+)$/);
     if (method === 'DELETE' && registryDeleteMatch) {
       const switchId = decodeURIComponent(registryDeleteMatch[1]);
       const registryStore = discoveryRegistry?.getStore?.();
@@ -209,13 +247,11 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
     }
 
     // --- POST /api/display/image/:switchId ---
-    const imageMatch = url && url.match(/^\/api\/display\/image\/([^/?]+)/);
+    const imageMatch = pathname.match(/^\/api\/display\/image\/([^/]+)$/);
     if (method === 'POST' && imageMatch) {
       const switchId = decodeURIComponent(imageMatch[1]);
 
-      const sw = (config.switches || []).find(
-        (s) => String(s.switch_id || '').toLowerCase() === switchId.toLowerCase()
-      );
+      const sw = getSwitchTarget(switchId);
       if (!sw) {
         log.warning(`HTTP API: unknown switch_id="${switchId}"`);
         return respond(res, 404, { error: `Unknown switch_id: ${switchId}` });
@@ -223,8 +259,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
 
       let payload;
       try {
-        const body = await readBody(req);
-        payload = JSON.parse(body);
+        payload = await readJsonBody(req);
       } catch (err) {
         return respond(res, 400, { error: `Invalid JSON body: ${err.message}` });
       }
@@ -261,9 +296,20 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
 
   const server = createServer((req, res) => {
     handleRequest(req, res).catch((err) => {
-      log.error(`HTTP API unhandled error: ${err.message}`);
+      const parsedUrl = new URL(req.url || '/', 'http://127.0.0.1');
+      const pathname = parsedUrl.pathname;
+      log.error(`HTTP API unhandled error on ${req.method} ${pathname}: ${err.message}`);
       if (!res.headersSent) {
-        respond(res, 500, { error: 'Internal server error' });
+        if (isApiPath(pathname)) {
+          respond(res, 500, { error: 'Internal server error' });
+          return;
+        }
+        const text = 'Internal server error';
+        res.writeHead(500, {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Length': Buffer.byteLength(text),
+        });
+        res.end(text);
       }
     });
   });
@@ -274,6 +320,10 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
         log.info(`HTTP API server listening on port ${apiPort}`);
       });
       server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          log.error(`HTTP API port ${apiPort} is already in use. Another bridge instance may still be running.`);
+          return;
+        }
         log.error(`HTTP API server error: ${err.message}`);
       });
     },
