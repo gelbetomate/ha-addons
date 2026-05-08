@@ -2,7 +2,7 @@
 
 [![Add HACS Repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=gelbetomate&repository=ha-addons&category=integration)
 
-A Home Assistant custom integration that renders rich, customisable dashboards on the **u::lux Switch IP** (a 240×240 pixel wall-mounted smart display). It bridges Home Assistant entity state with live visuals through a flexible widget/layout system. Rendered images are pushed to the **ulux UMP Bridge** add-on via HTTP, which handles all UMP/UDP communication with the physical device.
+A Home Assistant custom integration that renders rich, customisable dashboards on the **u::lux Switch IP** (a 240×240 pixel wall-mounted smart display). It bridges Home Assistant entity state with live visuals through a flexible widget/layout system and the UMP (u::lux Message Protocol) over UDP.
 
 ---
 
@@ -17,32 +17,73 @@ A Home Assistant custom integration that renders rich, customisable dashboards o
 | **Widgets** | 16 widget types |
 | **Multi-screen** | Multiple screens per device with optional auto-cycling |
 | **Global views** | Shared views assignable to multiple devices |
-| **Transport** | HTTP → UMP Bridge add-on → UMP/UDP (port 34988) — fully local, no cloud |
+| **Transport** | UMP over UDP (port 34988) — fully local, no cloud |
 | **IOT class** | `local_polling` |
 
 ---
 
 ## Requirements
 
-- Home Assistant 2024.1+
-- [HACS](https://hacs.xyz/) for installation
+- Home Assistant 2024.1+ with Supervisor (for the bridge add-on)
+- [HACS](https://hacs.xyz/) for integration installation
+- **u::Lux UMP Bridge** add-on running (see [Installation order](#installation-order))
 - Python packages (installed automatically):
   - `pillow >= 10.0.0`
   - `palettable >= 3.3.0`
 
 ---
 
-## Installation
+## Installation Order
 
-### Via HACS (recommended)
+**Install the bridge add-on first.** The integration config flow talks to the bridge to discover your switch — if the bridge is not running, the config flow will fail.
 
-1. Open your Home Assistant instance and navigate to **HACS** in the sidebar.
-2. Click the three-dot menu (⋮) and select **Custom repositories**.
+### Step 1 — Install the UMP Bridge Add-on
+
+1. Navigate to **Settings → Add-ons → Add-on Store**.
+2. Click **⋮ → Repositories** and add `https://github.com/gelbetomate/ha-addons`.
+3. Find **u::Lux UMP Bridge** and install it.
+4. Configure it with your switch details (see the [bridge README](../../addons/ulux/README.md)):
+
+```yaml
+switches:
+  - name: "Living Room"
+    switch_id: "AA:BB:CC:DD:EE:FF"   # MAC address of your switch
+    ip: "192.168.1.100"
+listen_port: 34988
+api_port: 8099
+stream:
+  width: 240
+  height: 240
+  lines_per_packet: 5
+  inter_packet_delay_ms: 5
+mode:
+  ha_events: true
+  mqtt: false
+log_level: "info"
+```
+
+5. Start the add-on and confirm it is running (green status, no errors in the log tab).
+
+### Step 2 — Install the Integration via HACS
+
+1. Open **HACS** in the sidebar.
+2. Click **⋮ → Custom repositories**.
 3. Add `https://github.com/gelbetomate/ha-addons` with category **Integration**.
 4. Search for **u::lux Display**, click **Download**, and restart Home Assistant.
 5. Go to **Settings → Devices & Services → Add Integration** and search for **u::lux Display**.
 
-### Manual
+### Step 3 — Config Flow
+
+The config flow asks for:
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| **Bridge URL** | `http://localhost:8099` | URL of the UMP Bridge add-on HTTP API. Use the default if bridge and HA run on the same host. |
+| **Action** | Discover | **Discover** fetches known switches from the bridge. **Manual** lets you enter a switch MAC directly. |
+
+> **Tip — Discover vs Manual:** The discovery endpoint only lists switches that have already sent at least one UMP packet to the bridge (i.e. the switch has powered on and communicated). If you run the config flow before the switch has sent any packet, use **Manual** entry instead — it works identically, just skips the discovery call.
+
+### Manual Installation (without HACS)
 
 Copy the `custom_components/ulux_display/` folder into your Home Assistant `config/custom_components/` directory and restart.
 
@@ -64,8 +105,9 @@ Setup is fully UI-driven via the config flow. You will be prompted for:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `bridge_url` | `http://localhost:8099` | Base URL of the UMP Bridge add-on HTTP API |
-| `switch_id` | — | Switch identifier as reported by the bridge (e.g. `AA:BB:CC:DD:EE:FF`) — discovered automatically or entered manually |
+| `switch_ip` | — | IP address of the u::lux Switch IP device |
+| `actor_id` | `22` | UMP actor ID |
+| `page_id` | `4` | Page index on the device |
 | `refresh_interval` | `10` s | How often to re-render and push the display |
 | `screen_cycle_interval` | `0` s | Auto-cycle interval between screens (0 = manual) |
 
@@ -168,28 +210,13 @@ Views can be created once and shared across multiple devices. They are stored in
 
 ## Technical Details
 
-### Architecture — integration → bridge → device
+### Transport — UMP over UDP
 
-The integration does **not** speak UMP or UDP directly. Instead it follows a two-hop path:
-
-```
-HA Integration  ──HTTP POST──▶  UMP Bridge add-on  ──UMP/UDP──▶  u::lux Switch IP
- (Python/PIL)                    (Node.js, port 8099)             (port 34988)
-```
-
-1. **Render** — The coordinator renders the current screen into a 240×240 PIL image (with 2× supersampling for anti-aliased text and graphics).
-2. **Push to bridge** — The rendered image is base64-encoded as a PNG and sent to the bridge via:
-   ```
-   POST <bridge_url>/api/display/image/<switch_id>
-   Body: { "base64": "<png>", "width": 240, "height": 240 }
-   ```
-3. **UMP streaming** — The bridge decodes the PNG, converts it to **RGB565** (5-bit red, 6-bit green, 5-bit blue, little-endian) and streams it line-by-line to the physical device over UDP (port 34988) using stop-and-wait flow control.
-
-The bridge also exposes `GET /api/discovery/devices`, which the config flow uses to discover switches that have announced themselves over UDP.
+All communication uses the **u::lux Message Protocol** (UMP) over UDP port 34988. Images are encoded as **RGB565** (5-bit red, 6-bit green, 5-bit blue, little-endian) and streamed line-by-line with stop-and-wait flow control. The integration uses `asyncio.DatagramProtocol` for non-blocking I/O.
 
 ### Smart Backoff
 
-When the bridge is unreachable (HTTP connection error) the integration backs off exponentially (1×, 2×, 4×, 8×… up to 16× the refresh interval) to avoid log spam and reduce network overhead. It recovers automatically as soon as the bridge responds again.
+When a device is unreachable the integration backs off exponentially (1×, 2×, 4×, 8×… up to 16× the refresh interval) to avoid log spam and reduce network overhead. It recovers automatically when the device comes back online.
 
 ---
 
