@@ -162,50 +162,203 @@ automation:
 | `prev_key_state_raw` | number | Previous key state bitmask. |
 | `timestamp` | string | ISO 8601 timestamp. |
 
-## MQTT Topics
+## Networking
 
-When `mode.mqtt: true`:
+The app runs with **host networking** so it can bind UDP/34988 and receive packets from the local network. No additional port mapping is needed.
 
-| Topic | Direction | Description |
-|-------|-----------|-------------|
-| `ulux/<switch_id>/event/key` | Publish | Key snapshot (`ulux_event` payload for ID-Event). |
-| `ulux/<switch_id>/event/key_edge` | Publish | Key edge (`ulux_key` payload). |
-| `ulux/<switch_id>/event/state` | Publish | State event (`ulux_event` payload for ID-State). |
-| `ulux/<switch_id>/event/raw` | Publish | Raw packet for unhandled message IDs. |
-| `ulux/<switch_id>/cmd/display/image` | Subscribe | Stream an image to the switch display. |
+Configure each u::Lux Switch IP to send UMP packets to the bridge host's IP address.
 
-### MQTT command: stream display image
+## HTTP API
 
-Publish to:
+The bridge exposes a JSON REST API on port **8099** (configurable via `api_port`).
 
-```text
-ulux/<switch_id>/cmd/display/image
+### `GET /api/health`
+
+Health check — returns `200 OK` as soon as the server is ready.
+
+```json
+{ "ok": true }
 ```
 
-Payload (JSON):
+### `GET /api/discovery/devices`
+
+Returns all switches that have been seen on the network since the bridge started.
 
 ```json
 {
-  "url": "http://example.local/snapshot.jpg",
-  "width": 86,
-  "height": 90,
+  "devices": [
+    { "switch_id": "AA:BB:CC:DD:EE:FF", "ip": "192.168.1.100", "lastSeen": "2026-05-08T12:00:00.000Z" }
+  ]
+}
+```
+
+Used by the `ulux_display` integration config flow to populate the device picker.
+
+### `POST /api/display/image/:switchId`
+
+Push a rendered image to a specific switch. The bridge converts it to RGB565 and streams it to the device over UMP/UDP.
+
+| Parameter | Location | Description |
+|-----------|----------|-------------|
+| `switchId` | URL path | Switch ID (MAC address) as configured — URL-encoded |
+| `base64` | JSON body | **Required.** Base64-encoded PNG (or other image format) |
+| `width` | JSON body | Optional. Target width in pixels (default: `stream.width` from config) |
+| `height` | JSON body | Optional. Target height in pixels (default: `stream.height` from config) |
+
+**Request example:**
+
+```http
+POST /api/display/image/AA%3ABB%3ACC%3ADD%3AEE%3AFF
+Content-Type: application/json
+
+{
+  "base64": "<base64-encoded PNG>",
+  "width": 240,
+  "height": 240
+}
+```
+
+**Responses:**
+
+| Status | Body | Meaning |
+|--------|------|---------|
+| `200` | `{ "ok": true }` | Image streamed successfully |
+| `400` | `{ "error": "..." }` | Invalid JSON or missing `base64` field |
+| `404` | `{ "error": "Unknown switch_id: ..." }` | `switchId` not in configured switches list |
+| `500` | `{ "error": "..." }` | Streaming failed (UDP error etc.) |
+
+---
+
+## MQTT Topics
+
+Enable with `mode.mqtt: true`. All topics are prefixed with `mqtt.base_topic` (default `ulux`).
+
+### Inbound events (bridge → MQTT broker, published by bridge)
+
+| Topic | Trigger | Payload |
+|-------|---------|---------|
+| `ulux/<switch_id>/event/key` | Any key-state change | `ulux_event` JSON (ID-Event) |
+| `ulux/<switch_id>/event/key_edge` | Per-key press/release transition | `ulux_key` JSON |
+| `ulux/<switch_id>/event/state` | Switch initialisation / time request | `ulux_event` JSON (ID-State) |
+| `ulux/<switch_id>/event/raw` | Unhandled message IDs | Raw hex packet info |
+
+**Example — key edge event:**
+
+```json
+{
+  "switch_id": "AA:BB:CC:DD:EE:FF",
+  "switch_name": "Living Room",
+  "ip": "192.168.1.100",
+  "actor_id": 0,
+  "key": 1,
+  "action": "pressed",
+  "key_state_raw": 1,
+  "prev_key_state_raw": 0,
+  "timestamp": "2026-05-08T12:00:00.000Z"
+}
+```
+
+**Example — key snapshot event:**
+
+```json
+{
+  "switch_id": "AA:BB:CC:DD:EE:FF",
+  "switch_name": "Living Room",
+  "ip": "192.168.1.100",
+  "actor_id": 0,
+  "key_state_raw": 3,
+  "keys_down": [1, 2],
+  "timestamp": "2026-05-08T12:00:00.000Z"
+}
+```
+
+### Outbound commands (MQTT broker → bridge → switch, subscribed by bridge)
+
+| Topic | Direction | Description |
+|-------|-----------|-------------|
+| `ulux/<switch_id>/cmd/display/image` | Subscribe | Stream an image to the switch display |
+
+**Publish to `ulux/<switch_id>/cmd/display/image`:**
+
+```json
+{
+  "base64": "<base64-encoded image>",
+  "width": 240,
+  "height": 240,
   "lines_per_packet": 5,
   "inter_packet_delay_ms": 5
 }
 ```
 
-Image source fields (choose one):
-- `url`: HTTP/HTTPS image URL
-- `base64`: Base64-encoded image data (plain base64 or data URL)
-- `path`: Local file path inside the app container
+Image source fields (choose exactly one):
 
-Per-command tuning fields are optional and override `stream.*` defaults.
+| Field | Description |
+|-------|-------------|
+| `base64` | Base64-encoded image data (plain base64 or data URL) |
+| `url` | HTTP/HTTPS URL — bridge fetches it at command time |
+| `path` | Local file path inside the bridge container |
 
-## Networking
+The `width`, `height`, `lines_per_packet` and `inter_packet_delay_ms` fields are optional and override the corresponding `stream.*` config defaults per command.
 
-The app runs with **host networking** so it can bind UDP/34988 and receive packets from the local network. No additional port mapping is needed.
+---
 
-Configure each u::Lux Switch IP to send UMP packets to the Home Assistant host's IP address.
+## UMP/UDP Interface
+
+All communication with u::Lux Switch IP devices uses the **u::Lux Message Protocol (UMP)** over UDP port **34988** (`0x88AC`).
+
+### Wire format
+
+Every UDP datagram is a single UMP **telegram**:
+
+```
+Telegram (n bytes, all fields little-endian)
+├── Header (16 bytes)
+│   ├── [0-1]  TotalLength   UInt16LE — total datagram size incl. header
+│   ├── [2-3]  ProtocolVersion / reserved
+│   ├── [4-9]  DeviceAddress  6-byte MAC of the sender
+│   ├── [10-11] PacketID      UInt16LE — incrementing sequence counter
+│   └── [12-15] Reserved
+└── Messages (one or more, back-to-back)
+    ├── [0]    MessageLength  UInt8 — total size of this message incl. this byte
+    ├── [1]    MessageID      UInt8
+    ├── [2-3]  ActorID        UInt16LE
+    └── [4+]   Payload        (varies by MessageID)
+```
+
+### Inbound messages (switch → bridge)
+
+| MessageID | Name | Description |
+|-----------|------|-------------|
+| `0x01` | **ID-State** | StateFlags (32-bit LE). Bit 6 = InitRequest, bit 5 = TimeRequest. Bridge auto-replies. |
+| `0x51` | **ID-Event** | Key-state bitmask (4 bits). Bit 0=Key1, bit 1=Key2, bit 2=Key3, bit 3=Key4. |
+
+### Outbound messages (bridge → switch)
+
+| MessageID | Name | When sent | Description |
+|-----------|------|-----------|-------------|
+| `0x21` | **ID-Control** | On InitRequest | 8 bytes. Carries `control_flags` (UInt32LE). Safe default: `0x00000000`. |
+| `0x2F` | **DateTime** | On TimeRequest | 12 bytes. Year (UInt16LE), Month, Day, Hour, Minute, Second, DayOfWeek (ISO: 1=Mon). |
+| `0x8601` | **VideoStart** | Before image stream | Signals start of a new video frame; carries a 32-bit sequence ID. |
+| `0x8602` | **VideoStream** | Per image chunk | Carries RGB565 LE pixel data for `linesPerPacket` lines, with `startLine` offset. |
+
+### Image streaming sequence
+
+```
+Bridge                              Switch
+  │  VideoStart(seqId)                │
+  │ ─────────────────────────────────▶│
+  │  VideoStream(seqId, line=0, ...)  │
+  │ ─────────────────────────────────▶│
+  │  VideoStream(seqId, line=5, ...)  │
+  │ ─────────────────────────────────▶│
+  │           … (one packet per N lines, with inter_packet_delay_ms pause)
+  │  VideoStream(seqId, line=235,...) │
+  │ ─────────────────────────────────▶│
+```
+
+Pixels are encoded as **RGB565 little-endian**: 5 red bits, 6 green bits, 5 blue bits, packed into a UInt16LE per pixel, sent row by row. The number of lines per datagram and the inter-packet delay are tunable via `stream.lines_per_packet` and `stream.inter_packet_delay_ms`.
+
+---
 
 ## Standalone Docker
 
@@ -238,13 +391,42 @@ Use this deployment method when you are **not** running the Home Assistant Super
    |-----|-------------|
    | `switches[].switch_id` | MAC address of your u::Lux Switch IP |
    | `switches[].ip` | Local IP address of the switch |
-   | `ha.ws_url` | `ws://<your-ha-host>:8123/api/websocket` |
-   | `ha.token` | A long-lived access token (see below) |
    | `stream.width` / `stream.height` | `240` — the u::Lux Switch IP display is 240×240 |
 
-3. **Create a long-lived access token in Home Assistant:**
+3. **Choose a Home Assistant integration mode** (or disable HA events entirely):
 
-   In HA, go to **Profile → Security → Long-Lived Access Tokens → Create Token**, copy the token and paste it into `ha.token` in `options.json`.
+   **Option A — with HA long-lived access token** (most common for standalone):
+
+   Set in `options.json`:
+   ```json
+   "mode": { "ha_events": true, "mqtt": false },
+   "ha": {
+     "ws_url": "ws://<your-ha-host>:8123/api/websocket",
+     "token": "<long-lived-access-token>"
+   }
+   ```
+   In HA go to **Profile → Security → Long-Lived Access Tokens → Create Token**, copy the token and paste it into `ha.token`.
+
+   **Option B — MQTT only, no HA token required**:
+
+   Set in `options.json`:
+   ```json
+   "mode": { "ha_events": false, "mqtt": true },
+   "mqtt": {
+     "host": "<broker-host>",
+     "port": 1883,
+     "base_topic": "ulux"
+   }
+   ```
+   Key events are published to MQTT topics; no HA WebSocket connection is established.
+
+   **Option C — HTTP API only** (use the `ulux_display` HACS integration or custom clients):
+
+   Set in `options.json`:
+   ```json
+   "mode": { "ha_events": false, "mqtt": false }
+   ```
+   The bridge still listens for UMP packets and exposes the HTTP API, but does not push events anywhere automatically. Push images via `POST /api/display/image/<switchId>`.
 
 4. **Start the bridge:**
 
@@ -262,7 +444,7 @@ Use this deployment method when you are **not** running the Home Assistant Super
 
 ### HTTP API and the `ulux_display` HACS integration
 
-The bridge exposes an HTTP API on port **8099** (configurable via `api_port`).  
+The bridge HTTP API runs on port **8099** (configurable via `api_port`).  
 The [`ulux_display` HACS integration](https://github.com/gelbetomate/ha-addons/tree/main/custom_components/ulux_display) uses this API to push display images to the switch.
 
 When running standalone, set the **Bridge URL** in the integration config flow to:
@@ -276,7 +458,7 @@ http://<docker-host-ip>:8099
 | | Supervisor add-on | Standalone Docker |
 |---|---|---|
 | **Config source** | `/data/options.json` (managed by HA UI) | `options.json` mounted into the container |
-| **HA token** | `SUPERVISOR_TOKEN` (auto-injected) | Long-lived access token in `options.json` |
+| **HA token** | `SUPERVISOR_TOKEN` (auto-injected) | Long-lived access token in `options.json`, or omit if `mode.ha_events: false` |
 | **HA WebSocket URL** | `ws://supervisor/core/websocket` | `ws://<ha-host>:8123/api/websocket` |
 | **Networking** | Host network (Supervisor-managed) | `network_mode: host` (Linux only) |
 | **Updates** | Via HA Add-on Store | `docker compose pull` / rebuild |

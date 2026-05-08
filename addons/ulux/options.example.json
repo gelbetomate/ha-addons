@@ -1,4 +1,6 @@
 {
+  "_comment": "Standalone configuration example. Three modes are supported — pick one and delete the others.",
+
   "switches": [
     {
       "name": "Living Room",
@@ -16,6 +18,8 @@
     "lines_per_packet": 5,
     "inter_packet_delay_ms": 5
   },
+
+  "_mode_comment": "--- Mode A: HA WebSocket events (requires a long-lived access token) ---",
   "mode": {
     "ha_events": true,
     "mqtt": false
@@ -24,6 +28,27 @@
     "ws_url": "ws://192.168.1.X:8123/api/websocket",
     "token": "your-long-lived-access-token-here"
   },
+
+  "_mode_b_comment": "--- Mode B: MQTT only — no HA token required. Set mode.ha_events=false, mode.mqtt=true ---",
+  "_mode_b": {
+    "mode": {
+      "ha_events": false,
+      "mqtt": true
+    },
+    "ha": {
+      "ws_url": "",
+      "token": ""
+    }
+  },
+
+  "_mode_c_comment": "--- Mode C: HTTP API only — set both mode flags to false. No events pushed anywhere. ---",
+  "_mode_c": {
+    "mode": {
+      "ha_events": false,
+      "mqtt": false
+    }
+  },
+
   "mqtt": {
     "host": "mqtt-broker-hostname",
     "port": 1883,
