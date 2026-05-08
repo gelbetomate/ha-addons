@@ -70,6 +70,38 @@ function debounce<T extends (...args: unknown[]) => void>(
 
 @customElement("ulux-display-panel")
 export class UluxDisplayPanel extends LitElement {
+  private static readonly BRIDGE_THEME_VARS = [
+    "--primary-background-color",
+    "--secondary-background-color",
+    "--card-background-color",
+    "--primary-text-color",
+    "--secondary-text-color",
+    "--disabled-text-color",
+    "--divider-color",
+    "--outline-color",
+    "--accent-color",
+    "--error-color",
+    "--success-color",
+    "--warning-color",
+  ] as const;
+
+  private _handleBridgeThemeRequest = (event: MessageEvent): void => {
+    const data = event?.data as { type?: string } | undefined;
+    if (!data || data.type !== "ulux_bridge_theme_request") {
+      return;
+    }
+
+    const theme = this._collectCurrentThemeVars();
+    const targetOrigin = event.origin && event.origin !== "null" ? event.origin : "*";
+    event.source?.postMessage(
+      {
+        type: "ulux_bridge_theme",
+        theme,
+      },
+      { targetOrigin }
+    );
+  };
+
   // Props passed by Home Assistant
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ type: Boolean }) narrow = false;
@@ -89,6 +121,30 @@ export class UluxDisplayPanel extends LitElement {
   @state() private _saving = false;
   @state() private _expandedItems: Set<string> = new Set();
   @state() private _viewPreviews: Map<string, string> = new Map();
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    window.addEventListener("message", this._handleBridgeThemeRequest);
+  }
+
+  disconnectedCallback(): void {
+    window.removeEventListener("message", this._handleBridgeThemeRequest);
+    super.disconnectedCallback();
+  }
+
+  private _collectCurrentThemeVars(): Record<string, string> {
+    const style = window.getComputedStyle(document.documentElement);
+    const out: Record<string, string> = {};
+
+    UluxDisplayPanel.BRIDGE_THEME_VARS.forEach((name) => {
+      const value = style.getPropertyValue(name)?.trim();
+      if (value) {
+        out[name] = value;
+      }
+    });
+
+    return out;
+  }
 
   static styles = css`
     :host {
