@@ -194,8 +194,8 @@ let S = class extends HTMLElement {
     if (r !== void 0 && this._$Em !== r) {
       const o = i.getPropertyOptions(r), l = typeof o.converter == "function" ? { fromAttribute: o.converter } : ((a = o.converter) == null ? void 0 : a.fromAttribute) !== void 0 ? o.converter : j;
       this._$Em = r;
-      const h = l.fromAttribute(t, o.type);
-      this[r] = h ?? ((n = this._$Ej) == null ? void 0 : n.get(r)) ?? h, this._$Em = null;
+      const p = l.fromAttribute(t, o.type);
+      this[r] = p ?? ((n = this._$Ej) == null ? void 0 : n.get(r)) ?? p, this._$Em = null;
     }
   }
   requestUpdate(e, t, i, r = !1, a) {
@@ -296,10 +296,10 @@ const Ee = (s, e) => {
   let r, a = e === 2 ? "<svg>" : e === 3 ? "<math>" : "", n = k;
   for (let o = 0; o < t; o++) {
     const l = s[o];
-    let h, v, p = -1, f = 0;
-    for (; f < l.length && (n.lastIndex = f, v = n.exec(l), v !== null); ) f = n.lastIndex, n === k ? v[1] === "!--" ? n = ie : v[1] !== void 0 ? n = se : v[2] !== void 0 ? (he.test(v[2]) && (r = RegExp("</" + v[2], "g")), n = $) : v[3] !== void 0 && (n = $) : n === $ ? v[0] === ">" ? (n = r ?? k, p = -1) : v[1] === void 0 ? p = -2 : (p = n.lastIndex - v[2].length, h = v[1], n = v[3] === void 0 ? $ : v[3] === '"' ? ae : re) : n === ae || n === re ? n = $ : n === ie || n === se ? n = k : (n = $, r = void 0);
+    let p, v, h = -1, f = 0;
+    for (; f < l.length && (n.lastIndex = f, v = n.exec(l), v !== null); ) f = n.lastIndex, n === k ? v[1] === "!--" ? n = ie : v[1] !== void 0 ? n = se : v[2] !== void 0 ? (he.test(v[2]) && (r = RegExp("</" + v[2], "g")), n = $) : v[3] !== void 0 && (n = $) : n === $ ? v[0] === ">" ? (n = r ?? k, h = -1) : v[1] === void 0 ? h = -2 : (h = n.lastIndex - v[2].length, p = v[1], n = v[3] === void 0 ? $ : v[3] === '"' ? ae : re) : n === ae || n === re ? n = $ : n === ie || n === se ? n = k : (n = $, r = void 0);
     const m = n === $ && s[o + 1].startsWith("/>") ? " " : "";
-    a += n === k ? l + be : p >= 0 ? (i.push(h), l.slice(0, p) + ce + l.slice(p) + w + m) : l + w + (p === -2 ? o : m);
+    a += n === k ? l + be : h >= 0 ? (i.push(p), l.slice(0, h) + ce + l.slice(h) + w + m) : l + w + (h === -2 ? o : m);
   }
   return [pe(s, a + (s[t] || "<?>") + (e === 2 ? "</svg>" : e === 3 ? "</math>" : "")), i];
 };
@@ -308,29 +308,29 @@ class M {
     let r;
     this.parts = [];
     let a = 0, n = 0;
-    const o = e.length - 1, l = this.parts, [h, v] = Ee(e, t);
-    if (this.el = M.createElement(h, i), x.currentNode = this.el.content, t === 2 || t === 3) {
-      const p = this.el.content.firstChild;
-      p.replaceWith(...p.childNodes);
+    const o = e.length - 1, l = this.parts, [p, v] = Ee(e, t);
+    if (this.el = M.createElement(p, i), x.currentNode = this.el.content, t === 2 || t === 3) {
+      const h = this.el.content.firstChild;
+      h.replaceWith(...h.childNodes);
     }
     for (; (r = x.nextNode()) !== null && l.length < o; ) {
       if (r.nodeType === 1) {
-        if (r.hasAttributes()) for (const p of r.getAttributeNames()) if (p.endsWith(ce)) {
-          const f = v[n++], m = r.getAttribute(p).split(w), N = /([.?@])?(.*)/.exec(f);
-          l.push({ type: 1, index: a, name: N[2], strings: m, ctor: N[1] === "." ? ke : N[1] === "?" ? Ce : N[1] === "@" ? Ve : z }), r.removeAttribute(p);
-        } else p.startsWith(w) && (l.push({ type: 6, index: a }), r.removeAttribute(p));
+        if (r.hasAttributes()) for (const h of r.getAttributeNames()) if (h.endsWith(ce)) {
+          const f = v[n++], m = r.getAttribute(h).split(w), N = /([.?@])?(.*)/.exec(f);
+          l.push({ type: 1, index: a, name: N[2], strings: m, ctor: N[1] === "." ? ke : N[1] === "?" ? Ce : N[1] === "@" ? Ve : z }), r.removeAttribute(h);
+        } else h.startsWith(w) && (l.push({ type: 6, index: a }), r.removeAttribute(h));
         if (he.test(r.tagName)) {
-          const p = r.textContent.split(w), f = p.length - 1;
+          const h = r.textContent.split(w), f = h.length - 1;
           if (f > 0) {
             r.textContent = L ? L.emptyScript : "";
-            for (let m = 0; m < f; m++) r.append(p[m], O()), x.nextNode(), l.push({ type: 2, index: ++a });
-            r.append(p[f], O());
+            for (let m = 0; m < f; m++) r.append(h[m], O()), x.nextNode(), l.push({ type: 2, index: ++a });
+            r.append(h[f], O());
           }
         }
       } else if (r.nodeType === 8) if (r.data === de) l.push({ type: 2, index: a });
       else {
-        let p = -1;
-        for (; (p = r.data.indexOf(w, p + 1)) !== -1; ) l.push({ type: 7, index: a }), p += w.length - 1;
+        let h = -1;
+        for (; (h = r.data.indexOf(w, h + 1)) !== -1; ) l.push({ type: 7, index: a }), h += w.length - 1;
       }
       a++;
     }
@@ -363,8 +363,8 @@ class Pe {
     let a = x.nextNode(), n = 0, o = 0, l = i[0];
     for (; l !== void 0; ) {
       if (n === l.index) {
-        let h;
-        l.type === 2 ? h = new U(a, a.nextSibling, this, e) : l.type === 1 ? h = new l.ctor(a, l.name, l.strings, this, e) : l.type === 6 && (h = new De(a, this, e)), this._$AV.push(h), l = i[++o];
+        let p;
+        l.type === 2 ? p = new U(a, a.nextSibling, this, e) : l.type === 1 ? p = new l.ctor(a, l.name, l.strings, this, e) : l.type === 6 && (p = new De(a, this, e)), this._$AV.push(p), l = i[++o];
       }
       n !== (l == null ? void 0 : l.index) && (a = x.nextNode(), n++);
     }
@@ -454,8 +454,8 @@ class z {
     if (a === void 0) e = P(this, e, t, 0), n = !H(e) || e !== this._$AH && e !== E, n && (this._$AH = e);
     else {
       const o = e;
-      let l, h;
-      for (e = a[0], l = 0; l < a.length - 1; l++) h = P(this, o[i + l], t, l), h === E && (h = this._$AH[l]), n || (n = !H(h) || h !== this._$AH[l]), h === d ? e = d : e !== d && (e += (h ?? "") + a[l + 1]), this._$AH[l] = h;
+      let l, p;
+      for (e = a[0], l = 0; l < a.length - 1; l++) p = P(this, o[i + l], t, l), p === E && (p = this._$AH[l]), n || (n = !H(p) || p !== this._$AH[l]), p === d ? e = d : e !== d && (e += (p ?? "") + a[l + 1]), this._$AH[l] = p;
     }
     n && !r && this.j(e);
   }
@@ -1150,9 +1150,8 @@ let u = class extends D {
                 <ha-select
                   label="Theme"
                   .value=${s.theme}
-                  @selected=${(a) => {
-      var o;
-      const n = ((o = a.detail) == null ? void 0 : o.value) ?? a.target.value;
+                  @change=${(a) => {
+      const n = a.target.value;
       n && this._updateEditingView({ theme: n });
     }}
                   @closed=${(a) => a.stopPropagation()}
@@ -1192,9 +1191,8 @@ let u = class extends D {
           <ha-select
             label="Widget type"
             .value=${r}
-            @selected=${(o) => {
-      var h;
-      const l = ((h = o.detail) == null ? void 0 : h.value) ?? "";
+            @change=${(o) => {
+      const l = o.target.value;
       this._updateWidget(s, { type: l, options: {} });
     }}
             @closed=${(o) => o.stopPropagation()}
@@ -1269,9 +1267,8 @@ let u = class extends D {
           <ha-select
             label=${t.label}
             .value=${i !== void 0 ? String(i) : ""}
-            @selected=${(a) => {
-          var o;
-          const n = (o = a.detail) == null ? void 0 : o.value;
+            @change=${(a) => {
+          const n = a.target.value;
           n !== void 0 && this._updateWidgetOption(s, t.key, n);
         }}
             @closed=${(a) => a.stopPropagation()}

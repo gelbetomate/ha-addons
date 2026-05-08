@@ -742,8 +742,8 @@ export class UluxDisplayPanel extends LitElement {
                 <ha-select
                   label="Theme"
                   .value=${v.theme}
-                  @selected=${(e: CustomEvent) => {
-                    const val = (e.detail as { value?: string })?.value ?? (e.target as HTMLSelectElement).value;
+                  @change=${(e: Event) => {
+                    const val = (e.target as EventTarget & { value: string }).value;
                     if (val) this._updateEditingView({ theme: val });
                   }}
                   @closed=${(e: Event) => e.stopPropagation()}
@@ -788,8 +788,8 @@ export class UluxDisplayPanel extends LitElement {
           <ha-select
             label="Widget type"
             .value=${widgetType}
-            @selected=${(e: CustomEvent) => {
-              const val = (e.detail as { value?: string })?.value ?? "";
+            @change=${(e: Event) => {
+              const val = (e.target as EventTarget & { value: string }).value;
               this._updateWidget(slot, { type: val, options: {} });
             }}
             @closed=${(e: Event) => e.stopPropagation()}
@@ -879,8 +879,8 @@ export class UluxDisplayPanel extends LitElement {
           <ha-select
             label=${opt.label}
             .value=${value !== undefined ? String(value) : ""}
-            @selected=${(e: CustomEvent) => {
-              const val = (e.detail as { value?: string })?.value;
+            @change=${(e: Event) => {
+              const val = (e.target as EventTarget & { value: string }).value;
               if (val !== undefined) this._updateWidgetOption(slot, opt.key, val);
             }}
             @closed=${(e: Event) => e.stopPropagation()}
