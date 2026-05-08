@@ -296,8 +296,8 @@ const Ie = (s, e) => {
   let r, a = e === 2 ? "<svg>" : e === 3 ? "<math>" : "", o = k;
   for (let l = 0; l < t; l++) {
     const n = s[l];
-    let h, u, c = -1, m = 0;
-    for (; m < n.length && (o.lastIndex = m, u = o.exec(n), u !== null); ) m = o.lastIndex, o === k ? u[1] === "!--" ? o = re : u[1] !== void 0 ? o = ae : u[2] !== void 0 ? (ge.test(u[2]) && (r = RegExp("</" + u[2], "g")), o = w) : u[3] !== void 0 && (o = w) : o === w ? u[0] === ">" ? (o = r ?? k, c = -1) : u[1] === void 0 ? c = -2 : (c = o.lastIndex - u[2].length, h = u[1], o = u[3] === void 0 ? w : u[3] === '"' ? ne : oe) : o === ne || o === oe ? o = w : o === re || o === ae ? o = k : (o = w, r = void 0);
+    let h, g, c = -1, m = 0;
+    for (; m < n.length && (o.lastIndex = m, g = o.exec(n), g !== null); ) m = o.lastIndex, o === k ? g[1] === "!--" ? o = re : g[1] !== void 0 ? o = ae : g[2] !== void 0 ? (ge.test(g[2]) && (r = RegExp("</" + g[2], "g")), o = w) : g[3] !== void 0 && (o = w) : o === w ? g[0] === ">" ? (o = r ?? k, c = -1) : g[1] === void 0 ? c = -2 : (c = o.lastIndex - g[2].length, h = g[1], o = g[3] === void 0 ? w : g[3] === '"' ? ne : oe) : o === ne || o === oe ? o = w : o === re || o === ae ? o = k : (o = w, r = void 0);
     const _ = o === w && s[l + 1].startsWith("/>") ? " " : "";
     a += o === k ? n + Se : c >= 0 ? (i.push(h), n.slice(0, c) + pe + n.slice(c) + y + _) : n + y + (c === -2 ? l : _);
   }
@@ -308,7 +308,7 @@ class L {
     let r;
     this.parts = [];
     let a = 0, o = 0;
-    const l = e.length - 1, n = this.parts, [h, u] = Ie(e, t);
+    const l = e.length - 1, n = this.parts, [h, g] = Ie(e, t);
     if (this.el = L.createElement(h, i), x.currentNode = this.el.content, t === 2 || t === 3) {
       const c = this.el.content.firstChild;
       c.replaceWith(...c.childNodes);
@@ -316,7 +316,7 @@ class L {
     for (; (r = x.nextNode()) !== null && n.length < l; ) {
       if (r.nodeType === 1) {
         if (r.hasAttributes()) for (const c of r.getAttributeNames()) if (c.endsWith(pe)) {
-          const m = u[o++], _ = r.getAttribute(c).split(y), U = /([.?@])?(.*)/.exec(m);
+          const m = g[o++], _ = r.getAttribute(c).split(y), U = /([.?@])?(.*)/.exec(m);
           n.push({ type: 1, index: a, name: U[2], strings: _, ctor: U[1] === "." ? Me : U[1] === "?" ? Ce : U[1] === "@" ? Le : D }), r.removeAttribute(c);
         } else c.startsWith(y) && (n.push({ type: 6, index: a }), r.removeAttribute(c));
         if (ge.test(r.tagName)) {
@@ -674,11 +674,11 @@ function Fe(s, e) {
     clearTimeout(t), t = setTimeout(() => s(...i), e);
   };
 }
-let g = class extends O {
+let u = class extends O {
   constructor() {
-    super(...arguments), this.narrow = !1, this._page = "main", this._config = null, this._views = [], this._devices = [], this._editingView = null, this._previewImage = null, this._previewLoading = !1, this._loading = !0, this._saving = !1, this._expandedItems = /* @__PURE__ */ new Set(), this._viewPreviews = /* @__PURE__ */ new Map(), this._refreshPreview = Fe(async () => {
+    super(...arguments), this.narrow = !1, this._page = "main", this._config = null, this._views = [], this._devices = [], this._editingView = null, this._previewImage = null, this._previewError = null, this._previewLoading = !1, this._loading = !0, this._saving = !1, this._expandedItems = /* @__PURE__ */ new Set(), this._viewPreviews = /* @__PURE__ */ new Map(), this._refreshPreview = Fe(async () => {
       if (this._editingView) {
-        this._previewLoading = !0;
+        this._previewLoading = !0, this._previewError = null;
         try {
           const s = await this.hass.connection.sendMessagePromise({
             type: "ulux_display/preview/render",
@@ -690,7 +690,7 @@ let g = class extends O {
           });
           this._previewImage = s.image;
         } catch (s) {
-          console.error("Failed to render preview:", s);
+          console.error("Failed to render preview:", s), this._previewError = s instanceof Error ? s.message : String(s);
         } finally {
           this._previewLoading = !1;
         }
@@ -758,7 +758,7 @@ let g = class extends O {
       }
   }
   _editView(s) {
-    this._editingView = { ...s, widgets: [...s.widgets] }, this._page = "editor", this._refreshPreview();
+    this._editingView = { ...s, widgets: [...s.widgets] }, this._previewImage = null, this._previewError = null, this._page = "editor", this._refreshPreview();
   }
   async _saveView() {
     if (this._editingView) {
@@ -983,7 +983,7 @@ let g = class extends O {
                       class="preview-image"
                       src="data:image/png;base64,${this._previewImage}"
                       alt="Preview"
-                    />` : d`<div class="preview-placeholder">No preview</div>`}
+                    />` : this._previewError ? d`<div class="preview-placeholder" style="font-size:11px;padding:8px;word-break:break-all;text-align:center">${this._previewError}</div>` : d`<div class="preview-placeholder">No preview</div>`}
             </div>
           </ha-card>
         </div>
@@ -1407,7 +1407,7 @@ let g = class extends O {
                         .path=${"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"}
                         @click=${(n) => {
         n.stopPropagation();
-        const h = i.filter((u, c) => c !== a);
+        const h = i.filter((g, c) => c !== a);
         this._updateWidgetOption(s, e, h);
       }}
                       ></ha-icon-button>
@@ -1511,7 +1511,7 @@ let g = class extends O {
                         .path=${"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"}
                         @click=${(n) => {
         n.stopPropagation();
-        const h = i.filter((u, c) => c !== a);
+        const h = i.filter((g, c) => c !== a);
         this._updateWidgetOption(s, e, h);
       }}
                       ></ha-icon-button>
@@ -1661,7 +1661,7 @@ let g = class extends O {
     i && (i.slot = e), r && (r.slot = s), this._editingView = { ...this._editingView, widgets: [...t] }, this.requestUpdate(), this._refreshPreview();
   }
 };
-g.styles = _e`
+u.styles = _e`
     :host {
       display: flex;
       flex-direction: column;
@@ -2341,52 +2341,55 @@ g.styles = _e`
   `;
 v([
   T({ attribute: !1 })
-], g.prototype, "hass", 2);
+], u.prototype, "hass", 2);
 v([
   T({ type: Boolean })
-], g.prototype, "narrow", 2);
+], u.prototype, "narrow", 2);
 v([
   T({ attribute: !1 })
-], g.prototype, "route", 2);
+], u.prototype, "route", 2);
 v([
   T({ attribute: !1 })
-], g.prototype, "panel", 2);
+], u.prototype, "panel", 2);
 v([
   f()
-], g.prototype, "_page", 2);
+], u.prototype, "_page", 2);
 v([
   f()
-], g.prototype, "_config", 2);
+], u.prototype, "_config", 2);
 v([
   f()
-], g.prototype, "_views", 2);
+], u.prototype, "_views", 2);
 v([
   f()
-], g.prototype, "_devices", 2);
+], u.prototype, "_devices", 2);
 v([
   f()
-], g.prototype, "_editingView", 2);
+], u.prototype, "_editingView", 2);
 v([
   f()
-], g.prototype, "_previewImage", 2);
+], u.prototype, "_previewImage", 2);
 v([
   f()
-], g.prototype, "_previewLoading", 2);
+], u.prototype, "_previewError", 2);
 v([
   f()
-], g.prototype, "_loading", 2);
+], u.prototype, "_previewLoading", 2);
 v([
   f()
-], g.prototype, "_saving", 2);
+], u.prototype, "_loading", 2);
 v([
   f()
-], g.prototype, "_expandedItems", 2);
+], u.prototype, "_saving", 2);
 v([
   f()
-], g.prototype, "_viewPreviews", 2);
-g = v([
+], u.prototype, "_expandedItems", 2);
+v([
+  f()
+], u.prototype, "_viewPreviews", 2);
+u = v([
   Ue("ulux-display-panel")
-], g);
+], u);
 export {
-  g as UluxDisplayPanel
+  u as UluxDisplayPanel
 };

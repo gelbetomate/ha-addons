@@ -90,11 +90,11 @@ class StatusIndicator(Component):
 
         children: list[Component] = [
             Icon(name=self.icon, size=icon_size, color=color),
-            Text(text=name, font="small", color=THEME_TEXT_PRIMARY),
+            Text(text=name, font="secondary", color=THEME_TEXT_PRIMARY),
         ]
 
         if self.show_status_text:
-            children.append(Text(text=status_text, font="medium", color=color, bold=True))
+            children.append(Text(text=status_text, font="secondary", color=color, bold=True))
 
         Column(
             children=children,

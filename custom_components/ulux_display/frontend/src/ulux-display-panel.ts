@@ -83,6 +83,7 @@ export class UluxDisplayPanel extends LitElement {
   @state() private _devices: DeviceConfig[] = [];
   @state() private _editingView: ViewConfig | null = null;
   @state() private _previewImage: string | null = null;
+  @state() private _previewError: string | null = null;
   @state() private _previewLoading = false;
   @state() private _loading = true;
   @state() private _saving = false;
@@ -854,6 +855,8 @@ export class UluxDisplayPanel extends LitElement {
 
   private _editView(view: ViewConfig): void {
     this._editingView = { ...view, widgets: [...view.widgets] };
+    this._previewImage = null;
+    this._previewError = null;
     this._page = "editor";
     this._refreshPreview();
   }
@@ -903,6 +906,7 @@ export class UluxDisplayPanel extends LitElement {
     if (!this._editingView) return;
 
     this._previewLoading = true;
+    this._previewError = null;
     try {
       const result = await this.hass.connection.sendMessagePromise<{
         image: string;
@@ -917,6 +921,7 @@ export class UluxDisplayPanel extends LitElement {
       this._previewImage = result.image;
     } catch (err) {
       console.error("Failed to render preview:", err);
+      this._previewError = err instanceof Error ? err.message : String(err);
     } finally {
       this._previewLoading = false;
     }
@@ -1159,7 +1164,9 @@ export class UluxDisplayPanel extends LitElement {
                       src="data:image/png;base64,${this._previewImage}"
                       alt="Preview"
                     />`
-                  : html`<div class="preview-placeholder">No preview</div>`}
+                  : this._previewError
+                    ? html`<div class="preview-placeholder" style="font-size:11px;padding:8px;word-break:break-all;text-align:center">${this._previewError}</div>`
+                    : html`<div class="preview-placeholder">No preview</div>`}
             </div>
           </ha-card>
         </div>

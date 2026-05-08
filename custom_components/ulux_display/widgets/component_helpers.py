@@ -142,8 +142,8 @@ def CenteredValue(
     label: str | None = None,
     value_color: Color = THEME_TEXT_PRIMARY,
     label_color: Color = THEME_TEXT_SECONDARY,
-    value_font: str = "large",
-    label_font: str = "small",
+    value_font: str = "primary",
+    label_font: str = "secondary",
 ) -> Component:
     """Centered value with optional label below."""
     children: list[Component] = [

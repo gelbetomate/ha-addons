@@ -230,7 +230,7 @@ class Icon(Component):
     size: int | None = None  # None = auto-size to container
     color: Color = THEME_TEXT_PRIMARY  # Theme-aware by default
     min_size: int = 12  # Minimum size for readability
-    max_size: int = 32  # Maximum size to prevent oversized icons
+    max_size: int = 64  # Maximum size to prevent oversized icons
 
     def _calculate_size(self, available: int) -> int:
         """Calculate icon size with min/max bounds."""
@@ -1047,7 +1047,7 @@ class IconValueDisplay(Component):
         label_color = _resolve_color(self.label_color, ctx)
 
         # Calculate sizes based on container
-        icon_size = self.icon_size or max(16, min(48, int(inner_height * 0.25)))
+        icon_size = self.icon_size or max(16, int(inner_height * 0.40))
         label_height = int(inner_height * 0.15)
         value_height = inner_height - icon_size - label_height - 12  # gaps
 
