@@ -1,3 +1,5 @@
 {
-  "name": "u::lux Integration"
+  "name": "u::lux Integration",
+  "country": "DE",
+  "hide_default_branch": true
 }
