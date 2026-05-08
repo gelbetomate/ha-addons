@@ -1,0 +1,22 @@
+# u::Lux UMP Bridge — standalone Docker Compose
+#
+# Usage:
+#   1. Copy options.example.json to options.json and edit it.
+#   2. docker compose up -d
+#
+# network_mode: host is required so the container can:
+#   - bind UDP port 34988 to receive UMP packets from the switch
+#   - send UDP replies back to the switch on its ephemeral port
+#   - expose the HTTP API (port 8099) on the host network
+#
+services:
+  ulux-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile.standalone
+    network_mode: host
+    environment:
+      - OPTIONS_PATH=/config/options.json
+    volumes:
+      - ./options.json:/config/options.json:ro
+    restart: unless-stopped

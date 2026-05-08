@@ -207,6 +207,84 @@ The app runs with **host networking** so it can bind UDP/34988 and receive packe
 
 Configure each u::Lux Switch IP to send UMP packets to the Home Assistant host's IP address.
 
+## Standalone Docker
+
+Use this deployment method when you are **not** running the Home Assistant Supervisor (e.g. HA Container, HA Core, a NAS, or any plain Linux/Docker host), but you still want the UMP Bridge running alongside your HA instance.
+
+### Prerequisites
+
+- Docker and Docker Compose installed on the host
+- The host must run **Linux** — `network_mode: host` is required for UDP to work correctly.  
+  On macOS or Windows Docker Desktop, host networking behaves differently and UDP port binding may not work as expected.
+
+### Step-by-step setup
+
+1. **Clone or download this repository:**
+
+   ```bash
+   git clone https://github.com/gelbetomate/ha-addons.git
+   cd ha-addons/addons/ulux
+   ```
+
+2. **Copy the example config and edit it:**
+
+   ```bash
+   cp options.example.json options.json
+   ```
+
+   Open `options.json` and update at minimum:
+
+   | Key | What to set |
+   |-----|-------------|
+   | `switches[].switch_id` | MAC address of your u::Lux Switch IP |
+   | `switches[].ip` | Local IP address of the switch |
+   | `ha.ws_url` | `ws://<your-ha-host>:8123/api/websocket` |
+   | `ha.token` | A long-lived access token (see below) |
+   | `stream.width` / `stream.height` | `240` — the u::Lux Switch IP display is 240×240 |
+
+3. **Create a long-lived access token in Home Assistant:**
+
+   In HA, go to **Profile → Security → Long-Lived Access Tokens → Create Token**, copy the token and paste it into `ha.token` in `options.json`.
+
+4. **Start the bridge:**
+
+   ```bash
+   docker compose up -d
+   ```
+
+5. **Verify it is running:**
+
+   ```bash
+   curl http://localhost:8099/api/health
+   ```
+
+   You should receive a `200 OK` response.
+
+### HTTP API and the `ulux_display` HACS integration
+
+The bridge exposes an HTTP API on port **8099** (configurable via `api_port`).  
+The [`ulux_display` HACS integration](https://github.com/gelbetomate/ha-addons/tree/main/custom_components/ulux_display) uses this API to push display images to the switch.
+
+When running standalone, set the **Bridge URL** in the integration config flow to:
+
+```
+http://<docker-host-ip>:8099
+```
+
+### Supervisor add-on vs standalone Docker
+
+| | Supervisor add-on | Standalone Docker |
+|---|---|---|
+| **Config source** | `/data/options.json` (managed by HA UI) | `options.json` mounted into the container |
+| **HA token** | `SUPERVISOR_TOKEN` (auto-injected) | Long-lived access token in `options.json` |
+| **HA WebSocket URL** | `ws://supervisor/core/websocket` | `ws://<ha-host>:8123/api/websocket` |
+| **Networking** | Host network (Supervisor-managed) | `network_mode: host` (Linux only) |
+| **Updates** | Via HA Add-on Store | `docker compose pull` / rebuild |
+
+### macOS / Windows note
+
+`network_mode: host` **only works on Linux Docker hosts**. On macOS or Windows running Docker Desktop, the container is inside a Linux VM and host networking does not expose the host's physical network interfaces. UDP port 34988 may not receive packets from the switch. A Linux server or NAS is the recommended deployment target.
+
 ## Protocol Reference
 
 - [u::Lux UMP Protocol PDF](https://www.u-lux.com/fileadmin/user_upload/Downloads/PDF/Technische_Downloads/en/uLux_Switch_UMP_en.pdf)
