@@ -121,6 +121,97 @@ The bridge is configured via `options.json` in Supervisor. Key options:
 - **`mode.mqtt`**: Enable/disable MQTT integration (default: false)
   - If enabled, devices can be managed via MQTT topics
 
+### Minimal Configuration Profiles
+
+Use one of these profiles in the add-on configuration editor.
+
+#### Profile A: HA Integration + Bridge UI (recommended)
+
+Use this if you manage devices via the bridge UI and Home Assistant integration, without MQTT.
+
+```json
+{
+  "switches": [],
+  "listen_host": "0.0.0.0",
+  "listen_port": 34988,
+  "control_flags": 0,
+  "mode": {
+    "ha_events": false,
+    "mqtt": false
+  },
+  "ha": {
+    "ws_url": "ws://supervisor/core/websocket",
+    "token": ""
+  },
+  "mqtt": {
+    "host": "core-mosquitto",
+    "port": 1883,
+    "username": "",
+    "password": "",
+    "base_topic": "ulux"
+  },
+  "stream": {
+    "width": 86,
+    "height": 90,
+    "lines_per_packet": 5,
+    "inter_packet_delay_ms": 5
+  },
+  "api_port": 8099,
+  "log_level": "info"
+}
+```
+
+Notes:
+- `ha_events` is optional and can stay `false` unless you explicitly need `ulux_event`/`ulux_raw` events in HA.
+- `switches` can stay empty; devices are managed via persistent registry and discovery.
+
+#### Profile B: HA Integration + MQTT Commands/Events
+
+Use this when you also want MQTT topics for commands and registry management.
+
+```json
+{
+  "switches": [
+    {
+      "name": "Living Room",
+      "switch_id": "00:11:22:33:44:55",
+      "ip": "192.168.1.100",
+      "port": 50000
+    }
+  ],
+  "listen_host": "0.0.0.0",
+  "listen_port": 34988,
+  "control_flags": 0,
+  "mode": {
+    "ha_events": false,
+    "mqtt": true
+  },
+  "ha": {
+    "ws_url": "ws://supervisor/core/websocket",
+    "token": ""
+  },
+  "mqtt": {
+    "host": "core-mosquitto",
+    "port": 1883,
+    "username": "",
+    "password": "",
+    "base_topic": "ulux"
+  },
+  "stream": {
+    "width": 86,
+    "height": 90,
+    "lines_per_packet": 5,
+    "inter_packet_delay_ms": 5
+  },
+  "api_port": 8099,
+  "log_level": "info"
+}
+```
+
+Notes:
+- `switches` is strongly recommended for MQTT command topics (`<base_topic>/<switch_id>/cmd/...`).
+- If your broker requires auth, set `mqtt.username` and `mqtt.password`.
+
 ---
 
 ## Web UI
