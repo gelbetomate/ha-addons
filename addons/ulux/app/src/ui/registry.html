@@ -609,7 +609,9 @@
   <div id="messageAlert" class="alert"></div>
 
   <script>
-    const API_BASE = new URL('./api', window.location.href).pathname.replace(/\/$/, '');
+    const pageUrl = new URL(window.location.href);
+    if (!pageUrl.pathname.endsWith('/')) pageUrl.pathname += '/';
+    const API_BASE = new URL('api', pageUrl).pathname.replace(/\/$/, '');
     const THEME_VAR_MAP = {
       '--primary-background-color': '--ha-parent-primary-background-color',
       '--secondary-background-color': '--ha-parent-secondary-background-color',
