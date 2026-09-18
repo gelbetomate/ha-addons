@@ -83,7 +83,7 @@ function createDiscoveryScanner({
 
   return {
     start() {
-      socket.bind(DISCOVERY_PORT, host, () => {
+      socket.bind(port, host, () => {
         socket.setBroadcast(true);
         log?.info(`u::lux discovery listening on UDP ${port}`);
         sendDiscovery();

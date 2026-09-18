@@ -54,11 +54,22 @@ Physical u::lux Switch IP
 ## Main flows
 
 ### Discovery flow
-1. switch sends UMP packet
-2. bridge observes the device
-3. bridge updates discovery list
-4. Supervisor UI syncs discovery into registry
-5. user reviews and saves the device
+1. The bridge binds a discovery socket on UDP `34984`.
+2. Every `discovery_interval_ms` (default: 5000 ms), it broadcasts a 48-byte request to `255.255.255.255:34984`.
+3. u::lux switches answer directly to the bridge with a 228-byte response beginning with `e4 80 01 02`.
+4. The bridge records the sender IP, discovery port, protocol ID, sequence, timestamp, and raw response.
+5. If the sender IP matches a configured switch, its MAC and name are used to update the persistent registry.
+6. If no MAC can be confirmed, the response remains a pending discovery result and is shown in the bridge UI without inventing a switch ID.
+7. The UI can import only records with a verified switch ID into the persistent registry.
+
+The discovery protocol is separate from normal UMP traffic:
+
+| Purpose | Transport | Default port |
+|---|---|---:|
+| Active switch discovery | IPv4 broadcast/unicast UDP | `34984` |
+| Normal UMP events and streaming | UDP | `34988` |
+
+The current implementation decodes the broadcast response stage. The follow-up `0x83` and `0x02` handshake visible in `docs/UDPMitschnitt.pcapng` is reserved for a later protocol implementation.
 
 ### Rendering flow
 1. HACS integration renders a frame
