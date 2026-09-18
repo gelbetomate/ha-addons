@@ -909,12 +909,10 @@
         empty.style.display = 'none';
         actions.style.display = 'flex';
 
-        list.innerHTML = data.devices
-          .filter((dev) => dev.switch_id) // Only show devices with a switch_id
-          .map((dev) => `
-          <div class="discovery-card" data-switch-id="${dev.switch_id}">
-            <div class="device-name">${escapeHtml(dev.name)}</div>
-            <div class="device-id">${dev.switch_id}</div>
+        list.innerHTML = data.devices.map((dev) => `
+          <div class="discovery-card${dev.switch_id ? '' : ' pending'}" data-switch-id="${dev.switch_id || ''}">
+            <div class="device-name">${escapeHtml(dev.name || 'u::lux device')}</div>
+            <div class="device-id">${dev.switch_id || `Protocol ID: ${dev.protocol_id || 'unknown'}`}</div>
             <div class="device-info" style="margin-top: 10px;">
               <strong>IP:</strong> ${dev.ip || 'Unknown'}
             </div>
@@ -929,6 +927,10 @@
         document.querySelectorAll('.discovery-card').forEach((card) => {
           card.addEventListener('click', () => {
             const switchId = card.dataset.switchId;
+            if (!switchId) {
+              showAlert('MAC address is required before importing this device', 'info');
+              return;
+            }
             if (UI_STATE.selectedDiscoveryDevices.has(switchId)) {
               UI_STATE.selectedDiscoveryDevices.delete(switchId);
               card.classList.remove('selected');

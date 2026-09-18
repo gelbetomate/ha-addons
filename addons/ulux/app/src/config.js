@@ -10,6 +10,8 @@ const DEFAULTS = {
   switches: [],
   listen_host: '0.0.0.0',
   listen_port: 34988,
+  discovery_port: 34984,
+  discovery_interval_ms: 5000,
   control_flags: 0,
   mode: {
     ha_events: true,

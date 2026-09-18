@@ -9,6 +9,7 @@ The bridge add-on handles transport, device discovery observation, persistent re
 ### Core Responsibilities
 
 - **UDP Listener** (port 34988): Listens for UMP packets from u::lux Switch IP devices
+- **Active Discovery** (port 34984): Broadcasts discovery requests and collects u::lux responses
 - **Device Discovery**: Observes UDP traffic, extracts device info (MAC, IP, port, name)
 - **Persistent Registry** (`/data/registry.json`): Maintains canonical device list that survives restarts
 - **Image Streaming**: Encodes PIL images and streams via UDP to switches
@@ -87,6 +88,8 @@ The bridge is configured via `options.json` in Supervisor. Key options:
   ],
   "listen_host": "0.0.0.0",
   "listen_port": 34988,
+  "discovery_port": 34984,
+  "discovery_interval_ms": 5000,
   "mode": {
     "ha_events": true,
     "mqtt": false
@@ -117,6 +120,9 @@ The bridge is configured via `options.json` in Supervisor. Key options:
   - Used for backwards compatibility
   - Auto-populated into registry on startup if not already present
   - Discovery will add/update additional switches as they're observed
+
+- **`discovery_port`**: UDP port used by the u::lux configuration discovery protocol (default `34984`)
+- **`discovery_interval_ms`**: Active discovery broadcast interval (default `5000` ms)
 
 - **`mode.mqtt`**: Enable/disable MQTT integration (default: false)
   - If enabled, devices can be managed via MQTT topics

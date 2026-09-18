@@ -54,7 +54,14 @@ function createDiscoveryRegistry(registryStore, log) {
    * @returns {object[]} Sorted array of device records
    */
   function list() {
-    return store.getAll().sort((a, b) => {
+    const records = [...store.getAll(), ...pendingDiscovery.values()];
+    const unique = new Map();
+    for (const record of records) {
+      const key = record.switch_id || record.ip || record.senderIp;
+      if (key) unique.set(key, record);
+    }
+
+    return Array.from(unique.values()).sort((a, b) => {
       const aId = a.switch_id || a.ip;
       const bId = b.switch_id || b.ip;
       return aId.localeCompare(bId);

@@ -8,6 +8,7 @@ const { createDispatcher } = require('./src/handlers/index');
 const { handleCommandMessage } = require('./src/handlers/command');
 const { createApiServer } = require('./src/http');
 const { createDiscoveryRegistry } = require('./src/discoveryRegistry');
+const { createDiscoveryScanner } = require('./src/discovery');
 const { RegistryStore } = require('./src/registry/store');
 
 async function main() {
@@ -52,6 +53,15 @@ async function main() {
   // Use a late-bound wrapper so we can wire dispatch → udpServer in one step.
   let dispatchFn = null;
   const discoveryRegistry = createDiscoveryRegistry(registryStore, log);
+
+  const discoveryScanner = createDiscoveryScanner({
+    host: config.listen_host,
+    port: config.discovery_port,
+    intervalMs: config.discovery_interval_ms,
+    switches: config.switches,
+    onDevice: (device) => discoveryRegistry.upsert(device),
+    log,
+  });
 
   // --- Start UDP server ---
   const udpServer = createUdpServer({
@@ -107,6 +117,7 @@ async function main() {
 
   udpServer.start();
   log.info(`UDP server listening on ${config.listen_host}:${config.listen_port}`);
+  discoveryScanner.start();
 
   // --- HTTP API server ---
   // Allows the u::lux Display integration to delegate image streaming to the bridge.
@@ -122,6 +133,8 @@ async function main() {
   // Save registry on SIGTERM, SIGINT
   const cleanupFn = () => {
     log.info('Bridge shutting down, saving registry...');
+    discoveryScanner.stop();
+    udpServer.stop();
     try {
       registryStore.save();
       log.info('Registry saved successfully');
