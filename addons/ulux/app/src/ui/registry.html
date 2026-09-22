@@ -640,6 +640,7 @@
     const UI_STATE = {
       selectedDiscoveryDevices: new Set(),
       currentEditingDevice: null,
+      discoveryScanInProgress: false,
     };
 
     function applyThemeMap(themeMap) {
@@ -977,12 +978,24 @@
     }
 
     document.getElementById('scanDiscoveryBtn').addEventListener('click', async () => {
+      const scanButton = document.getElementById('scanDiscoveryBtn');
+      if (UI_STATE.discoveryScanInProgress) return;
       try {
+        UI_STATE.discoveryScanInProgress = true;
+        scanButton.disabled = true;
+        scanButton.textContent = 'Scanning...';
         await fetchJson(`${API_BASE}/discovery/scan`, { method: 'POST' });
         showAlert('Discovery scan started', 'success');
-        setTimeout(loadDiscovery, 500);
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 250));
+          await loadDiscovery();
+        }
       } catch (err) {
         // Error already shown
+      } finally {
+        UI_STATE.discoveryScanInProgress = false;
+        scanButton.disabled = false;
+        scanButton.textContent = 'Scan now';
       }
     });
 

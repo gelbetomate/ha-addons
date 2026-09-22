@@ -20,6 +20,16 @@ function createDiscoveryRegistry(registryStore, log) {
     return upper;
   }
 
+  function isGeneratedName(name, record) {
+    if (!name) return true;
+    const value = String(name).toLowerCase();
+    const ids = [record?.switch_id, record?.mac_address, record?.ip]
+      .filter(Boolean)
+      .map((item) => String(item).toLowerCase());
+    return value === 'u::lux device' || value.startsWith('u::lux device (') ||
+      value.startsWith('u::lux switch (') || ids.some((id) => value === `u::lux ${id}`);
+  }
+
   /**
    * Update registry when a device is observed on UDP traffic.
    * Merges discovery data (IP, port, name) into the persistent registry.
@@ -27,7 +37,7 @@ function createDiscoveryRegistry(registryStore, log) {
    */
   function upsert(ctx) {
     const switchId = normaliseSwitchId(ctx.switchId);
-    const existing = switchId ? store.get(switchId) : null;
+    const existing = (switchId ? store.get(switchId) : null) || store.findByIp(ctx.senderIp);
 
     // Discovery is a preview. Only refresh records that were already imported;
     // new devices remain pending until the user explicitly imports them.
@@ -42,25 +52,32 @@ function createDiscoveryRegistry(registryStore, log) {
     }
 
     // Merge discovery data into registry
-    store.upsert({
+    const nextName = ctx.switchName && isGeneratedName(existing.name, existing)
+      ? ctx.switchName
+      : existing.name;
+    const recordData = {
       switch_id: switchId,
       ip: ctx.senderIp || existing.ip || '',
       port: ctx.umpPort || existing.port || 34988,
       discovery_port: ctx.discovery_port || existing.discovery_port || 34984,
-      name: ctx.switchName || existing.name || `u::lux ${switchId}`,
+      name: nextName || ctx.switchName || `u::lux ${switchId}`,
       mac_address: ctx.mac_address || existing.mac_address || switchId,
       protocol_id: ctx.protocol_id || existing.protocol_id || '',
       serial_number: ctx.serial_number || existing.serial_number || null,
       serial_number_source: ctx.serial_number_source || existing.serial_number_source || null,
       mqtt_discovery: ctx.mqtt_discovery ?? existing.mqtt_discovery ?? false,
       last_seen: ctx.last_seen || new Date().toISOString(),
-    });
+    };
+    const record = existing.switch_id === switchId
+      ? store.upsert(recordData)
+      : store.rekey(existing.switch_id, recordData);
 
     // Mark as online
     store.updateOnlineStatus(switchId, 'online');
 
     // Remove from pending if it was there
     pendingDiscovery.delete(ctx.senderIp);
+    return record;
   }
 
   /**

@@ -121,6 +121,17 @@ class RegistryStore {
     return Array.from(this.devices.values());
   }
 
+  findByIp(ip) {
+    return this.getAll().find((device) => device.ip === ip) || null;
+  }
+
+  rekey(oldSwitchId, data) {
+    const oldKey = String(oldSwitchId || '').toUpperCase();
+    const old = this.devices.get(oldKey);
+    if (old) this.devices.delete(oldKey);
+    return this.upsert({ ...old, ...data });
+  }
+
   /**
    * Add or update a device.
    * @param {object} data - Device data: { switch_id, name?, ip?, port?, ... }
