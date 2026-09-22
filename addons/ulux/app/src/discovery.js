@@ -1,6 +1,7 @@
 'use strict';
 
 const dgram = require('dgram');
+const fs = require('fs');
 
 const DISCOVERY_PORT = 34984;
 const DISCOVERY_INTERVAL_MS = 5000;
@@ -33,6 +34,28 @@ function parseDiscoveryResponse(message, remote, discoveryPort = DISCOVERY_PORT)
   };
 }
 
+function lookupMacAddress(ip) {
+  try {
+    const lines = fs.readFileSync('/proc/net/arp', 'utf8').split(/\r?\n/).slice(1);
+    for (const line of lines) {
+      const fields = line.trim().split(/\s+/);
+      if (fields.length >= 4 && fields[0] === ip && /^[0-9a-f]{2}(?::[0-9a-f]{2}){5}$/i.test(fields[3])) {
+        return fields[3].toUpperCase();
+      }
+    }
+  } catch {
+    // ARP lookup is best effort; discovery still works without it.
+  }
+  return null;
+}
+
+function inferSerialNumber(macAddress) {
+  if (!macAddress) return null;
+  const octets = macAddress.split(':');
+  if (octets.length !== 6) return null;
+  return parseInt(`${octets[4]}${octets[5]}`, 16);
+}
+
 function createDiscoveryScanner({
   host,
   port = DISCOVERY_PORT,
@@ -61,13 +84,17 @@ function createDiscoveryScanner({
     const discovered = parseDiscoveryResponse(message, remote, port);
     if (!discovered) return;
 
+    const macAddress = lookupMacAddress(discovered.ip);
     const configured = switches.find(
       (item) => String(item.ip || '') === discovered.ip
     );
-    const switchId = configured?.switch_id || null;
+    const switchId = configured?.switch_id || macAddress || null;
 
     onDevice?.({
       ...discovered,
+      mac_address: macAddress,
+      serial_number_candidate: inferSerialNumber(macAddress),
+      serial_number_source: macAddress ? 'mac_suffix_inference' : null,
       senderIp: discovered.ip,
       senderPort: port,
       switchId,
@@ -103,5 +130,7 @@ module.exports = {
   DISCOVERY_INTERVAL_MS,
   buildDiscoveryRequest,
   parseDiscoveryResponse,
+  lookupMacAddress,
+  inferSerialNumber,
   createDiscoveryScanner,
 };

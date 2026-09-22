@@ -916,6 +916,8 @@
             <div class="device-info" style="margin-top: 10px;">
               <strong>IP:</strong> ${dev.ip || 'Unknown'}
             </div>
+            ${dev.mac_address ? `<div class="device-info"><strong>MAC:</strong> ${escapeHtml(dev.mac_address)}</div>` : ''}
+            ${dev.serial_number_candidate ? `<div class="device-info"><strong>Serial candidate:</strong> ${dev.serial_number_candidate}</div>` : ''}
             <div class="device-info">
               <strong>Port:</strong> ${dev.port || '50000'}
             </div>
