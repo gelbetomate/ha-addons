@@ -113,6 +113,15 @@ default. HACS remains the normal owner of the device; enabling MQTT Discovery
 for the same device creates an additional MQTT representation and should only
 be used intentionally.
 
+HA config entries are created only by the integration setup wizard. Bridge
+discovery and bridge registry imports do not automatically create all switches
+in Home Assistant; this prevents a single wizard setup from creating multiple
+HA devices.
+
+The wizard offers three setup methods: create a device manually, select one
+device from the bridge registry, or add all not-yet-configured registry devices.
+Registry-based entries use the serial number for their name when available.
+
 The follow-up handshake is the likely place to investigate for additional device
 properties such as firmware version, bootloader version, hardware type, display
 type, production date, CPU information, and memory sizes. Those values are not

@@ -15,6 +15,7 @@ const DEFAULTS = {
   control_flags: 0,
   mode: {
     ha_events: true,
+    ha_device_management: true,
     mqtt: false,
     mqtt_discovery: false,
   },

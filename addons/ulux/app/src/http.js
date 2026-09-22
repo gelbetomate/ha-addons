@@ -291,10 +291,13 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       const deleteFromHa = parsedUrl.searchParams.get('delete_from_homeassistant') === 'true';
       if (deleteFromHa) {
         try {
+          if (!haClient) {
+            throw new Error('Home Assistant device management is disabled or unavailable');
+          }
           const entryIds = new Set();
           if (device?.linked_entry_id) entryIds.add(device.linked_entry_id);
 
-          const entries = await haClient?.getConfigEntries?.() || [];
+          const entries = await haClient.getConfigEntries();
           for (const entry of entries) {
             if (
               entry.domain === 'ulux_display' &&
@@ -306,8 +309,9 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
           }
 
           for (const entryId of entryIds) {
-            await haClient?.deleteConfigEntry(entryId);
+            await haClient.deleteConfigEntry(entryId);
           }
+          log.info(`HA config entries removed for "${switchId}": ${entryIds.size}`);
         } catch (err) {
           haDeleteError = err.message;
           log.warning(`Failed to delete HA config entry for "${switchId}": ${err.message}`);

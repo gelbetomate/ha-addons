@@ -42,7 +42,7 @@ async function main() {
 
   // --- HA WebSocket client ---
   let haClient = null;
-  if (config.mode.ha_events) {
+  if (config.mode.ha_events || config.mode.ha_device_management) {
     haClient = createHaWebSocket(config.ha, log);
     haClient.connect(); // non-blocking; reconnects on failure
   }

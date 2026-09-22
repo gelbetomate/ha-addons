@@ -8,7 +8,7 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 from homeassistant.core import callback
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow, SOURCE_IMPORT
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 
@@ -25,6 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 CONF_ACTION = "action"
 ACTION_DISCOVER = "discover"
 ACTION_MANUAL = "manual"
+ACTION_IMPORT_ALL = "import_all"
 CONF_MQTT_DISCOVERY = "mqtt_discovery"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
@@ -33,6 +34,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_ACTION, default=ACTION_DISCOVER): vol.In(
             {
                 ACTION_DISCOVER: "Discover devices from bridge",
+                ACTION_IMPORT_ALL: "Add all devices from bridge registry",
                 ACTION_MANUAL: "Enter switch ID manually",
             }
         ),
@@ -71,6 +73,8 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
 
                 if action == ACTION_DISCOVER:
                     return await self.async_step_discover()
+                if action == ACTION_IMPORT_ALL:
+                    return await self.async_step_import_all()
                 return await self.async_step_manual()
 
         return self.async_show_form(
@@ -95,8 +99,9 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
                 return await self._async_create_switch_entry(
                     bridge_url=self._bridge_url,
                     switch_id=switch_id,
-                    name=user_input.get(CONF_NAME),
+                    name=user_input.get(CONF_NAME) or self._device_name(device_meta),
                     host=device_meta.get("ip"),
+                    metadata=self._device_metadata(device_meta),
                 )
 
         try:
@@ -132,6 +137,56 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=schema,
             errors=errors,
         )
+
+    async def async_step_import_all(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Create HA entries for all registry devices not configured yet."""
+        try:
+            devices = await self._async_fetch_discovered_devices(self._bridge_url)
+        except (aiohttp.ClientError, ValueError):
+            return self.async_abort(reason="bridge_unreachable")
+
+        configured = {
+            str(entry.data.get(CONF_SWITCH_ID, "")).upper()
+            for entry in self.hass.config_entries.async_entries(DOMAIN)
+        }
+        pending = [
+            device for device in devices
+            if device.get("switch_id") and str(device["switch_id"]).upper() not in configured
+        ]
+
+        for device in pending:
+            await self.hass.config_entries.flow.async_init(
+                DOMAIN,
+                context={"source": SOURCE_IMPORT},
+                data={
+                    CONF_BRIDGE_URL: self._bridge_url,
+                    CONF_SWITCH_ID: str(device["switch_id"]).upper(),
+                    CONF_NAME: self._device_name(device),
+                    CONF_HOST: device.get("ip", ""),
+                    **self._device_metadata(device),
+                },
+            )
+
+        return self.async_abort(reason="imported_all")
+
+    @staticmethod
+    def _device_name(device: dict[str, Any]) -> str:
+        serial_number = device.get("serial_number")
+        return (
+            f"u::lux Switch ({serial_number})"
+            if serial_number
+            else f"u::lux Display ({device.get('switch_id', 'unknown')})"
+        )
+
+    @staticmethod
+    def _device_metadata(device: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "mac_address": device.get("mac_address", ""),
+            "serial_number": device.get("serial_number"),
+            "protocol_id": device.get("protocol_id", ""),
+        }
 
     async def async_step_manual(
         self, user_input: dict[str, Any] | None = None

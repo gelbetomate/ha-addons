@@ -103,7 +103,9 @@
     },
     "abort": {
       "already_configured": "This device is already configured.",
-      "invalid_switch_id": "Invalid switch data received during auto-discovery."
+      "invalid_switch_id": "Invalid switch data received during auto-discovery.",
+      "imported_all": "All unconfigured registry devices were added.",
+      "bridge_unreachable": "Cannot reach the u::lux bridge registry."
     }
   },
   "options": {
