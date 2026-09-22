@@ -32,6 +32,8 @@ This Home Assistant integration renders dashboards for u::lux Switch IP devices 
 
 ## Installation
 
+See the [integration changelog](CHANGELOG.md) for version history.
+
 **Prerequisites**: u::Lux UMP Bridge add-on must be installed and running first.
 
 ### Step 1: Install via HACS
