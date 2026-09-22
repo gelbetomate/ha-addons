@@ -196,7 +196,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
       }
 
       try {
-        const device = registryStore.upsert(payload);
+        const device = discoveryRegistry.registerDevice(payload);
         log.info(`HTTP API: registered device "${device.switch_id}" (${device.ip})`);
         return respond(res, 201, { device });
       } catch (err) {
@@ -221,7 +221,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
       }
 
       try {
-        const device = registryStore.upsert({ ...payload, switch_id: switchId });
+        const device = discoveryRegistry.registerDevice({ ...payload, switch_id: switchId });
         log.info(`HTTP API: updated device "${device.switch_id}"`);
         return respond(res, 200, { device });
       } catch (err) {

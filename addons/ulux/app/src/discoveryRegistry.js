@@ -27,14 +27,21 @@ function createDiscoveryRegistry(registryStore, log) {
    */
   function upsert(ctx) {
     const switchId = normaliseSwitchId(ctx.switchId);
+    const existing = switchId ? store.get(switchId) : null;
+
+    // Discovery is a preview. Only refresh records that were already imported;
+    // new devices remain pending until the user explicitly imports them.
+    if (!existing) {
+      pendingDiscovery.set(ctx.senderIp, { ...ctx, switch_id: switchId });
+      return;
+    }
+
     if (!switchId) {
-      // No switch_id yet; store in pending discovery until we get one
       pendingDiscovery.set(ctx.senderIp, ctx);
       return;
     }
 
     // Merge discovery data into registry
-    const existing = store.get(switchId) || {};
     store.upsert({
       switch_id: switchId,
       ip: ctx.senderIp || existing.ip || '',
@@ -87,7 +94,10 @@ function createDiscoveryRegistry(registryStore, log) {
    * @returns {object} Created device record
    */
   function registerDevice(data) {
-    return store.upsert(data);
+    const record = store.upsert(data);
+    if (record.ip) pendingDiscovery.delete(record.ip);
+    if (data.switch_id) pendingDiscovery.delete(data.switch_id);
+    return record;
   }
 
   /**

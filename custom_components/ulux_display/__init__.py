@@ -117,7 +117,7 @@ async def _async_auto_discover_devices(hass: HomeAssistant) -> None:
     for bridge_url in bridge_urls:
         try:
             async with session.get(
-                f"{bridge_url}/api/discovery/devices",
+                f"{bridge_url}/api/registry/devices",
                 timeout=5,
             ) as resp:
                 if resp.status != 200:
