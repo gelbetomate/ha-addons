@@ -2,6 +2,7 @@
 
 const dgram = require('dgram');
 const fs = require('fs');
+const { execFileSync } = require('child_process');
 
 const DISCOVERY_PORT = 34984;
 const DISCOVERY_INTERVAL_MS = 5000;
@@ -46,6 +47,18 @@ function lookupMacAddress(ip) {
   } catch {
     // ARP lookup is best effort; discovery still works without it.
   }
+
+  for (const command of ['ip', 'arp']) {
+    try {
+      const args = command === 'ip' ? ['neigh', 'show', ip] : ['-n', ip];
+      const output = execFileSync(command, args, { encoding: 'utf8', timeout: 500 });
+      const match = output.match(/(?:lladdr\s+)?([0-9a-f]{2}(?::[0-9a-f]{2}){5})/i);
+      if (match) return match[1].toUpperCase();
+    } catch {
+      // The command may not exist in the add-on image.
+    }
+  }
+
   return null;
 }
 
