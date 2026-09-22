@@ -170,7 +170,22 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       const target = getSwitchTarget(switchId);
       if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
       const probe = buildTelegram(buildVideoStateRequest());
+      const requestedAt = new Date().toISOString();
+      discoveryRegistry.updateDiagnosticsBySwitchId(switchId, {
+        ump_probe_status: 'pending',
+        ump_probe_requested_at: requestedAt,
+        ump_probe_error: null,
+      });
       udpSend(target.ip, config.listen_port || 34988, probe);
+      setTimeout(() => {
+        const current = discoveryRegistry.getStore().get(switchId);
+        if (current?.ump_probe_requested_at === requestedAt && current.ump_probe_status === 'pending') {
+          discoveryRegistry.updateDiagnosticsBySwitchId(switchId, {
+            ump_probe_status: 'timeout',
+            ump_probe_error: 'No UMP response received within 3 seconds',
+          });
+        }
+      }, 3000);
       log.info(`Sent UMP VideoState probe to ${target.ip}:${config.listen_port || 34988}`);
       return respond(res, 202, { ok: true, message: 'UMP probe sent' });
     }
@@ -318,6 +333,10 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         }
       }
 
+      if (haDeleteError) {
+        return respond(res, 502, { error: haDeleteError });
+      }
+
       const removed = discoveryRegistry.unregisterDevice(switchId);
       if (!removed) {
         return respond(res, 404, { error: `Device not found: ${switchId}` });
@@ -326,7 +345,6 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         mqttClient?.removeDiscovery(switchId);
       }
       log.info(`HTTP API: removed device "${switchId}"`);
-      if (haDeleteError) return respond(res, 502, { error: haDeleteError });
       return respond(res, 204);
     }
 

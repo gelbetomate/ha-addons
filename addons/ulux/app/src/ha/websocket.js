@@ -24,6 +24,7 @@ function createHaWebSocket(haConfig, log) {
   let authenticated = false;
   let msgId = 1;
   let pendingCalls = new Map(); // msgId → { resolve, reject }
+  let authenticationWaiters = [];
   let reconnectTimer = null;
   let stopped = false;
 
@@ -77,6 +78,7 @@ function createHaWebSocket(haConfig, log) {
       case 'auth_ok':
         log.info('HA WebSocket authenticated successfully');
         authenticated = true;
+        for (const waiter of authenticationWaiters.splice(0)) waiter.resolve();
         break;
 
       case 'auth_invalid':
@@ -134,7 +136,18 @@ function createHaWebSocket(haConfig, log) {
   function sendCommand(payload) {
     return new Promise((resolve, reject) => {
       if (!authenticated || !ws || ws.readyState !== WebSocket.OPEN) {
-        reject(new Error('HA WebSocket not connected / authenticated'));
+        const timer = setTimeout(() => {
+          const index = authenticationWaiters.indexOf(waiter);
+          if (index >= 0) authenticationWaiters.splice(index, 1);
+          reject(new Error('HA WebSocket not connected / authenticated'));
+        }, 10000);
+        const waiter = {
+          resolve: () => {
+            clearTimeout(timer);
+            sendCommand(payload).then(resolve, reject);
+          },
+        };
+        authenticationWaiters.push(waiter);
         return;
       }
       const id = msgId++;

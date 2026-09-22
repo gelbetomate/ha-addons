@@ -81,7 +81,7 @@
       },
       "manual": {
         "title": "Manual u::lux Setup",
-        "description": "Enter the switch MAC address and its IP address on your local network.",
+        "description": "Enter the switch MAC address and IP address. Existing bridge registry data will be used when available.",
         "data": {
           "switch_id": "Switch ID (MAC address)",
           "host": "Switch IP address",

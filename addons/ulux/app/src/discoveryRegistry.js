@@ -129,6 +129,12 @@ function createDiscoveryRegistry(registryStore, log) {
     });
   }
 
+  function updateDiagnosticsBySwitchId(switchId, data) {
+    const device = store.get(switchId);
+    if (!device) return null;
+    return store.upsert({ ...device, ...data, switch_id: device.switch_id });
+  }
+
   return {
     upsert,
     list,
@@ -137,6 +143,7 @@ function createDiscoveryRegistry(registryStore, log) {
     unregisterDevice,
     getStore,
     updateDiagnostics,
+    updateDiagnosticsBySwitchId,
   };
 }
 

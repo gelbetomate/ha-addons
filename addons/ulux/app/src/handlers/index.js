@@ -51,6 +51,8 @@ function createDispatcher({ config, haClient, mqttClient, discoveryRegistry, udp
       ump_packet_id: telegram.packetId,
       ump_message_ids: telegram.messages.map((message) => message.msgId),
       ump_last_seen: timestamp,
+      ump_probe_status: 'responded',
+      ump_probe_error: null,
     });
 
     // Resolve switch by device address embedded in the telegram header

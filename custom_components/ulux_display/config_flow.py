@@ -202,11 +202,21 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
             elif not host:
                 errors[CONF_HOST] = "invalid_host"
             else:
+                registry_device = await self._async_fetch_registry_device(
+                    self._bridge_url, switch_id
+                )
+                metadata = self._device_metadata(registry_device or {})
+                name = (
+                    user_input.get(CONF_NAME)
+                    or (registry_device or {}).get("name")
+                    or self._device_name(registry_device or {"serial_number": None, "switch_id": switch_id})
+                )
                 return await self._async_create_switch_entry(
                     bridge_url=self._bridge_url,
                     switch_id=switch_id,
-                    name=user_input.get(CONF_NAME),
+                    name=name,
                     host=host,
+                    metadata=metadata,
                 )
 
         return self.async_show_form(
@@ -234,6 +244,25 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
         if not isinstance(devices, list):
             raise ValueError("Invalid registry response shape")
         return [d for d in devices if isinstance(d, dict)]
+
+    async def _async_fetch_registry_device(
+        self, bridge_url: str, switch_id: str
+    ) -> dict[str, Any] | None:
+        """Fetch one registry record to enrich manual setup when available."""
+        url = f"{bridge_url}/api/registry/devices/{switch_id}"
+        timeout = aiohttp.ClientTimeout(total=5)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(url) as response:
+                    if response.status == 404:
+                        return None
+                    response.raise_for_status()
+                    data = await response.json()
+            device = data.get("device")
+            return device if isinstance(device, dict) else None
+        except (aiohttp.ClientError, ValueError) as err:
+            _LOGGER.debug("Could not enrich manual device %s from bridge: %s", switch_id, err)
+            return None
 
     async def _async_register_device_in_bridge(
         self,

@@ -221,6 +221,11 @@
       color: var(--ha-warning);
     }
 
+    .probe-responded { color: var(--ha-success); }
+    .probe-pending { color: var(--ha-warning); }
+    .probe-timeout { color: var(--ha-danger); }
+    .probe-not-tested { color: var(--ha-text-secondary); }
+
     .device-actions {
       display: flex;
       gap: 8px;
@@ -807,6 +812,8 @@
             ${dev.ump_device_address ? `<div class="device-info"><strong>UMP address:</strong> ${escapeHtml(dev.ump_device_address)}</div>` : ''}
             ${dev.ump_message_ids?.length ? `<div class="device-info"><strong>UMP messages:</strong> ${dev.ump_message_ids.map((id) => `0x${Number(id).toString(16).padStart(2, '0')}`).join(', ')}</div>` : ''}
             ${dev.ump_last_seen ? `<div class="timestamp">UMP response: ${new Date(dev.ump_last_seen).toLocaleString()}</div>` : ''}
+            <div class="device-info"><strong>UMP probe:</strong> <span class="probe-${(dev.ump_probe_status || 'not-tested').replace(/\s+/g, '-')}" >${escapeHtml(dev.ump_probe_status || 'not tested')}</span></div>
+            ${dev.ump_probe_error ? `<div class="timestamp">${escapeHtml(dev.ump_probe_error)}</div>` : ''}
             ${dev.linked_entry_id ? `<div class="linked-badge">✓ Linked to HA</div>` : ''}
             ${dev.last_seen ? `<div class="timestamp">Last seen: ${new Date(dev.last_seen).toLocaleString()}</div>` : ''}
             <div class="device-actions">
