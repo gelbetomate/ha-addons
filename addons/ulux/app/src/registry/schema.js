@@ -30,6 +30,7 @@ function createDeviceRecord(data) {
     serial_number: data.serial_number || data.serial_number_candidate || null,
     serial_number_source: data.serial_number_source || null,
     mqtt_discovery: Boolean(data.mqtt_discovery),
+    ha_delete_requested: Boolean(data.ha_delete_requested),
     ump_device_address: data.ump_device_address || null,
     ump_packet_id: data.ump_packet_id ?? null,
     ump_message_ids: data.ump_message_ids || [],

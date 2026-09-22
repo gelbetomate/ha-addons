@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     CONF_BRIDGE_URL,
@@ -26,6 +28,7 @@ from .websocket import async_register_websocket_commands
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+HA_DELETE_POLL_INTERVAL = timedelta(seconds=5)
 
 PLATFORMS: list[Platform] = [
     Platform.IMAGE,
@@ -49,6 +52,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     async_register_websocket_commands(hass)
     await async_register_panel(hass)
+    hass.data[DOMAIN]["ha_delete_unsub"] = async_track_time_interval(
+        hass, lambda now: _async_process_pending_deletions(hass), HA_DELETE_POLL_INTERVAL
+    )
 
     async def async_handle_notify(call):
         device_ids = call.data.get("device_id")
@@ -69,6 +75,30 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     _LOGGER.info("u::lux Display domain setup complete")
     return True
+
+
+async def _async_process_pending_deletions(hass: HomeAssistant) -> None:
+    """Remove HA entries explicitly requested by the bridge UI."""
+    entries = hass.config_entries.async_entries(DOMAIN)
+    session = async_get_clientsession(hass)
+    for entry in entries:
+        bridge_url = entry.data.get(CONF_BRIDGE_URL, DEFAULT_BRIDGE_URL).rstrip("/")
+        switch_id = str(entry.data.get(CONF_SWITCH_ID, "")).upper()
+        try:
+            async with session.get(f"{bridge_url}/api/registry/devices", timeout=5) as response:
+                if response.status != 200:
+                    continue
+                payload = await response.json()
+            pending = {
+                str(device.get("switch_id", "")).upper()
+                for device in payload.get("devices", [])
+                if device.get("ha_delete_requested")
+            }
+            if switch_id in pending:
+                _LOGGER.info("Removing HA config entry %s requested by bridge", entry.entry_id)
+                await hass.config_entries.async_remove(entry.entry_id)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("Pending deletion check failed for %s: %s", switch_id, err)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -155,3 +185,10 @@ async def async_options_update_listener(hass: HomeAssistant, entry: ConfigEntry)
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle removal of an entry."""
+    bridge_url = entry.data.get(CONF_BRIDGE_URL, DEFAULT_BRIDGE_URL).rstrip("/")
+    switch_id = entry.data.get(CONF_SWITCH_ID, "")
+    try:
+        session = async_get_clientsession(hass)
+        await session.delete(f"{bridge_url}/api/registry/devices/{switch_id}", timeout=5)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Failed to remove bridge registry entry for %s: %s", switch_id, err)

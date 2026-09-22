@@ -879,8 +879,10 @@
       try {
         const suffix = deleteFromHomeAssistant ? '?delete_from_homeassistant=true' : '';
         const data = await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}${suffix}`, { method: 'DELETE' });
-        const message = data.warning
-          ? `Device deleted from Bridge. HA deletion failed: ${data.warning}`
+        const message = data.pending_homeassistant_delete
+          ? `HA deletion queued; Bridge entry retained until HA confirms removal: ${data.warning}`
+          : data.warning
+            ? `Device deleted from Bridge. HA deletion failed: ${data.warning}`
           : 'Device deleted';
         showAlert(message, data.warning ? 'error' : 'success');
         loadDevices();
