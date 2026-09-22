@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.10
+
+- Process bridge-requested HA deletions immediately at integration startup and with a named periodic callback.
+- Added explicit logging after a requested HA config entry is removed.
+
 ## 0.2.9
 
 - Added HA-side processing of bridge-requested device deletions.

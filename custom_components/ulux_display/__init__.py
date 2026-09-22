@@ -52,8 +52,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     async_register_websocket_commands(hass)
     await async_register_panel(hass)
+    hass.async_create_task(_async_process_pending_deletions(hass))
+
+    async def async_poll_pending_deletions(_now=None) -> None:
+        await _async_process_pending_deletions(hass)
+
     hass.data[DOMAIN]["ha_delete_unsub"] = async_track_time_interval(
-        hass, lambda now: _async_process_pending_deletions(hass), HA_DELETE_POLL_INTERVAL
+        hass, async_poll_pending_deletions, HA_DELETE_POLL_INTERVAL
     )
 
     async def async_handle_notify(call):
@@ -97,6 +102,7 @@ async def _async_process_pending_deletions(hass: HomeAssistant) -> None:
             if switch_id in pending:
                 _LOGGER.info("Removing HA config entry %s requested by bridge", entry.entry_id)
                 await hass.config_entries.async_remove(entry.entry_id)
+                _LOGGER.info("Removed HA config entry %s for switch %s", entry.entry_id, switch_id)
         except Exception as err:  # noqa: BLE001
             _LOGGER.debug("Pending deletion check failed for %s: %s", switch_id, err)
 

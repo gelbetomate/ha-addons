@@ -1,5 +1,14 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.11
+
+- Import Selected and Import All now prefer the serial-number-based device name over stale MAC-based discovery names.
+
+## 0.5.10
+
+- Extended the Discovery UI refresh window after a manual scan to accommodate slower switch responses.
+- Prevented the need for a second scan click when UDP responses arrive late.
+
 ## 0.5.9
 
 - Added HA-side pending deletion fallback when the bridge WebSocket cannot remove a config entry directly.

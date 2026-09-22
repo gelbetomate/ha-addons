@@ -1022,8 +1022,8 @@
         scanButton.textContent = 'Scanning...';
         await fetchJson(`${API_BASE}/discovery/scan`, { method: 'POST' });
         showAlert('Discovery scan started', 'success');
-        for (let attempt = 0; attempt < 8; attempt += 1) {
-          await new Promise((resolve) => setTimeout(resolve, 250));
+        for (let attempt = 0; attempt < 20; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
           await loadDiscovery();
         }
       } catch (err) {
@@ -1054,7 +1054,9 @@
                 method: 'POST',
                 body: JSON.stringify({
                   switch_id: dev.switch_id,
-                  name: dev.name || `u::lux ${dev.switch_id}`,
+                  name: dev.serial_number
+                    ? `u::lux Switch (${dev.serial_number})`
+                    : dev.name || `u::lux ${dev.switch_id}`,
                   ip: dev.ip,
                   port: dev.port,
                   mac_address: dev.mac_address,
@@ -1091,7 +1093,9 @@
                 method: 'POST',
                 body: JSON.stringify({
                   switch_id: dev.switch_id,
-                  name: dev.name || `u::lux ${dev.switch_id}`,
+                  name: dev.serial_number
+                    ? `u::lux Switch (${dev.serial_number})`
+                    : dev.name || `u::lux ${dev.switch_id}`,
                   ip: dev.ip,
                   port: dev.port,
                   mac_address: dev.mac_address,
