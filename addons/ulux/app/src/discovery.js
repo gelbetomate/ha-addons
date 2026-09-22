@@ -6,6 +6,7 @@ const { execFileSync } = require('child_process');
 
 const DISCOVERY_PORT = 34984;
 const DISCOVERY_INTERVAL_MS = 5000;
+const probedIps = new Set();
 
 // Discovery request captured from the u::lux configuration software.
 const DISCOVERY_REQUEST = Buffer.from(
@@ -46,6 +47,31 @@ function lookupMacAddress(ip) {
     }
   } catch {
     // ARP lookup is best effort; discovery still works without it.
+  }
+
+  if (!probedIps.has(ip)) {
+    probedIps.add(ip);
+    try {
+      execFileSync('ping', ['-c', '1', '-W', '1', ip], {
+        encoding: 'utf8',
+        timeout: 1500,
+        stdio: 'ignore',
+      });
+    } catch {
+      // A failed ping can still populate the neighbor table on some systems.
+    }
+
+    try {
+      const arp = fs.readFileSync('/proc/net/arp', 'utf8').split(/\r?\n/).slice(1);
+      for (const line of arp) {
+        const fields = line.trim().split(/\s+/);
+        if (fields.length >= 4 && fields[0] === ip && /^[0-9a-f]{2}(?::[0-9a-f]{2}){5}$/i.test(fields[3])) {
+          return fields[3].toUpperCase();
+        }
+      }
+    } catch {
+      // Continue without a MAC when the platform exposes no ARP table.
+    }
   }
 
   for (const command of ['ip', 'arp']) {
