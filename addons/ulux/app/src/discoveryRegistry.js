@@ -63,6 +63,7 @@ function createDiscoveryRegistry(registryStore, log) {
       name: nextName || ctx.switchName || `u::lux ${switchId}`,
       mac_address: ctx.mac_address || existing.mac_address || switchId,
       protocol_id: ctx.protocol_id || existing.protocol_id || '',
+      ump_device_id: ctx.ump_device_id ?? existing.ump_device_id ?? null,
       serial_number: ctx.serial_number || existing.serial_number || null,
       serial_number_source: ctx.serial_number_source || existing.serial_number_source || null,
       mqtt_discovery: ctx.mqtt_discovery ?? existing.mqtt_discovery ?? false,

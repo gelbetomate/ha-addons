@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.18
+
+- Used the device context ID observed in the live configuration capture for UMP initialization probes.
+- Documented the exact working TX/RX initialization frames from `newudpmitschnitt.pcapng`.
+
 ## 0.5.17
 
 - Changed Probe UMP to send the combined initialization request used by the working u::lux software: ID-State, ID-Control, ID-PageCount, and ID-PageIndex.

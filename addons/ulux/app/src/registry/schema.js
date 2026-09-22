@@ -27,6 +27,7 @@ function createDeviceRecord(data) {
     discovery_port: data.discovery_port || 34984,
     mac_address: data.mac_address || data.switch_id || '',
     protocol_id: data.protocol_id || '',
+    ump_device_id: data.ump_device_id ?? null,
     serial_number: data.serial_number || data.serial_number_candidate || null,
     serial_number_source: data.serial_number_source || null,
     mqtt_discovery: Boolean(data.mqtt_discovery),

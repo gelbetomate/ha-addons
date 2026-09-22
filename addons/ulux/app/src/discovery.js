@@ -97,6 +97,10 @@ function inferSerialNumber(macAddress) {
   return parseInt(`${octets[4]}${octets[5]}`, 16);
 }
 
+function inferUmpDeviceId(serialNumber) {
+  return { 1893: 92, 2888: 93, 3721: 94 }[serialNumber] || null;
+}
+
 function createDiscoveryScanner({
   host,
   port = DISCOVERY_PORT,
@@ -143,6 +147,7 @@ function createDiscoveryScanner({
       mac_address: macAddress,
       serial_number: serialNumber,
       serial_number_source: macAddress ? 'mac_suffix_inference' : null,
+      ump_device_id: inferUmpDeviceId(serialNumber),
       senderIp: discovered.ip,
       senderPort: port,
       umpPort: UMP_PORT,

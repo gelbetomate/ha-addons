@@ -40,6 +40,23 @@ Its comments state that this variant worked with the real switch after the
 neutral header was replaced. The bytes at offsets 10-13 may therefore identify
 controller/project/protocol context and should not be assumed universally zero.
 
+The live capture `docs/newudpmitschnitt.pcapng` confirms the configuration
+software's first exchange for switch ID `0x005D` (decimal 93):
+
+```text
+TX: 01 86 20 00 32 02 05 00 00 00 00 00 5D 00 01 00
+  04 01 00 00 04 21 00 00 04 0E 00 00 04 2E 00 00
+
+RX: 01 86 2C 00 32 02 05 00 00 00 54 02 5D 00 01 00
+  08 01 00 00 00 10 00 00
+  08 21 00 00 00 08 00 1F
+  06 0E 00 00 06 00
+  06 2E 00 00 03 00
+```
+
+This is the first known-good exchange from the actual configuration software,
+not just a generic PDF example.
+
 ## Startup and initialization
 
 The PDF states that after startup/power-on the switch sets `InitRequest` and `TimeRequest` in `ID-State`.
