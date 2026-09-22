@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.19
+
+- Displayed decoded UMP StateFlags, ControlFlags, PageCount, and PageIndex on registered devices.
+
 ## 0.5.18
 
 - Used the device context ID observed in the live configuration capture for UMP initialization probes.

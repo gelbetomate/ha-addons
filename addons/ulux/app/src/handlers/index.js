@@ -54,6 +54,10 @@ function createDispatcher({ config, haClient, mqttClient, discoveryRegistry, udp
       ump_rx_hex: hex,
       ump_probe_status: 'responded',
       ump_probe_error: null,
+      ump_state_flags: readMessageValue(telegram.messages, MessageIds.IdState),
+      ump_control_flags: readMessageValue(telegram.messages, MessageIds.IdControl),
+      ump_page_count: readMessageValue(telegram.messages, MessageIds.PageCount),
+      ump_page_index: readMessageValue(telegram.messages, MessageIds.PageIndex),
     });
 
     // Resolve switch by device address embedded in the telegram header
@@ -89,6 +93,12 @@ function createDispatcher({ config, haClient, mqttClient, discoveryRegistry, udp
       }
     }
   };
+}
+
+function readMessageValue(messages, messageId) {
+  const message = messages.find((item) => item.msgId === messageId);
+  if (!message || message.length < 6) return null;
+  return message.data.readUInt16LE(4);
 }
 
 /**

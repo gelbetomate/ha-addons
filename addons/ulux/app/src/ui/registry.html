@@ -835,6 +835,10 @@
             <div class="device-info"><strong>Discovery port:</strong> ${dev.discovery_port || '34984'}</div>
             ${dev.ump_device_address ? `<div class="device-info"><strong>UMP address:</strong> ${escapeHtml(dev.ump_device_address)}</div>` : ''}
             ${dev.ump_message_ids?.length ? `<div class="device-info"><strong>UMP messages:</strong> ${dev.ump_message_ids.map((id) => `0x${Number(id).toString(16).padStart(2, '0')}`).join(', ')}</div>` : ''}
+            ${dev.ump_state_flags !== null && dev.ump_state_flags !== undefined ? `<div class="device-info"><strong>State flags:</strong> 0x${Number(dev.ump_state_flags).toString(16).padStart(8, '0')}</div>` : ''}
+            ${dev.ump_control_flags !== null && dev.ump_control_flags !== undefined ? `<div class="device-info"><strong>Control flags:</strong> 0x${Number(dev.ump_control_flags).toString(16).padStart(8, '0')}</div>` : ''}
+            ${dev.ump_page_count !== null && dev.ump_page_count !== undefined ? `<div class="device-info"><strong>Pages:</strong> ${dev.ump_page_count}</div>` : ''}
+            ${dev.ump_page_index !== null && dev.ump_page_index !== undefined ? `<div class="device-info"><strong>Page:</strong> ${dev.ump_page_index}</div>` : ''}
             ${dev.ump_last_seen ? `<div class="timestamp">UMP response: ${new Date(dev.ump_last_seen).toLocaleString()}</div>` : ''}
             <div class="device-info"><strong>UMP probe:</strong> <span class="probe-${(dev.ump_probe_status || 'not-tested').replace(/\s+/g, '-')}" >${escapeHtml(dev.ump_probe_status || 'not tested')}</span></div>
             ${dev.ump_probe_error ? `<div class="timestamp">${escapeHtml(dev.ump_probe_error)}</div>` : ''}
