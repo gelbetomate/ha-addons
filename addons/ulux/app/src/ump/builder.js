@@ -108,6 +108,16 @@ function buildVideoStartMessage(sequenceId) {
   return buf;
 }
 
+/** Build a passive VideoState capability request (MessageID=0xA1). */
+function buildVideoStateRequest() {
+  const buf = Buffer.alloc(8, 0);
+  buf.writeUInt8(0x08, 0);
+  buf.writeUInt8(MessageIds.VideoState, 1);
+  buf.writeUInt16LE(0x0000, 2);
+  buf.writeUInt32LE(0x00000002, 4);
+  return buf;
+}
+
 // ─── Telegram builder ────────────────────────────────────────────────────────
 
 /**
@@ -180,6 +190,7 @@ module.exports = {
   buildIdControlMessage,
   buildDateTimeMessage,
   buildVideoStartMessage,
+  buildVideoStateRequest,
   buildTelegram,
   buildVideoStreamTelegram,
   FRAME_ID_MESSAGE,

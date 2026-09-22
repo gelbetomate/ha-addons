@@ -117,6 +117,16 @@ function createDiscoveryRegistry(registryStore, log) {
     return store;
   }
 
+  function updateDiagnostics(ip, data) {
+    const device = store.getAll().find((item) => item.ip === ip);
+    if (!device) return null;
+    return store.upsert({
+      ...device,
+      ...data,
+      switch_id: device.switch_id,
+    });
+  }
+
   return {
     upsert,
     list,
@@ -124,6 +134,7 @@ function createDiscoveryRegistry(registryStore, log) {
     registerDevice,
     unregisterDevice,
     getStore,
+    updateDiagnostics,
   };
 }
 

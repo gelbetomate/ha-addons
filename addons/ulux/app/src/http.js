@@ -4,6 +4,7 @@ const { createServer } = require('http');
 const fs = require('fs');
 const path = require('path');
 const { streamImageToSwitch } = require('./ump/videoStream');
+const { buildTelegram, buildVideoStateRequest } = require('./ump/builder');
 
 /**
  * Create the bridge HTTP API server.
@@ -161,6 +162,17 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
     if (method === 'POST' && pathname === '/api/discovery/scan') {
       discoveryScanner?.scan?.();
       return respond(res, 202, { ok: true });
+    }
+
+    const umpProbeMatch = pathname.match(/^\/api\/diagnostics\/ump\/([^/]+)$/);
+    if (method === 'POST' && umpProbeMatch) {
+      const switchId = decodeURIComponent(umpProbeMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const probe = buildTelegram(buildVideoStateRequest());
+      udpSend(target.ip, config.listen_port || 34988, probe);
+      log.info(`Sent UMP VideoState probe to ${target.ip}:${config.listen_port || 34988}`);
+      return respond(res, 202, { ok: true, message: 'UMP probe sent' });
     }
 
     // --- GET /api/registry/devices ---

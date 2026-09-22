@@ -803,9 +803,13 @@
             <div class="device-info">
               <strong>Port:</strong> ${dev.port || '50000'}
             </div>
+            ${dev.ump_device_address ? `<div class="device-info"><strong>UMP address:</strong> ${escapeHtml(dev.ump_device_address)}</div>` : ''}
+            ${dev.ump_message_ids?.length ? `<div class="device-info"><strong>UMP messages:</strong> ${dev.ump_message_ids.map((id) => `0x${Number(id).toString(16).padStart(2, '0')}`).join(', ')}</div>` : ''}
+            ${dev.ump_last_seen ? `<div class="timestamp">UMP response: ${new Date(dev.ump_last_seen).toLocaleString()}</div>` : ''}
             ${dev.linked_entry_id ? `<div class="linked-badge">✓ Linked to HA</div>` : ''}
             ${dev.last_seen ? `<div class="timestamp">Last seen: ${new Date(dev.last_seen).toLocaleString()}</div>` : ''}
             <div class="device-actions">
+              <button class="btn-secondary btn-small" onclick="probeUmp('${dev.switch_id}')">Probe UMP</button>
               <button class="btn-secondary btn-small" onclick="editDevice('${dev.switch_id}')">Edit</button>
               <button class="btn-danger btn-small" onclick="deleteDevice('${dev.switch_id}')">Delete</button>
             </div>
@@ -855,6 +859,16 @@
         await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}${suffix}`, { method: 'DELETE' });
         showAlert('Device deleted', 'success');
         loadDevices();
+      } catch (err) {
+        // Error already shown
+      }
+    }
+
+    async function probeUmp(switchId) {
+      try {
+        await fetchJson(`${API_BASE}/diagnostics/ump/${encodeURIComponent(switchId)}`, { method: 'POST' });
+        showAlert('UMP probe sent; waiting for response', 'success');
+        setTimeout(loadDevices, 1000);
       } catch (err) {
         // Error already shown
       }
