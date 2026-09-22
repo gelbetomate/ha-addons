@@ -53,10 +53,11 @@ const { streamImageToSwitch } = require('./ump/videoStream');
  * @param {object}   opts.config   - Full add-on config
  * @param {Function} opts.udpSend  - udpSend(host, port, buf) from the UDP server
  * @param {object}   opts.discoveryRegistry - Device discovery/registry manager
+ * @param {object}   opts.discoveryScanner - Active discovery scanner
  * @param {object}   opts.log      - Logger
  * @returns {{ start: Function, close: Function }}
  */
-function createApiServer({ config, udpSend, discoveryRegistry, log }) {
+function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner, log }) {
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
 
@@ -154,6 +155,12 @@ function createApiServer({ config, udpSend, discoveryRegistry, log }) {
     if (method === 'GET' && pathname === '/api/discovery/devices') {
       const devices = discoveryRegistry ? discoveryRegistry.list() : [];
       return respond(res, 200, { devices });
+    }
+
+    // --- POST /api/discovery/scan ---
+    if (method === 'POST' && pathname === '/api/discovery/scan') {
+      discoveryScanner?.scan?.();
+      return respond(res, 202, { ok: true });
     }
 
     // --- GET /api/registry/devices ---

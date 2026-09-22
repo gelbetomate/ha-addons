@@ -5,7 +5,7 @@ const fs = require('fs');
 const { execFileSync } = require('child_process');
 
 const DISCOVERY_PORT = 34984;
-const DISCOVERY_INTERVAL_MS = 5000;
+const DISCOVERY_INTERVAL_MS = 0;
 const probedIps = new Set();
 
 // Discovery request captured from the u::lux configuration software.
@@ -155,7 +155,7 @@ function createDiscoveryScanner({
         socket.setBroadcast(true);
         log?.info(`u::lux discovery listening on UDP ${port}`);
         sendDiscovery();
-        timer = setInterval(sendDiscovery, intervalMs);
+        if (intervalMs > 0) timer = setInterval(sendDiscovery, intervalMs);
       });
     },
     stop() {
@@ -163,6 +163,7 @@ function createDiscoveryScanner({
       timer = null;
       socket.close();
     },
+    scan: sendDiscovery,
   };
 }
 

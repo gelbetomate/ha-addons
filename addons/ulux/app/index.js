@@ -125,6 +125,7 @@ async function main() {
     config,
     udpSend: udpServer.send,
     discoveryRegistry,
+    discoveryScanner,
     log,
   });
   apiServer.start();

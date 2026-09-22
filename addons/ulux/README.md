@@ -89,7 +89,7 @@ The bridge is configured via `options.json` in Supervisor. Key options:
   "listen_host": "0.0.0.0",
   "listen_port": 34988,
   "discovery_port": 34984,
-  "discovery_interval_ms": 5000,
+  "discovery_interval_ms": 0,
   "mode": {
     "ha_events": true,
     "mqtt": false
@@ -122,7 +122,7 @@ The bridge is configured via `options.json` in Supervisor. Key options:
   - Discovery will add/update additional switches as they're observed
 
 - **`discovery_port`**: UDP port used by the u::lux configuration discovery protocol (default `34984`)
-- **`discovery_interval_ms`**: Active discovery broadcast interval (default `5000` ms)
+- **`discovery_interval_ms`**: Optional recurring discovery interval in milliseconds (default `0`, disabled). Use a positive value for testing.
 
 - **`mode.mqtt`**: Enable/disable MQTT integration (default: false)
   - If enabled, devices can be managed via MQTT topics

@@ -55,7 +55,7 @@ Physical u::lux Switch IP
 
 ### Discovery flow
 1. The bridge binds a discovery socket on UDP `34984`.
-2. Every `discovery_interval_ms` (default: 5000 ms), it broadcasts a 48-byte request to `255.255.255.255:34984`.
+2. It broadcasts a 48-byte request to `255.255.255.255:34984` at startup and when the Discovery tab's **Scan now** action is used.
 3. u::lux switches answer directly to the bridge with a 228-byte response beginning with `e4 80 01 02`.
 4. The bridge records the sender IP, discovery port, protocol ID, sequence, timestamp, and raw response.
 5. If the sender IP matches a configured switch, its MAC and name are used to update the persistent registry.
@@ -84,6 +84,10 @@ The discovery protocol is separate from normal UMP traffic:
 | Normal UMP events and streaming | UDP | `34988` |
 
 The current implementation decodes the broadcast response stage. The follow-up `0x83` and `0x02` handshake visible in `docs/UDPMitschnitt.pcapng` is reserved for a later protocol implementation.
+
+Recurring scans are disabled by default (`discovery_interval_ms: 0`). A positive
+value can be configured temporarily for testing or installations that need
+continuous discovery.
 
 The follow-up handshake is the likely place to investigate for additional device
 properties such as firmware version, bootloader version, hardware type, display

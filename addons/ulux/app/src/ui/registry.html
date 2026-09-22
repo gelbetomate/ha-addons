@@ -553,6 +553,7 @@
         <p style="color: var(--ha-text-secondary); margin-bottom: 20px; font-size: 14px;">
           Devices observed on UDP traffic from your network.
         </p>
+        <button class="btn-secondary" id="scanDiscoveryBtn" style="margin-bottom: 20px;">Scan now</button>
 
         <div id="discoveryList" class="discovery-list"></div>
         <div id="discoveryEmpty" class="empty-state" style="display: none;">
@@ -950,6 +951,16 @@
         // Error already shown
       }
     }
+
+    document.getElementById('scanDiscoveryBtn').addEventListener('click', async () => {
+      try {
+        await fetchJson(`${API_BASE}/discovery/scan`, { method: 'POST' });
+        showAlert('Discovery scan started', 'success');
+        setTimeout(loadDiscovery, 500);
+      } catch (err) {
+        // Error already shown
+      }
+    });
 
     document.getElementById('importSelectedBtn').addEventListener('click', async () => {
       const selected = Array.from(UI_STATE.selectedDiscoveryDevices);
