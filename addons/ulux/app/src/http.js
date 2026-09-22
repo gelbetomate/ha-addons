@@ -175,6 +175,8 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         ump_probe_status: 'pending',
         ump_probe_requested_at: requestedAt,
         ump_probe_error: null,
+        ump_tx_hex: probe.toString('hex'),
+        ump_rx_hex: null,
       });
       udpSend(target.ip, config.listen_port || 34988, probe);
       setTimeout(() => {

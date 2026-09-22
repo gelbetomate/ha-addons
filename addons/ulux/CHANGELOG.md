@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.14
+
+- Corrected UMP frame offsets and the DateTime/VideoState message layouts using the supplied UMP specification and reference implementation.
+- Added persisted UMP TX/RX hex diagnostics to registered devices.
+
 ## 0.5.13
 
 - Treat queued HA deletion as a successful asynchronous operation in the Bridge UI instead of showing a misleading error.

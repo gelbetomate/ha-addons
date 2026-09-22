@@ -12,7 +12,7 @@ const DEFAULTS = {
   listen_port: 34988,
   discovery_port: 34984,
   discovery_interval_ms: 0,
-  control_flags: 0,
+  control_flags: 0x16,
   mode: {
     ha_events: true,
     ha_device_management: true,

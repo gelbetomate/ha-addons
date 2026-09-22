@@ -38,6 +38,8 @@ function createDeviceRecord(data) {
     ump_probe_status: data.ump_probe_status || 'not tested',
     ump_probe_requested_at: data.ump_probe_requested_at || null,
     ump_probe_error: data.ump_probe_error || null,
+    ump_tx_hex: data.ump_tx_hex || null,
+    ump_rx_hex: data.ump_rx_hex || null,
     online_status: 'unknown',
     last_seen: null,
     discovered_at: now,

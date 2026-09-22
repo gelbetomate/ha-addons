@@ -76,15 +76,13 @@ function buildDateTimeMessage(date) {
   buf.writeUInt8(0x0C, 0);                          // MessageLength
   buf.writeUInt8(MessageIds.DateTime, 1);           // MessageID = 0x2F
   buf.writeUInt16LE(0x0000, 2);                     // ActorID
-  buf.writeUInt16LE(d.getFullYear(), 4);            // Year
-  buf.writeUInt8(d.getMonth() + 1, 6);              // Month (1-12)
-  buf.writeUInt8(d.getDate(), 7);                   // Day
-  buf.writeUInt8(d.getHours(), 8);                  // Hour
-  buf.writeUInt8(d.getMinutes(), 9);                // Minute
-  buf.writeUInt8(d.getSeconds(), 10);               // Second
-  // ISO 8601: Mon=1 … Sun=7; JS getDay() returns Sun=0 … Sat=6
-  const jsDay = d.getDay();
-  buf.writeUInt8(jsDay === 0 ? 7 : jsDay, 11);      // DayOfWeek
+  buf.writeUInt8(d.getSeconds(), 4);
+  buf.writeUInt8(d.getMinutes(), 5);
+  buf.writeUInt8(d.getHours(), 6);
+  buf.writeUInt8(d.getUTCDay(), 7);
+  buf.writeUInt8(d.getUTCDate(), 8);
+  buf.writeUInt8(d.getUTCMonth() + 1, 9);
+  buf.writeUInt16LE(d.getUTCFullYear(), 10);
   return buf;
 }
 
@@ -110,11 +108,10 @@ function buildVideoStartMessage(sequenceId) {
 
 /** Build a passive VideoState capability request (MessageID=0xA1). */
 function buildVideoStateRequest() {
-  const buf = Buffer.alloc(8, 0);
-  buf.writeUInt8(0x08, 0);
+  const buf = Buffer.alloc(4, 0);
+  buf.writeUInt8(0x04, 0);
   buf.writeUInt8(MessageIds.VideoState, 1);
-  buf.writeUInt16LE(0x0000, 2);
-  buf.writeUInt32LE(0x00000002, 4);
+  buf.writeUInt16LE(0x0016, 2);
   return buf;
 }
 
@@ -130,12 +127,9 @@ function buildTelegram(...messageBuffers) {
   const messagesBuffer = Buffer.concat(messageBuffers);
   const totalLength = 16 + messagesBuffer.length;
 
-  const header = Buffer.alloc(16, 0);
-  header.writeUInt16LE(totalLength, 0);    // TotalLength
-  // bytes 2-3: ProtocolVersion (0x0000 — already zeroed)
-  // bytes 4-9: DeviceAddress (all zeros — our virtual sender address)
-  header.writeUInt16LE(nextPacketId(), 10); // PacketID
-  // bytes 12-15: Reserved (0x00000000 — already zeroed)
+  const header = Buffer.from('01861000320225000000000001000100', 'hex');
+  header.writeUInt16LE(totalLength, 2);
+  header.writeUInt16LE(nextPacketId(), 6);
 
   return Buffer.concat([header, messagesBuffer]);
 }

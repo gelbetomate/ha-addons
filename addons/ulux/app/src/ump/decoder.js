@@ -55,10 +55,10 @@ function parseTelegram(buf) {
     return { valid: false, error: `Telegram too short: ${buf.length} < ${MIN_TELEGRAM_SIZE} bytes` };
   }
 
-  const totalLength = buf.readUInt16LE(0);
-  const deviceAddrBytes = buf.slice(4, 10);
+  const totalLength = buf.readUInt16LE(2);
+  const deviceAddrBytes = buf.slice(8, 14);
   const deviceAddressHex = (deviceAddrBytes.toString('hex').toUpperCase().match(/.{2}/g) || []).join(':');
-  const packetId = buf.readUInt16LE(10);
+  const packetId = buf.readUInt16LE(6);
 
   const messages = [];
   let offset = TELEGRAM_HEADER_SIZE;

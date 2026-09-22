@@ -828,6 +828,8 @@
             ${dev.ump_last_seen ? `<div class="timestamp">UMP response: ${new Date(dev.ump_last_seen).toLocaleString()}</div>` : ''}
             <div class="device-info"><strong>UMP probe:</strong> <span class="probe-${(dev.ump_probe_status || 'not-tested').replace(/\s+/g, '-')}" >${escapeHtml(dev.ump_probe_status || 'not tested')}</span></div>
             ${dev.ump_probe_error ? `<div class="timestamp">${escapeHtml(dev.ump_probe_error)}</div>` : ''}
+            ${dev.ump_tx_hex ? `<div class="timestamp">UMP TX: ${escapeHtml(dev.ump_tx_hex)}</div>` : ''}
+            ${dev.ump_rx_hex ? `<div class="timestamp">UMP RX: ${escapeHtml(dev.ump_rx_hex)}</div>` : ''}
             ${dev.linked_entry_id ? `<div class="linked-badge">✓ Linked to HA</div>` : ''}
             ${dev.last_seen ? `<div class="timestamp">Last seen: ${new Date(dev.last_seen).toLocaleString()}</div>` : ''}
             <div class="device-actions">

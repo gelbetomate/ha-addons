@@ -51,6 +51,7 @@ function createDispatcher({ config, haClient, mqttClient, discoveryRegistry, udp
       ump_packet_id: telegram.packetId,
       ump_message_ids: telegram.messages.map((message) => message.msgId),
       ump_last_seen: timestamp,
+      ump_rx_hex: hex,
       ump_probe_status: 'responded',
       ump_probe_error: null,
     });
