@@ -26,7 +26,7 @@ function createDeviceRecord(data) {
     port: data.port || 50000,
     mac_address: data.mac_address || data.switch_id || '',
     protocol_id: data.protocol_id || '',
-    serial_number_candidate: data.serial_number_candidate || null,
+    serial_number: data.serial_number || data.serial_number_candidate || null,
     serial_number_source: data.serial_number_source || null,
     online_status: 'unknown',
     last_seen: null,

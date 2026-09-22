@@ -101,17 +101,19 @@ function createDiscoveryScanner({
     const configured = switches.find(
       (item) => String(item.ip || '') === discovered.ip
     );
+    const serialNumber = configured?.serial_number || inferSerialNumber(macAddress);
     const switchId = configured?.switch_id || macAddress || null;
+    const name = configured?.name || (serialNumber ? `u::lux Switch (${serialNumber})` : null);
 
     onDevice?.({
       ...discovered,
       mac_address: macAddress,
-      serial_number_candidate: inferSerialNumber(macAddress),
+      serial_number: serialNumber,
       serial_number_source: macAddress ? 'mac_suffix_inference' : null,
       senderIp: discovered.ip,
       senderPort: port,
       switchId,
-      switchName: configured?.name,
+      switchName: name,
       configured: Boolean(configured),
     });
 

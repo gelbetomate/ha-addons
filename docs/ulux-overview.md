@@ -62,6 +62,20 @@ Physical u::lux Switch IP
 6. If no MAC can be confirmed, the response remains a pending discovery result and is shown in the bridge UI without inventing a switch ID.
 7. The UI can import only records with a verified switch ID into the persistent registry.
 
+The discovery response currently exposes these useful properties:
+
+- sender IP address and UDP port
+- response length and discovery message type
+- sequence number
+- protocol ID from the response header
+- raw response bytes for later decoding
+- last-seen timestamp
+- MAC address when the HA host can resolve the sender through its neighbor table
+- serial number as a clearly marked inference from the known MAC suffix pattern
+
+The configuration software's numeric database ID is intentionally not shown. It
+has not been identified as a value in the captured discovery protocol.
+
 The discovery protocol is separate from normal UMP traffic:
 
 | Purpose | Transport | Default port |
@@ -70,6 +84,11 @@ The discovery protocol is separate from normal UMP traffic:
 | Normal UMP events and streaming | UDP | `34988` |
 
 The current implementation decodes the broadcast response stage. The follow-up `0x83` and `0x02` handshake visible in `docs/UDPMitschnitt.pcapng` is reserved for a later protocol implementation.
+
+The follow-up handshake is the likely place to investigate for additional device
+properties such as firmware version, bootloader version, hardware type, display
+type, production date, CPU information, and memory sizes. Those values are not
+currently present as readable text in the captured 228-byte discovery response.
 
 ### Rendering flow
 1. HACS integration renders a frame

@@ -217,6 +217,10 @@
       color: var(--ha-text-primary);
     }
 
+    .mac-unavailable {
+      color: var(--ha-warning);
+    }
+
     .device-actions {
       display: flex;
       gap: 8px;
@@ -911,13 +915,13 @@
 
         list.innerHTML = data.devices.map((dev) => `
           <div class="discovery-card${dev.switch_id ? '' : ' pending'}" data-switch-id="${dev.switch_id || ''}">
-            <div class="device-name">${escapeHtml(dev.name || 'u::lux device')}</div>
+            <div class="device-name">${escapeHtml(dev.name || `u::lux device (${dev.ip || 'unknown IP'})`)}</div>
             <div class="device-id">${dev.switch_id || `Protocol ID: ${dev.protocol_id || 'unknown'}`}</div>
+            <div class="device-info"><strong>Serial number:</strong> ${dev.serial_number || '<span class="mac-unavailable">not available</span>'}</div>
             <div class="device-info" style="margin-top: 10px;">
               <strong>IP:</strong> ${dev.ip || 'Unknown'}
             </div>
-            ${dev.mac_address ? `<div class="device-info"><strong>MAC:</strong> ${escapeHtml(dev.mac_address)}</div>` : ''}
-            ${dev.serial_number_candidate ? `<div class="device-info"><strong>Serial candidate:</strong> ${dev.serial_number_candidate}</div>` : ''}
+            <div class="device-info"><strong>MAC:</strong> ${dev.mac_address ? escapeHtml(dev.mac_address) : '<span class="mac-unavailable">not available from UDP discovery</span>'}</div>
             <div class="device-info">
               <strong>Port:</strong> ${dev.port || '50000'}
             </div>

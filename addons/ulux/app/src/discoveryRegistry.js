@@ -42,7 +42,7 @@ function createDiscoveryRegistry(registryStore, log) {
       name: ctx.switchName || existing.name || `u::lux ${switchId}`,
       mac_address: ctx.mac_address || existing.mac_address || switchId,
       protocol_id: ctx.protocol_id || existing.protocol_id || '',
-      serial_number_candidate: ctx.serial_number_candidate || existing.serial_number_candidate || null,
+      serial_number: ctx.serial_number || existing.serial_number || null,
       serial_number_source: ctx.serial_number_source || existing.serial_number_source || null,
       last_seen: ctx.last_seen || new Date().toISOString(),
     });
