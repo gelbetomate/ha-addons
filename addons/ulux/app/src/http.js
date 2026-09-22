@@ -165,6 +165,16 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       return respond(res, 200, { ok: true });
     }
 
+    if (method === 'GET' && pathname === '/api/registry/pending-deletions') {
+      return respond(res, 200, { devices: discoveryRegistry.listPendingDeletions() });
+    }
+
+    const pendingDeletionMatch = pathname.match(/^\/api\/registry\/pending-deletions\/([^/]+)$/);
+    if (method === 'DELETE' && pendingDeletionMatch) {
+      discoveryRegistry.clearPendingDeletion(decodeURIComponent(pendingDeletionMatch[1]));
+      return respond(res, 204);
+    }
+
     const umpProbeMatch = pathname.match(/^\/api\/diagnostics\/ump\/([^/]+)$/);
     if (method === 'POST' && umpProbeMatch) {
       const switchId = decodeURIComponent(umpProbeMatch[1]);
@@ -336,6 +346,10 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         }
       }
 
+      if (deleteFromHa && haDeleteError) {
+        discoveryRegistry.queueDeletion({ ...device, switch_id: switchId });
+      }
+
       const removed = discoveryRegistry.unregisterDevice(switchId);
       if (!removed) {
         return respond(res, 404, { error: `Device not found: ${switchId}` });
@@ -349,6 +363,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         bridge_deleted: true,
         homeassistant_deleted: deleteFromHa && !haDeleteError,
         discovery_retained: true,
+        pending_homeassistant_delete: Boolean(deleteFromHa && haDeleteError),
         warning: haDeleteError || undefined,
       });
     }

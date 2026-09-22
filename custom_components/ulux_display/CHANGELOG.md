@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.14
+
+- Process bridge-requested HA deletions through a separate pending-deletions endpoint while keeping Discovery visible.
+
 ## 0.2.12
 
 - Clear stale bridge deletion requests when a device is linked to a newly created HA config entry.

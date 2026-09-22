@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.20
+
+- Registered Device deletion removes the registry record while retaining the device in Discovery.
+- Added a separate queue endpoint for HA to complete pending Config Entry deletion.
+
 ## 0.5.19
 
 - Displayed decoded UMP StateFlags, ControlFlags, PageCount, and PageIndex on registered devices.

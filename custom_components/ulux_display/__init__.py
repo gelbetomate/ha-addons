@@ -90,19 +90,19 @@ async def _async_process_pending_deletions(hass: HomeAssistant) -> None:
         bridge_url = entry.data.get(CONF_BRIDGE_URL, DEFAULT_BRIDGE_URL).rstrip("/")
         switch_id = str(entry.data.get(CONF_SWITCH_ID, "")).upper()
         try:
-            async with session.get(f"{bridge_url}/api/registry/devices", timeout=5) as response:
+            async with session.get(f"{bridge_url}/api/registry/pending-deletions", timeout=5) as response:
                 if response.status != 200:
                     continue
                 payload = await response.json()
-            pending = {
-                str(device.get("switch_id", "")).upper()
-                for device in payload.get("devices", [])
-                if device.get("ha_delete_requested")
-            }
+            pending = {str(device.get("switch_id", "")).upper() for device in payload.get("devices", [])}
             if switch_id in pending:
                 _LOGGER.info("Removing HA config entry %s requested by bridge", entry.entry_id)
                 await hass.config_entries.async_remove(entry.entry_id)
                 _LOGGER.info("Removed HA config entry %s for switch %s", entry.entry_id, switch_id)
+                await session.delete(
+                    f"{bridge_url}/api/registry/pending-deletions/{switch_id}",
+                    timeout=5,
+                )
         except Exception as err:  # noqa: BLE001
             _LOGGER.debug("Pending deletion check failed for %s: %s", switch_id, err)
 

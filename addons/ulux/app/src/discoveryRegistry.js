@@ -12,6 +12,7 @@ function createDiscoveryRegistry(registryStore, log) {
   // If no store provided, create a default one (in-memory or file-based)
   const store = registryStore || new RegistryStore(undefined, log);
   const pendingDiscovery = new Map(); // switchId → discovery data (not yet in registry)
+  const pendingDeletions = new Map();
 
   function normaliseSwitchId(switchId) {
     if (!switchId) return null;
@@ -129,6 +130,20 @@ function createDiscoveryRegistry(registryStore, log) {
     return store.remove(switchId);
   }
 
+  function queueDeletion(device) {
+    if (!device?.switch_id) return;
+    pendingDeletions.set(device.switch_id.toUpperCase(), { ...device, ha_delete_requested: true });
+    if (device.ip) pendingDiscovery.set(device.ip, { ...device, switch_id: device.switch_id });
+  }
+
+  function listPendingDeletions() {
+    return Array.from(pendingDeletions.values());
+  }
+
+  function clearPendingDeletion(switchId) {
+    return pendingDeletions.delete(String(switchId).toUpperCase());
+  }
+
   /**
    * Get the underlying persistent store (for advanced operations).
    * @returns {RegistryStore}
@@ -162,6 +177,9 @@ function createDiscoveryRegistry(registryStore, log) {
     getStore,
     updateDiagnostics,
     updateDiagnosticsBySwitchId,
+    queueDeletion,
+    listPendingDeletions,
+    clearPendingDeletion,
   };
 }
 
