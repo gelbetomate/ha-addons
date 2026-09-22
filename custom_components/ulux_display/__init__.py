@@ -144,13 +144,23 @@ async def _async_auto_discover_devices(hass: HomeAssistant) -> None:
 
             pending.add(pair_key)
             try:
+                serial_number = dev.get("serial_number")
+                display_name = (
+                    f"u::lux Switch ({serial_number})"
+                    if serial_number
+                    else f"u::lux Display ({switch_id})"
+                )
                 result = await hass.config_entries.flow.async_init(
                     DOMAIN,
                     context={"source": SOURCE_IMPORT},
                     data={
                         CONF_BRIDGE_URL: bridge_url,
                         CONF_SWITCH_ID: switch_id,
-                        CONF_NAME: f"u::lux Display ({switch_id})",
+                        CONF_NAME: display_name,
+                        CONF_HOST: dev.get("ip", ""),
+                        "mac_address": dev.get("mac_address", ""),
+                        "serial_number": serial_number,
+                        "protocol_id": dev.get("protocol_id", ""),
                     },
                 )
                 _LOGGER.info(

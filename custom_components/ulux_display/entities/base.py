@@ -26,9 +26,14 @@ class UluxDisplayEntity(CoordinatorEntity["UluxDisplayCoordinator"]):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information."""
+        entry_data = self.coordinator.entry.data
+        mac_address = entry_data.get("mac_address")
+        connections = {("mac", mac_address)} if mac_address else set()
         return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.entry.entry_id)},
+            identifiers={(DOMAIN, entry_data.get("switch_id", self.coordinator.entry.entry_id))},
+            connections=connections,
             name=self.coordinator.entry.title,
             manufacturer="u::lux",
             model="u::lux Display",
+            serial_number=entry_data.get("serial_number"),
         )

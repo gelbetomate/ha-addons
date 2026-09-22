@@ -211,6 +211,7 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
         switch_id: str,
         name: str | None,
         host: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
         """Create config entry for chosen switch and register in bridge."""
         unique_id = f"{bridge_url}_{switch_id}"
@@ -235,6 +236,7 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_SWITCH_ID: switch_id,
                 CONF_HOST: host or "",
                 CONF_NAME: title,
+                **(metadata or {}),
             },
         )
 
@@ -247,4 +249,14 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
         if not bridge_url or not switch_id:
             return self.async_abort(reason="invalid_switch_id")
 
-        return await self._async_create_switch_entry(bridge_url, switch_id, name)
+        return await self._async_create_switch_entry(
+            bridge_url,
+            switch_id,
+            name,
+            host=user_input.get(CONF_HOST),
+            metadata={
+                "mac_address": user_input.get("mac_address", ""),
+                "serial_number": user_input.get("serial_number"),
+                "protocol_id": user_input.get("protocol_id", ""),
+            },
+        )
