@@ -488,6 +488,16 @@
       display: inline-block;
     }
 
+    .registry-only-badge {
+      background: rgba(255, 160, 0, 0.14);
+      color: var(--ha-warning);
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      margin-top: 4px;
+      display: inline-block;
+    }
+
     .timestamp {
       font-size: 11px;
       color: #7d8aa4;
@@ -830,7 +840,9 @@
             ${dev.ump_probe_error ? `<div class="timestamp">${escapeHtml(dev.ump_probe_error)}</div>` : ''}
             ${dev.ump_tx_hex ? `<div class="timestamp">UMP TX: ${escapeHtml(dev.ump_tx_hex)}</div>` : ''}
             ${dev.ump_rx_hex ? `<div class="timestamp">UMP RX: ${escapeHtml(dev.ump_rx_hex)}</div>` : ''}
-            ${dev.linked_entry_id ? `<div class="linked-badge">✓ Linked to HA</div>` : ''}
+            ${dev.linked_entry_id
+              ? `<div class="linked-badge">✓ Linked to HA</div>`
+              : `<div class="registry-only-badge">Bridge registry only</div>`}
             ${dev.last_seen ? `<div class="timestamp">Last seen: ${new Date(dev.last_seen).toLocaleString()}</div>` : ''}
             <div class="device-actions">
               <button class="btn-secondary btn-small" onclick="probeUmp('${dev.switch_id}')">Probe UMP</button>

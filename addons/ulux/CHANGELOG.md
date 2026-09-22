@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.15
+
+- Clarified unlinked registered devices in the Bridge UI with a `Bridge registry only` badge.
+- Kept registry devices available for future HA setup after an HA entry is removed.
+
 ## 0.5.14
 
 - Corrected UMP frame offsets and the DateTime/VideoState message layouts using the supplied UMP specification and reference implementation.
