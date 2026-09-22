@@ -70,6 +70,7 @@ function loadConfig() {
   if (!config.ha.token) {
     console.warn('No HA token found (via options or SUPERVISOR_TOKEN). HA event integration disabled.');
     config.mode.ha_events = false;
+    config.mode.ha_device_management = false;
   }
 
   return config;

@@ -151,7 +151,7 @@ function createHaWebSocket(haConfig, log) {
         const timer = setTimeout(() => {
           const index = authenticationWaiters.indexOf(waiter);
           if (index >= 0) authenticationWaiters.splice(index, 1);
-          reject(new Error('HA WebSocket not connected / authenticated'));
+          reject(new Error(lastError || 'HA WebSocket not connected / authenticated'));
         }, 10000);
         const waiter = {
           resolve: () => {

@@ -333,10 +333,6 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         }
       }
 
-      if (haDeleteError) {
-        return respond(res, 502, { error: haDeleteError });
-      }
-
       const removed = discoveryRegistry.unregisterDevice(switchId);
       if (!removed) {
         return respond(res, 404, { error: `Device not found: ${switchId}` });
@@ -345,7 +341,12 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         mqttClient?.removeDiscovery(switchId);
       }
       log.info(`HTTP API: removed device "${switchId}"`);
-      return respond(res, 204);
+      return respond(res, 200, {
+        ok: true,
+        bridge_deleted: true,
+        homeassistant_deleted: deleteFromHa && !haDeleteError,
+        warning: haDeleteError || undefined,
+      });
     }
 
     // --- POST /api/display/image/:switchId ---

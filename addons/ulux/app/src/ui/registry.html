@@ -878,8 +878,11 @@
       const deleteFromHomeAssistant = await askConfirmation('Das zugehörige Gerät auch aus Home Assistant löschen?');
       try {
         const suffix = deleteFromHomeAssistant ? '?delete_from_homeassistant=true' : '';
-        await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}${suffix}`, { method: 'DELETE' });
-        showAlert('Device deleted', 'success');
+        const data = await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}${suffix}`, { method: 'DELETE' });
+        const message = data.warning
+          ? `Device deleted from Bridge. HA deletion failed: ${data.warning}`
+          : 'Device deleted';
+        showAlert(message, data.warning ? 'error' : 'success');
         loadDevices();
       } catch (err) {
         // Error already shown
