@@ -35,5 +35,9 @@ class UluxDisplayEntity(CoordinatorEntity["UluxDisplayCoordinator"]):
             name=self.coordinator.entry.title,
             manufacturer="u::lux",
             model="u::lux Display",
-            serial_number=entry_data.get("serial_number"),
+            serial_number=(
+                str(entry_data["serial_number"])
+                if entry_data.get("serial_number") is not None
+                else None
+            ),
         )
