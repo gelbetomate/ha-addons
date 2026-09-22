@@ -1,5 +1,11 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.16
+
+- Deleting a Registered Device always removes it from the persistent Bridge Registry.
+- Discovery results remain available separately after a Registered Device is deleted.
+- Home Assistant deletion failures are reported as warnings without preventing Bridge Registry deletion.
+
 ## 0.5.15
 
 - Clarified unlinked registered devices in the Bridge UI with a `Bridge registry only` badge.

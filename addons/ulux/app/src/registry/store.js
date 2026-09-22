@@ -210,6 +210,7 @@ class RegistryStore {
     }
 
     record.linked_entry_id = entryId;
+    record.ha_delete_requested = false;
     this.dirty = true;
     return record;
   }

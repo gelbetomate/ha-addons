@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.12
+
+- Clear stale bridge deletion requests when a device is linked to a newly created HA config entry.
+- Prevent newly created HA devices from being removed by an earlier deletion request.
+
 ## 0.2.11
 
 - Removing a Home Assistant config entry now unlinks it from the Bridge Registry instead of deleting the registry device.

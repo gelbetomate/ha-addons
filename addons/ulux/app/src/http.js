@@ -335,22 +335,6 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         }
       }
 
-      if (deleteFromHa && haDeleteError) {
-        const marked = discoveryRegistry.registerDevice({
-          ...device,
-          switch_id: switchId,
-          ha_delete_requested: true,
-        });
-        return respond(res, 202, {
-          ok: true,
-          bridge_deleted: false,
-          homeassistant_deleted: false,
-          pending_homeassistant_delete: true,
-          warning: haDeleteError,
-          device: marked,
-        });
-      }
-
       const removed = discoveryRegistry.unregisterDevice(switchId);
       if (!removed) {
         return respond(res, 404, { error: `Device not found: ${switchId}` });
@@ -363,6 +347,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         ok: true,
         bridge_deleted: true,
         homeassistant_deleted: deleteFromHa && !haDeleteError,
+        discovery_retained: true,
         warning: haDeleteError || undefined,
       });
     }
