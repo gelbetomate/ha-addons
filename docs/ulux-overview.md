@@ -135,3 +135,4 @@ currently present as readable text in the captured 228-byte discovery response.
 ## Next steps
 
 See `docs/ulux-registry-api.md` for the formal registry API proposal.
+See `docs/ulux-ump-protocol-notes.md` for the verified UMP framing and initialization sequence.

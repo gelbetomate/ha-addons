@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.17
+
+- Changed Probe UMP to send the combined initialization request used by the working u::lux software: ID-State, ID-Control, ID-PageCount, and ID-PageIndex.
+- Kept TX/RX hexadecimal diagnostics for the initialization exchange.
+
 ## 0.5.16
 
 - Deleting a Registered Device always removes it from the persistent Bridge Registry.

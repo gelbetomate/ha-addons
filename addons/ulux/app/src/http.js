@@ -4,7 +4,7 @@ const { createServer } = require('http');
 const fs = require('fs');
 const path = require('path');
 const { streamImageToSwitch } = require('./ump/videoStream');
-const { buildTelegram, buildVideoStateRequest } = require('./ump/builder');
+const { buildTelegram, buildInitializationRequest } = require('./ump/builder');
 
 /**
  * Create the bridge HTTP API server.
@@ -169,7 +169,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       const switchId = decodeURIComponent(umpProbeMatch[1]);
       const target = getSwitchTarget(switchId);
       if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
-      const probe = buildTelegram(buildVideoStateRequest());
+      const probe = buildTelegram(buildInitializationRequest());
       const requestedAt = new Date().toISOString();
       discoveryRegistry.updateDiagnosticsBySwitchId(switchId, {
         ump_probe_status: 'pending',

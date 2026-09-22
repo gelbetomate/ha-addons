@@ -115,6 +115,22 @@ function buildVideoStateRequest() {
   return buf;
 }
 
+function buildRequestMessage(messageId) {
+  const message = Buffer.alloc(4, 0);
+  message.writeUInt8(0x04, 0);
+  message.writeUInt8(messageId, 1);
+  return message;
+}
+
+function buildInitializationRequest() {
+  return Buffer.concat([
+    buildRequestMessage(MessageIds.IdState),
+    buildRequestMessage(MessageIds.IdControl),
+    buildRequestMessage(MessageIds.PageCount),
+    buildRequestMessage(MessageIds.PageIndex),
+  ]);
+}
+
 // ─── Telegram builder ────────────────────────────────────────────────────────
 
 /**
@@ -185,6 +201,7 @@ module.exports = {
   buildDateTimeMessage,
   buildVideoStartMessage,
   buildVideoStateRequest,
+  buildInitializationRequest,
   buildTelegram,
   buildVideoStreamTelegram,
   FRAME_ID_MESSAGE,
