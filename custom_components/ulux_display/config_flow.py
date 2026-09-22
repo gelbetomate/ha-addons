@@ -7,7 +7,8 @@ from typing import Any
 
 import aiohttp
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.core import callback
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 
@@ -24,6 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 CONF_ACTION = "action"
 ACTION_DISCOVER = "discover"
 ACTION_MANUAL = "manual"
+CONF_MQTT_DISCOVERY = "mqtt_discovery"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -42,6 +44,11 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the config flow for u::lux Display."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        return UluxDisplayOptionsFlow()
 
     def __init__(self) -> None:
         self._bridge_url: str = DEFAULT_BRIDGE_URL
@@ -187,7 +194,7 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
             "switch_id": switch_id,
             "name": name,
             "ip": host,
-            "port": 50000,
+            "port": 34988,
         }
 
         try:
@@ -259,4 +266,19 @@ class UluxDisplayConfigFlow(ConfigFlow, domain=DOMAIN):
                 "serial_number": user_input.get("serial_number"),
                 "protocol_id": user_input.get("protocol_id", ""),
             },
+        )
+
+
+class UluxDisplayOptionsFlow(OptionsFlow):
+    """Manage per-device options."""
+
+    async def async_step_init(self, user_input=None):
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Optional(CONF_MQTT_DISCOVERY, default=False): bool,
+            }),
         )

@@ -45,12 +45,14 @@ function createDiscoveryRegistry(registryStore, log) {
     store.upsert({
       switch_id: switchId,
       ip: ctx.senderIp || existing.ip || '',
-      port: ctx.senderPort || existing.port || 50000,
+      port: ctx.umpPort || existing.port || 34988,
+      discovery_port: ctx.discovery_port || existing.discovery_port || 34984,
       name: ctx.switchName || existing.name || `u::lux ${switchId}`,
       mac_address: ctx.mac_address || existing.mac_address || switchId,
       protocol_id: ctx.protocol_id || existing.protocol_id || '',
       serial_number: ctx.serial_number || existing.serial_number || null,
       serial_number_source: ctx.serial_number_source || existing.serial_number_source || null,
+      mqtt_discovery: ctx.mqtt_discovery ?? existing.mqtt_discovery ?? false,
       last_seen: ctx.last_seen || new Date().toISOString(),
     });
 

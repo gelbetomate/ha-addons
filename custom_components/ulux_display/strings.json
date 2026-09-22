@@ -109,10 +109,10 @@
   "options": {
     "step": {
       "init": {
-        "title": "u::lux Display Options",
-        "description": "Choose what to configure.",
+        "title": "Device Settings",
+        "description": "Configure this u::lux device.",
         "data": {
-          "action": "Action"
+          "mqtt_discovery": "Enable MQTT Discovery"
         }
       },
       "device_settings": {

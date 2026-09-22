@@ -216,6 +216,9 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
       try {
         const device = discoveryRegistry.registerDevice(payload);
+        if (config.mode.mqtt && config.mode.mqtt_discovery && device.mqtt_discovery) {
+          mqttClient?.publishDiscovery(device);
+        }
         log.info(`HTTP API: registered device "${device.switch_id}" (${device.ip})`);
         return respond(res, 201, { device });
       } catch (err) {
@@ -241,6 +244,10 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
       try {
         const device = discoveryRegistry.registerDevice({ ...payload, switch_id: switchId });
+        if (config.mode.mqtt && config.mode.mqtt_discovery) {
+          if (device.mqtt_discovery) mqttClient?.publishDiscovery(device);
+          else mqttClient?.removeDiscovery(device.switch_id);
+        }
         log.info(`HTTP API: updated device "${device.switch_id}"`);
         return respond(res, 200, { device });
       } catch (err) {
@@ -282,9 +289,25 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       const device = registryStore.get(switchId);
       let haDeleteError = null;
       const deleteFromHa = parsedUrl.searchParams.get('delete_from_homeassistant') === 'true';
-      if (deleteFromHa && device?.linked_entry_id) {
+      if (deleteFromHa) {
         try {
-          await haClient?.deleteConfigEntry(device.linked_entry_id);
+          const entryIds = new Set();
+          if (device?.linked_entry_id) entryIds.add(device.linked_entry_id);
+
+          const entries = await haClient?.getConfigEntries?.() || [];
+          for (const entry of entries) {
+            if (
+              entry.domain === 'ulux_display' &&
+              String(entry.data?.switch_id || '').toUpperCase() === switchId.toUpperCase() &&
+              (!device?.bridge_url || entry.data?.bridge_url === device.bridge_url)
+            ) {
+              entryIds.add(entry.entry_id);
+            }
+          }
+
+          for (const entryId of entryIds) {
+            await haClient?.deleteConfigEntry(entryId);
+          }
         } catch (err) {
           haDeleteError = err.message;
           log.warning(`Failed to delete HA config entry for "${switchId}": ${err.message}`);

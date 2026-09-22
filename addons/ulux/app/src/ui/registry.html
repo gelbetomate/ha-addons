@@ -801,8 +801,9 @@
               <strong>IP:</strong> ${dev.ip || 'Not set'}
             </div>
             <div class="device-info">
-              <strong>Port:</strong> ${dev.port || '50000'}
+              <strong>UMP port:</strong> ${dev.port || '34988'}
             </div>
+            <div class="device-info"><strong>Discovery port:</strong> ${dev.discovery_port || '34984'}</div>
             ${dev.ump_device_address ? `<div class="device-info"><strong>UMP address:</strong> ${escapeHtml(dev.ump_device_address)}</div>` : ''}
             ${dev.ump_message_ids?.length ? `<div class="device-info"><strong>UMP messages:</strong> ${dev.ump_message_ids.map((id) => `0x${Number(id).toString(16).padStart(2, '0')}`).join(', ')}</div>` : ''}
             ${dev.ump_last_seen ? `<div class="timestamp">UMP response: ${new Date(dev.ump_last_seen).toLocaleString()}</div>` : ''}

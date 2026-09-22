@@ -247,6 +247,20 @@ async def async_options_update_listener(hass: HomeAssistant, entry: ConfigEntry)
     coordinator.update_options(dict(entry.options))
     await coordinator.async_request_refresh()
 
+    bridge_url = entry.data.get(CONF_BRIDGE_URL, DEFAULT_BRIDGE_URL).rstrip("/")
+    switch_id = entry.data.get(CONF_SWITCH_ID, "")
+    try:
+        session = async_get_clientsession(hass)
+        async with session.put(
+            f"{bridge_url}/api/registry/devices/{switch_id}",
+            json={"mqtt_discovery": bool(entry.options.get("mqtt_discovery", False))},
+            timeout=5,
+        ) as response:
+            if response.status != 200:
+                _LOGGER.warning("Failed to update MQTT Discovery setting for %s: HTTP %s", switch_id, response.status)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Failed to update MQTT Discovery setting for %s: %s", switch_id, err)
+
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle removal of an entry."""

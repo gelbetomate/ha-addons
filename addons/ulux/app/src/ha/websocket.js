@@ -122,6 +122,10 @@ function createHaWebSocket(haConfig, log) {
     });
   }
 
+  function getConfigEntries() {
+    return sendCommand({ type: 'config_entries/get' });
+  }
+
   /**
    * Send a command and wait for its result.
    * @param {object} payload
@@ -167,7 +171,7 @@ function createHaWebSocket(haConfig, log) {
     }
   }
 
-  return { connect, fireEvent, deleteConfigEntry, disconnect };
+  return { connect, fireEvent, deleteConfigEntry, getConfigEntries, disconnect };
 }
 
 module.exports = { createHaWebSocket };

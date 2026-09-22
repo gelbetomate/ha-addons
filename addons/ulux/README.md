@@ -123,6 +123,7 @@ The bridge is configured via `options.json` in Supervisor. Key options:
   - Discovery will add/update additional switches as they're observed
 
 - **`discovery_port`**: UDP port used by the u::lux configuration discovery protocol (default `34984`)
+- **`listen_port`**: UDP port used for normal UMP traffic and image streaming (default `34988`)
 - **`discovery_interval_ms`**: Optional recurring discovery interval in milliseconds (default `0`, disabled). Use a positive value for testing.
 
 - **`mode.mqtt`**: Enable/disable MQTT integration (default: false)

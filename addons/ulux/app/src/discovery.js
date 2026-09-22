@@ -5,6 +5,7 @@ const fs = require('fs');
 const { execFileSync } = require('child_process');
 
 const DISCOVERY_PORT = 34984;
+const UMP_PORT = 34988;
 const DISCOVERY_INTERVAL_MS = 0;
 const probedIps = new Set();
 
@@ -27,7 +28,8 @@ function parseDiscoveryResponse(message, remote, discoveryPort = DISCOVERY_PORT)
 
   return {
     ip: remote.address,
-    port: remote.port || discoveryPort,
+    port: UMP_PORT,
+    discovery_port: remote.port || discoveryPort,
     protocol_id: message.subarray(8, 14).toString('hex').toUpperCase(),
     sequence: message.readUInt16LE(6),
     raw_hex: message.toString('hex'),
@@ -138,6 +140,7 @@ function createDiscoveryScanner({
       serial_number_source: macAddress ? 'mac_suffix_inference' : null,
       senderIp: discovered.ip,
       senderPort: port,
+      umpPort: UMP_PORT,
       switchId,
       switchName: name,
       configured: Boolean(configured),
