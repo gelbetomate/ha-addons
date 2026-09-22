@@ -8,7 +8,7 @@ const RECONNECT_DELAY_MS = 5000;
  * Create a Home Assistant WebSocket API client.
  *
  * Implements the HA WebSocket authentication handshake and exposes a
- * `fireEvent()` method for publishing events.
+ * `fireEvent()` and config-entry deletion methods.
  *
  * If the connection fails the client logs the error and retries automatically
  * so the rest of the add-on keeps running.
@@ -115,6 +115,13 @@ function createHaWebSocket(haConfig, log) {
     });
   }
 
+  function deleteConfigEntry(entryId) {
+    return sendCommand({
+      type: 'config_entries/delete',
+      entry_id: entryId,
+    });
+  }
+
   /**
    * Send a command and wait for its result.
    * @param {object} payload
@@ -160,7 +167,7 @@ function createHaWebSocket(haConfig, log) {
     }
   }
 
-  return { connect, fireEvent, disconnect };
+  return { connect, fireEvent, deleteConfigEntry, disconnect };
 }
 
 module.exports = { createHaWebSocket };

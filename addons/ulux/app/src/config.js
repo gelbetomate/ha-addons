@@ -16,6 +16,7 @@ const DEFAULTS = {
   mode: {
     ha_events: true,
     mqtt: false,
+    mqtt_discovery: false,
   },
   ha: {
     ws_url: 'ws://supervisor/core/websocket',

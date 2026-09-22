@@ -193,6 +193,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     device = UluxDevice(bridge_url=bridge_url, switch_id=switch_id, host=host)
 
+    try:
+        session = async_get_clientsession(hass)
+        async with session.post(
+            f"{bridge_url}/api/registry/devices/{switch_id}/link",
+            json={"ha_entry_id": entry.entry_id},
+            timeout=5,
+        ) as response:
+            if response.status not in (200, 201):
+                _LOGGER.debug("Bridge link update failed for %s: HTTP %s", switch_id, response.status)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Bridge link update failed for %s: %s", switch_id, err)
+
     coordinator = UluxDisplayCoordinator(
         hass=hass,
         device=device,

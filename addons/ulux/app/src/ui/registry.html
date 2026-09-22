@@ -849,8 +849,10 @@
 
     async function deleteDevice(switchId) {
       if (!confirm(`Delete device "${switchId}"?`)) return;
+      const deleteFromHomeAssistant = confirm('Also remove the corresponding device from Home Assistant?');
       try {
-        await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}`, { method: 'DELETE' });
+        const suffix = deleteFromHomeAssistant ? '?delete_from_homeassistant=true' : '';
+        await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}${suffix}`, { method: 'DELETE' });
         showAlert('Device deleted', 'success');
         loadDevices();
       } catch (err) {

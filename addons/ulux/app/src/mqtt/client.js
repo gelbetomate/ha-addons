@@ -104,14 +104,58 @@ function createMqttClient(mqttConfig, switches, log, onCommand, onRegistryComman
    * @param {string} topic
    * @param {string} payload - JSON string
    */
-  function publish(topic, payload) {
+  function publish(topic, payload, retain = false) {
     if (!connected || !client) {
       log.warning(`MQTT not connected — dropping message to ${topic}`);
       return;
     }
-    client.publish(topic, payload, { qos: 0, retain: false }, (err) => {
+    client.publish(topic, payload, { qos: 0, retain }, (err) => {
       if (err) log.error(`MQTT publish error on ${topic}:`, err.message);
     });
+  }
+
+  function publishDiscovery(device) {
+    if (!device?.switch_id) return;
+    const id = device.switch_id.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const base = `homeassistant/sensor/ulux_${id}`;
+    const stateTopic = `${mqttConfig.base_topic}/${device.switch_id}/state`;
+    const identifiers = [`ulux:${device.switch_id}`];
+    const common = {
+      state_topic: stateTopic,
+      value_template: '{{ value_json.%s }}',
+      device: {
+        identifiers,
+        name: device.name || `u::lux Switch (${device.serial_number || device.switch_id})`,
+        manufacturer: 'u::lux',
+        model: 'u::lux Switch',
+        connections: device.mac_address ? [['mac', device.mac_address]] : [],
+        serial_number: device.serial_number ? String(device.serial_number) : undefined,
+      },
+    };
+    for (const [suffix, name, field, unit] of [
+      ['ip', 'IP Address', 'ip', undefined],
+      ['serial', 'Serial Number', 'serial_number', undefined],
+      ['protocol', 'Protocol ID', 'protocol_id', undefined],
+    ]) {
+      const payload = {
+        ...common,
+        name,
+        unique_id: `ulux_${id}_${suffix}`,
+        value_template: `{{ value_json.${field} }}`,
+      };
+      if (unit) payload.unit_of_measurement = unit;
+      publish(`${base}/${suffix}/config`, JSON.stringify(payload), true);
+    }
+    publish(stateTopic, JSON.stringify(device), true);
+  }
+
+  function removeDiscovery(switchId) {
+    if (!switchId) return;
+    const id = switchId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    for (const suffix of ['ip', 'serial', 'protocol']) {
+      publish(`homeassistant/sensor/ulux_${id}/${suffix}/config`, '', true);
+    }
+    publish(`${mqttConfig.base_topic}/${switchId}/state`, '', true);
   }
 
   /**
@@ -207,7 +251,7 @@ function createMqttClient(mqttConfig, switches, log, onCommand, onRegistryComman
     }
   }
 
-  return { connect, publish, disconnect };
+  return { connect, publish, publishDiscovery, removeDiscovery, disconnect };
 }
 
 /**

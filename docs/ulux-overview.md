@@ -76,6 +76,16 @@ The discovery response currently exposes these useful properties:
 The configuration software's numeric database ID is intentionally not shown. It
 has not been identified as a value in the captured discovery protocol.
 
+### Ownership modes
+
+The normal mode is the HACS integration. It creates the Home Assistant device,
+entities, rendering, and views. Optional MQTT Discovery is controlled by
+`mode.mqtt_discovery` and should not be enabled for the same switches while HACS
+auto-import is active, because that would create duplicate Home Assistant
+devices. MQTT Discovery publishes metadata sensors for IP, serial number, and
+protocol ID. Deleting a bridge device removes those retained MQTT Discovery
+topics when the mode is enabled.
+
 The discovery protocol is separate from normal UMP traffic:
 
 | Purpose | Transport | Default port |

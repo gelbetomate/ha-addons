@@ -92,7 +92,8 @@ The bridge is configured via `options.json` in Supervisor. Key options:
   "discovery_interval_ms": 0,
   "mode": {
     "ha_events": true,
-    "mqtt": false
+    "mqtt": false,
+    "mqtt_discovery": false
   },
   "ha": {
     "ws_url": "ws://supervisor/core/websocket",
@@ -126,6 +127,9 @@ The bridge is configured via `options.json` in Supervisor. Key options:
 
 - **`mode.mqtt`**: Enable/disable MQTT integration (default: false)
   - If enabled, devices can be managed via MQTT topics
+- **`mode.mqtt_discovery`**: Publish Home Assistant MQTT Discovery entities (default: false)
+  - Use this only instead of automatic HACS device creation for the same switches.
+  - Publishes IP, serial number, and protocol ID sensors.
 
 ### Minimal Configuration Profiles
 

@@ -57,7 +57,7 @@ const { streamImageToSwitch } = require('./ump/videoStream');
  * @param {object}   opts.log      - Logger
  * @returns {{ start: Function, close: Function }}
  */
-function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner, log }) {
+function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner, haClient, mqttClient, log }) {
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
 
@@ -236,6 +236,28 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       }
     }
 
+    const registryLinkMatch = pathname.match(/^\/api\/registry\/devices\/([^/]+)\/(link|unlink)$/);
+    if (method === 'POST' && registryLinkMatch) {
+      const switchId = decodeURIComponent(registryLinkMatch[1]);
+      const action = registryLinkMatch[2];
+      const registryStore = discoveryRegistry?.getStore?.();
+      if (!registryStore) return respond(res, 500, { error: 'Registry not available' });
+      let payload = {};
+      if (action === 'link') {
+        try {
+          payload = await readJsonBody(req);
+        } catch (err) {
+          return respond(res, 400, { error: `Invalid JSON body: ${err.message}` });
+        }
+        if (!payload.ha_entry_id) return respond(res, 400, { error: 'ha_entry_id is required' });
+      }
+      const device = action === 'link'
+        ? registryStore.linkEntry(switchId, payload.ha_entry_id)
+        : registryStore.unlinkEntry(switchId);
+      if (!device) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      return respond(res, 200, { device });
+    }
+
     // --- DELETE /api/registry/devices/:switchId ---
     const registryDeleteMatch = pathname.match(/^\/api\/registry\/devices\/([^/]+)$/);
     if (method === 'DELETE' && registryDeleteMatch) {
@@ -245,11 +267,27 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         return respond(res, 500, { error: 'Registry not available' });
       }
 
-      const removed = registryStore.remove(switchId);
+      const device = registryStore.get(switchId);
+      let haDeleteError = null;
+      const deleteFromHa = parsedUrl.searchParams.get('delete_from_homeassistant') === 'true';
+      if (deleteFromHa && device?.linked_entry_id) {
+        try {
+          await haClient?.deleteConfigEntry(device.linked_entry_id);
+        } catch (err) {
+          haDeleteError = err.message;
+          log.warning(`Failed to delete HA config entry for "${switchId}": ${err.message}`);
+        }
+      }
+
+      const removed = discoveryRegistry.unregisterDevice(switchId);
       if (!removed) {
         return respond(res, 404, { error: `Device not found: ${switchId}` });
       }
+      if (config.mode.mqtt && config.mode.mqtt_discovery) {
+        mqttClient?.removeDiscovery(switchId);
+      }
       log.info(`HTTP API: removed device "${switchId}"`);
+      if (haDeleteError) return respond(res, 502, { error: haDeleteError });
       return respond(res, 204);
     }
 

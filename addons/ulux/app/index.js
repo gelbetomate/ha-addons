@@ -59,7 +59,12 @@ async function main() {
     port: config.discovery_port,
     intervalMs: config.discovery_interval_ms,
     switches: config.switches,
-    onDevice: (device) => discoveryRegistry.upsert(device),
+    onDevice: (device) => {
+      discoveryRegistry.upsert(device);
+      if (config.mode.mqtt && config.mode.mqtt_discovery) {
+        mqttClient?.publishDiscovery(device);
+      }
+    },
     log,
   });
 
@@ -126,6 +131,8 @@ async function main() {
     udpSend: udpServer.send,
     discoveryRegistry,
     discoveryScanner,
+    haClient,
+    mqttClient,
     log,
   });
   apiServer.start();
