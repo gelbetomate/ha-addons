@@ -25,6 +25,7 @@ function createHaWebSocket(haConfig, log) {
   let msgId = 1;
   let pendingCalls = new Map(); // msgId → { resolve, reject }
   let authenticationWaiters = [];
+  let lastError = null;
   let reconnectTimer = null;
   let stopped = false;
 
@@ -58,11 +59,13 @@ function createHaWebSocket(haConfig, log) {
 
     ws.on('close', (code) => {
       authenticated = false;
+      lastError = `WebSocket closed (code ${code})`;
       log.warning(`HA WebSocket closed (code ${code})`);
       scheduleReconnect();
     });
 
     ws.on('error', (err) => {
+      lastError = err.message;
       log.error('HA WebSocket error:', err.message);
       // 'close' event will follow; reconnect handled there
     });
@@ -78,10 +81,12 @@ function createHaWebSocket(haConfig, log) {
       case 'auth_ok':
         log.info('HA WebSocket authenticated successfully');
         authenticated = true;
+        lastError = null;
         for (const waiter of authenticationWaiters.splice(0)) waiter.resolve();
         break;
 
       case 'auth_invalid':
+        lastError = 'Home Assistant authentication failed';
         log.error('HA WebSocket authentication failed — check your token');
         ws.close();
         break;
@@ -126,6 +131,13 @@ function createHaWebSocket(haConfig, log) {
 
   function getConfigEntries() {
     return sendCommand({ type: 'config_entries/get' });
+  }
+
+  function getStatus() {
+    return {
+      connected: Boolean(authenticated && ws?.readyState === WebSocket.OPEN),
+      error: lastError,
+    };
   }
 
   /**
@@ -184,7 +196,7 @@ function createHaWebSocket(haConfig, log) {
     }
   }
 
-  return { connect, fireEvent, deleteConfigEntry, getConfigEntries, disconnect };
+  return { connect, fireEvent, deleteConfigEntry, getConfigEntries, getStatus, disconnect };
 }
 
 module.exports = { createHaWebSocket };

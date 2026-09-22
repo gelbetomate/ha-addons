@@ -618,6 +618,19 @@
   <!-- Alerts -->
   <div id="messageAlert" class="alert"></div>
 
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirm deletion</h3>
+      </div>
+      <p id="confirmMessage" class="device-info"></p>
+      <div class="form-actions">
+        <button type="button" class="btn-primary" id="confirmYesBtn">Ja</button>
+        <button type="button" class="btn-secondary" id="confirmNoBtn">Nein</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const pageUrl = new URL(window.location.href);
     if (!pageUrl.pathname.endsWith('/')) pageUrl.pathname += '/';
@@ -861,8 +874,8 @@
     }
 
     async function deleteDevice(switchId) {
-      if (!confirm(`Delete device "${switchId}"?`)) return;
-      const deleteFromHomeAssistant = confirm('Also remove the corresponding device from Home Assistant?');
+      if (!await askConfirmation(`Gerät "${switchId}" aus der Bridge löschen?`)) return;
+      const deleteFromHomeAssistant = await askConfirmation('Das zugehörige Gerät auch aus Home Assistant löschen?');
       try {
         const suffix = deleteFromHomeAssistant ? '?delete_from_homeassistant=true' : '';
         await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}${suffix}`, { method: 'DELETE' });
@@ -871,6 +884,24 @@
       } catch (err) {
         // Error already shown
       }
+    }
+
+    function askConfirmation(message) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        const yes = document.getElementById('confirmYesBtn');
+        const no = document.getElementById('confirmNoBtn');
+        document.getElementById('confirmMessage').textContent = message;
+        modal.classList.add('active');
+        const finish = (value) => {
+          modal.classList.remove('active');
+          yes.onclick = null;
+          no.onclick = null;
+          resolve(value);
+        };
+        yes.onclick = () => finish(true);
+        no.onclick = () => finish(false);
+      });
     }
 
     async function probeUmp(switchId) {

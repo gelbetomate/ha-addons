@@ -149,7 +149,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
     // --- GET /api/health ---
     if (method === 'GET' && pathname === '/api/health') {
-      return respond(res, 200, { ok: true });
+      return respond(res, 200, { ok: true, ha: haClient?.getStatus?.() || { connected: false } });
     }
 
     // --- GET /api/discovery/devices ---
