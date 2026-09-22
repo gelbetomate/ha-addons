@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.11
+
+- Removing a Home Assistant config entry now unlinks it from the Bridge Registry instead of deleting the registry device.
+- Discovery and imported Bridge Registry devices remain available for later HA setup.
+
 ## 0.2.10
 
 - Process bridge-requested HA deletions immediately at integration startup and with a named periodic callback.

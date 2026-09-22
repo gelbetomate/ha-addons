@@ -195,6 +195,15 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     switch_id = entry.data.get(CONF_SWITCH_ID, "")
     try:
         session = async_get_clientsession(hass)
-        await session.delete(f"{bridge_url}/api/registry/devices/{switch_id}", timeout=5)
+        async with session.post(
+            f"{bridge_url}/api/registry/devices/{switch_id}/unlink",
+            timeout=5,
+        ) as response:
+            if response.status not in (200, 404):
+                _LOGGER.warning(
+                    "Failed to unlink bridge registry entry for %s: HTTP %s",
+                    switch_id,
+                    response.status,
+                )
     except Exception as err:  # noqa: BLE001
-        _LOGGER.debug("Failed to remove bridge registry entry for %s: %s", switch_id, err)
+        _LOGGER.debug("Failed to unlink bridge registry entry for %s: %s", switch_id, err)
