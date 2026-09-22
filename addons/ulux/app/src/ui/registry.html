@@ -880,11 +880,11 @@
         const suffix = deleteFromHomeAssistant ? '?delete_from_homeassistant=true' : '';
         const data = await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}${suffix}`, { method: 'DELETE' });
         const message = data.pending_homeassistant_delete
-          ? `HA deletion queued; Bridge entry retained until HA confirms removal: ${data.warning}`
+          ? 'HA deletion queued; Home Assistant will remove the device shortly.'
           : data.warning
             ? `Device deleted from Bridge. HA deletion failed: ${data.warning}`
           : 'Device deleted';
-        showAlert(message, data.warning ? 'error' : 'success');
+        showAlert(message, data.pending_homeassistant_delete ? 'success' : data.warning ? 'error' : 'success');
         loadDevices();
       } catch (err) {
         // Error already shown
@@ -1021,11 +1021,8 @@
         scanButton.disabled = true;
         scanButton.textContent = 'Scanning...';
         await fetchJson(`${API_BASE}/discovery/scan`, { method: 'POST' });
-        showAlert('Discovery scan started', 'success');
-        for (let attempt = 0; attempt < 20; attempt += 1) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          await loadDiscovery();
-        }
+        await loadDiscovery();
+        showAlert('Discovery scan complete', 'success');
       } catch (err) {
         // Error already shown
       } finally {

@@ -117,6 +117,11 @@ function createDiscoveryScanner({
     });
   }
 
+  function scanAndWait(waitMs = 5000) {
+    sendDiscovery();
+    return new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
+
   socket.on('error', (err) => {
     log?.error(`Discovery socket error: ${err.message}`);
   });
@@ -167,6 +172,7 @@ function createDiscoveryScanner({
       socket.close();
     },
     scan: sendDiscovery,
+    scanAndWait,
   };
 }
 

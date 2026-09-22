@@ -1,5 +1,14 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.13
+
+- Treat queued HA deletion as a successful asynchronous operation in the Bridge UI instead of showing a misleading error.
+
+## 0.5.12
+
+- The manual scan API now waits for the UDP response window before returning.
+- Discovery results are refreshed once from completed scan data instead of requiring a second click.
+
 ## 0.5.11
 
 - Import Selected and Import All now prefer the serial-number-based device name over stale MAC-based discovery names.

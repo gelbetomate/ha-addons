@@ -160,8 +160,8 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
     // --- POST /api/discovery/scan ---
     if (method === 'POST' && pathname === '/api/discovery/scan') {
-      discoveryScanner?.scan?.();
-      return respond(res, 202, { ok: true });
+      await discoveryScanner?.scanAndWait?.(5000);
+      return respond(res, 200, { ok: true });
     }
 
     const umpProbeMatch = pathname.match(/^\/api\/diagnostics\/ump\/([^/]+)$/);
