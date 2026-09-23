@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.26
+
+- Import Selected and Import All now report individual registry import failures instead of silently swallowing them.
+- Both lists are refreshed after imports complete.
+
 ## 0.5.25
 
 - Keep repeated Discovery and UMP observations pending until an explicit import registers the device.

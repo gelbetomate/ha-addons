@@ -1088,6 +1088,7 @@
       try {
         const allData = await fetchJson(`${API_BASE}/discovery/devices`);
         let count = 0;
+        const failures = [];
 
         for (const switchId of selected) {
           const dev = allData.devices.find((d) => d.switch_id === switchId);
@@ -1109,16 +1110,21 @@
                 }),
               });
               count++;
-            } catch {
-              // Might already exist, skip
+            } catch (err) {
+              failures.push(`${dev.ip || switchId}: ${err.message}`);
             }
           }
         }
 
-        showAlert(`Imported ${count} device(s)`, 'success');
+        showAlert(
+          failures.length
+            ? `Imported ${count}; failed ${failures.length}: ${failures.join(' | ')}`
+            : `Imported ${count} device(s)`,
+          failures.length ? 'error' : 'success'
+        );
         UI_STATE.selectedDiscoveryDevices.clear();
-        loadDiscovery();
-        loadDevices();
+        await loadDiscovery();
+        await loadDevices();
       } catch (err) {
         // Error already shown
       }
@@ -1128,6 +1134,7 @@
       try {
         const allData = await fetchJson(`${API_BASE}/discovery/devices`);
         let count = 0;
+        const failures = [];
 
         for (const dev of allData.devices) {
           if (dev.switch_id) {
@@ -1148,16 +1155,21 @@
                 }),
               });
               count++;
-            } catch {
-              // Might already exist, skip
+            } catch (err) {
+              failures.push(`${dev.ip || dev.switch_id}: ${err.message}`);
             }
           }
         }
 
-        showAlert(`Imported ${count} device(s)`, 'success');
+        showAlert(
+          failures.length
+            ? `Imported ${count}; failed ${failures.length}: ${failures.join(' | ')}`
+            : `Imported ${count} device(s)`,
+          failures.length ? 'error' : 'success'
+        );
         UI_STATE.selectedDiscoveryDevices.clear();
-        loadDiscovery();
-        loadDevices();
+        await loadDiscovery();
+        await loadDevices();
       } catch (err) {
         // Error already shown
       }
