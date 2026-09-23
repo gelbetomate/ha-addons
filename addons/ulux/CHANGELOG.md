@@ -1,5 +1,11 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.38
+
+- Corrected the read-only Discovery request lengths and 8-byte challenge payloads for `0x80/0x02/0x00` and `0x80/0x83/0x01` to match the captured wire format.
+- Store per-response decoded packet envelopes (length, message ID, variant, sequence, payload, and `0x83` challenge echo) alongside raw hex.
+- Initialize each device synchronization session before sending its first follow-up request.
+
 ## 0.5.37
 
 - Extended read-only Discovery synchronization through `0x80/0x02/0x00` and `0x83/0x01` device information responses.

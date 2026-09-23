@@ -2,6 +2,7 @@
 
 const dgram = require('dgram');
 const fs = require('fs');
+const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
 const DISCOVERY_PORT = 34984;
@@ -101,6 +102,26 @@ function inferUmpDeviceId(serialNumber) {
   return { 131: 17, 1893: 92, 2888: 93, 3721: 94 }[serialNumber] || null;
 }
 
+function decodeSyncPacket(message) {
+  if (!Buffer.isBuffer(message) || message.length < 8) return null;
+  const decoded = {
+    declared_length: message[0],
+    actual_length: message.length,
+    family: `0x${message[1].toString(16).padStart(2, '0')}`,
+    message_id: `0x${message[2].toString(16).padStart(2, '0')}`,
+    variant: `0x${message[3].toString(16).padStart(2, '0')}`,
+    reserved_hex: message.subarray(4, 6).toString('hex'),
+    sequence: message.readUInt16LE(6),
+    payload_length: Math.max(0, message.length - 8),
+    payload_hex: message.subarray(8).toString('hex'),
+  };
+  if (message[2] === 0x83 && message[3] === 0x01 && message.length >= 16) {
+    decoded.challenge_echo_hex = message.subarray(8, 16).toString('hex');
+    decoded.device_info_payload_hex = message.subarray(16).toString('hex');
+  }
+  return decoded;
+}
+
 function createDiscoveryScanner({
   host,
   port = DISCOVERY_PORT,
@@ -146,16 +167,19 @@ function createDiscoveryScanner({
     });
   }
 
-  function sendSyncRequest(ip, messageId, variant) {
+  function sendSyncRequest(ip, messageId, variant, payload = []) {
     const session = syncSessions.get(ip) || { next: 0 };
     session.next = (session.next + 1) & 0xffff;
     syncSessions.set(ip, session);
-    const request = Buffer.alloc(8, 0);
+    const tail = Buffer.from(payload);
+    const request = Buffer.alloc(8 + tail.length, 0);
     request[0] = 0x08;
     request[1] = 0x80;
     request[2] = messageId;
     request[3] = variant;
     request.writeUInt16LE(session.next, 6);
+    tail.copy(request, 8);
+    request[0] = request.length;
     socket.send(request, 0, request.length, port, ip);
     return request;
   }
@@ -186,21 +210,36 @@ function createDiscoveryScanner({
       const sync = syncSessions.get(remote.address);
       if (sync && message.length >= 8 && message[1] === 0x80) {
         sync.responses = sync.responses || [];
-        sync.responses.push({ length: message.length, hex: message.toString('hex') });
+        sync.responses.push({
+          length: message.length,
+          hex: message.toString('hex'),
+          decoded: decodeSyncPacket(message),
+        });
         if (message[2] === 0x01 && message.length >= 168) {
           sync.detail_response_01_hex = message.toString('hex');
-          sendSyncRequest(remote.address, 0x02, 0x04);
+          sync.detail_response_01 = decodeSyncPacket(message);
+          sync.detail_request_0204_hex = sendSyncRequest(remote.address, 0x02, 0x04).toString('hex');
         } else if (message[2] === 0x02 && message[3] === 0x04) {
           sync.detail_response_0204_hex = message.toString('hex');
-          sendSyncRequest(remote.address, 0x02, 0x00);
+          sync.detail_response_0204 = decodeSyncPacket(message);
+          sync.detail_request_0200_hex = sendSyncRequest(
+            remote.address,
+            0x02,
+            0x00,
+            crypto.randomBytes(8)
+          ).toString('hex');
         } else if (message[2] === 0x02 && message[3] === 0x00) {
           sync.detail_response_0200_hex = message.toString('hex');
-          if (sync.discovery_response) {
-            const deviceToken = sync.discovery_response.subarray(8, 14);
-            sendSyncRequestWithPayload(remote.address, 0x83, 0x01, deviceToken);
-          }
+          sync.detail_response_0200 = decodeSyncPacket(message);
+          sync.device_info_request_8301_hex = sendSyncRequestWithPayload(
+            remote.address,
+            0x83,
+            0x01,
+            crypto.randomBytes(8)
+          ).toString('hex');
         } else if (message[2] === 0x83 && message[3] === 0x01) {
           sync.device_info_response_83_hex = message.toString('hex');
+          sync.device_info_response_83 = decodeSyncPacket(message);
         }
         const { discovery_response: _discoveryResponse, ...publicSync } = sync;
         onDevice?.({ ip: remote.address, sync_detail: publicSync, last_seen: new Date().toISOString() });
@@ -216,6 +255,15 @@ function createDiscoveryScanner({
     const serialNumber = configured?.serial_number || inferSerialNumber(macAddress);
     const switchId = configured?.switch_id || macAddress || null;
     const name = configured?.name || (serialNumber ? `u::lux Switch (${serialNumber})` : null);
+
+    const sync = syncSessions.get(discovered.ip) || { next: 0 };
+    sync.discovery_response = message;
+    sync.discovery_response_decoded = {
+      ...discovered,
+      payload_hex: message.subarray(14).toString('hex'),
+      payload_length: message.length - 14,
+    };
+    syncSessions.set(discovered.ip, sync);
 
     onDevice?.({
       ...discovered,
@@ -234,9 +282,6 @@ function createDiscoveryScanner({
         detail_request_01_hex: sendSyncRequest(discovered.ip, 0x01, 0x00).toString('hex'),
       },
     });
-    const sync = syncSessions.get(discovered.ip) || { next: 0 };
-    sync.discovery_response = message;
-    syncSessions.set(discovered.ip, sync);
 
     log?.info(
       `Discovery response from ${discovered.ip} ` +
@@ -269,6 +314,7 @@ module.exports = {
   DISCOVERY_INTERVAL_MS,
   buildDiscoveryRequest,
   parseDiscoveryResponse,
+  decodeSyncPacket,
   lookupMacAddress,
   inferSerialNumber,
   createDiscoveryScanner,
