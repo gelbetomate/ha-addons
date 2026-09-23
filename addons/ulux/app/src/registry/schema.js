@@ -31,6 +31,7 @@ function createDeviceRecord(data) {
     ump_frame_version: data.ump_frame_version ?? 0x0232,
     serial_number: data.serial_number || data.serial_number_candidate || null,
     serial_number_source: data.serial_number_source || null,
+    sync_detail: data.sync_detail || null,
     mqtt_discovery: Boolean(data.mqtt_discovery),
     ha_delete_requested: Boolean(data.ha_delete_requested),
     ump_device_address: data.ump_device_address || null,

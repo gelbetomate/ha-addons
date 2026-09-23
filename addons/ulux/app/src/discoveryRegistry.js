@@ -87,6 +87,7 @@ function createDiscoveryRegistry(registryStore, log) {
       ump_device_id: ctx.ump_device_id ?? existing.ump_device_id ?? null,
       serial_number: ctx.serial_number || existing.serial_number || null,
       serial_number_source: ctx.serial_number_source || existing.serial_number_source || null,
+      sync_detail: ctx.sync_detail || existing.sync_detail || null,
       mqtt_discovery: ctx.mqtt_discovery ?? existing.mqtt_discovery ?? false,
       last_seen: ctx.last_seen || new Date().toISOString(),
     };

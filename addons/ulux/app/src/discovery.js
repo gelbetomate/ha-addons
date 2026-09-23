@@ -112,6 +112,7 @@ function createDiscoveryScanner({
   const socket = dgram.createSocket('udp4');
   let timer = null;
   let sequence = 0x9d07;
+  const syncSessions = new Map();
 
   function sendDiscovery() {
     const request = buildDiscoveryRequest(sequence++);
@@ -145,13 +146,39 @@ function createDiscoveryScanner({
     });
   }
 
+  function sendSyncRequest(ip, messageId, variant) {
+    const session = syncSessions.get(ip) || { next: 0 };
+    session.next = (session.next + 1) & 0xffff;
+    syncSessions.set(ip, session);
+    const request = Buffer.alloc(8, 0);
+    request[0] = 0x08;
+    request[1] = 0x80;
+    request[2] = messageId;
+    request[3] = variant;
+    request.writeUInt16LE(session.next, 6);
+    socket.send(request, 0, request.length, port, ip);
+    return request;
+  }
+
   socket.on('error', (err) => {
     log?.error(`Discovery socket error: ${err.message}`);
   });
 
   socket.on('message', (message, remote) => {
     const discovered = parseDiscoveryResponse(message, remote, port);
-    if (!discovered) return;
+    if (!discovered) {
+      const sync = syncSessions.get(remote.address);
+      if (sync && message.length >= 8 && message[1] === 0x80) {
+        if (message[2] === 0x01 && message.length >= 168) {
+          sync.detail_response_01_hex = message.toString('hex');
+          sendSyncRequest(remote.address, 0x02, 0x04);
+        } else if (message[2] === 0x02 && message[3] === 0x04) {
+          sync.detail_response_0204_hex = message.toString('hex');
+        }
+        onDevice?.({ ip: remote.address, sync_detail: { ...sync }, last_seen: new Date().toISOString() });
+      }
+      return;
+    }
 
     const macAddress = lookupMacAddress(discovered.ip);
     const configured = switches.find(
@@ -173,6 +200,10 @@ function createDiscoveryScanner({
       switchId,
       switchName: name,
       configured: Boolean(configured),
+      sync_detail: {
+        discovery_response_hex: message.toString('hex'),
+        detail_request_01_hex: sendSyncRequest(discovered.ip, 0x01, 0x00).toString('hex'),
+      },
     });
 
     log?.info(

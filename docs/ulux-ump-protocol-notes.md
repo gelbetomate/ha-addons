@@ -6,6 +6,14 @@ These notes capture the currently verified UMP findings from:
 - `brammh/ULux`, especially `ulux.js`
 - `docs/UDPMitschnitt.pcapng`
 
+The read-only synchronization capture from the assignment assistant is
+documented separately in `docs/ulux-assignment-assistant-notes.md`. Its write
+and IP-configuration options are intentionally out of scope.
+
+The longer serial-2888 synchronization capture adds a separate read-only
+detail protocol on UDP `34984`; it is documented in the assignment-assistant
+notes and must not be confused with UMP on UDP `34988`.
+
 ## Transport
 
 - Active configuration discovery uses UDP `34984` and IPv4 broadcast `255.255.255.255`.

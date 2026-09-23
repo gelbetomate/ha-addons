@@ -1,5 +1,11 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.32
+
+- Added the first read-only synchronization detail exchange on UDP `34984`.
+- Stores raw responses for the `0x80/0x01` and `0x80/0x02/0x04` detail stages.
+- Deliberately does not send the later `0x83` request until its device-specific token is decoded.
+
 ## 0.5.31
 
 - Display dotted UMP frame versions with a two-digit minor part, e.g. `1.04` instead of `1.4`.
