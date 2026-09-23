@@ -160,6 +160,22 @@ function createDiscoveryScanner({
     return request;
   }
 
+  function sendSyncRequestWithPayload(ip, messageId, variant, payload) {
+    const session = syncSessions.get(ip) || { next: 0 };
+    session.next = (session.next + 1) & 0xffff;
+    syncSessions.set(ip, session);
+    const tail = Buffer.from(payload || []);
+    const request = Buffer.alloc(8 + tail.length, 0);
+    request[0] = request.length;
+    request[1] = 0x80;
+    request[2] = messageId;
+    request[3] = variant;
+    request.writeUInt16LE(session.next, 6);
+    tail.copy(request, 8);
+    socket.send(request, 0, request.length, port, ip);
+    return request;
+  }
+
   socket.on('error', (err) => {
     log?.error(`Discovery socket error: ${err.message}`);
   });
@@ -169,13 +185,26 @@ function createDiscoveryScanner({
     if (!discovered) {
       const sync = syncSessions.get(remote.address);
       if (sync && message.length >= 8 && message[1] === 0x80) {
+        sync.responses = sync.responses || [];
+        sync.responses.push({ length: message.length, hex: message.toString('hex') });
         if (message[2] === 0x01 && message.length >= 168) {
           sync.detail_response_01_hex = message.toString('hex');
           sendSyncRequest(remote.address, 0x02, 0x04);
         } else if (message[2] === 0x02 && message[3] === 0x04) {
           sync.detail_response_0204_hex = message.toString('hex');
+          sendSyncRequest(remote.address, 0x02, 0x00);
+        } else if (message[2] === 0x02 && message[3] === 0x00) {
+          sync.detail_response_0200_hex = message.toString('hex');
+          if (sync.discovery_response) {
+            const deviceToken = sync.discovery_response.subarray(8, 14);
+            sendSyncRequestWithPayload(remote.address, 0x83, 0x01, deviceToken);
+          }
+        } else if (message[2] === 0x83 && message[3] === 0x01) {
+          sync.device_info_response_83_hex = message.toString('hex');
         }
-        onDevice?.({ ip: remote.address, sync_detail: { ...sync }, last_seen: new Date().toISOString() });
+        const { discovery_response: _discoveryResponse, ...publicSync } = sync;
+        onDevice?.({ ip: remote.address, sync_detail: publicSync, last_seen: new Date().toISOString() });
+        scanQuietFinish?.();
       }
       return;
     }
@@ -205,6 +234,9 @@ function createDiscoveryScanner({
         detail_request_01_hex: sendSyncRequest(discovered.ip, 0x01, 0x00).toString('hex'),
       },
     });
+    const sync = syncSessions.get(discovered.ip) || { next: 0 };
+    sync.discovery_response = message;
+    syncSessions.set(discovered.ip, sync);
 
     log?.info(
       `Discovery response from ${discovered.ip} ` +

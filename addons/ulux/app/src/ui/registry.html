@@ -1059,6 +1059,8 @@
             <div class="device-info"><strong>MAC:</strong> ${dev.mac_address ? escapeHtml(dev.mac_address) : '<span class="mac-unavailable">not available from UDP discovery</span>'}</div>
             ${dev.sync_detail?.detail_response_01_hex ? `<div class="timestamp">Sync 0x80/01: ${escapeHtml(formatHex(dev.sync_detail.detail_response_01_hex))}</div>` : ''}
             ${dev.sync_detail?.detail_response_0204_hex ? `<div class="timestamp">Sync 0x80/02/04: ${escapeHtml(formatHex(dev.sync_detail.detail_response_0204_hex))}</div>` : ''}
+            ${dev.sync_detail?.detail_response_0200_hex ? `<div class="timestamp">Sync 0x80/02/00: ${escapeHtml(formatHex(dev.sync_detail.detail_response_0200_hex))}</div>` : ''}
+            ${dev.sync_detail?.device_info_response_83_hex ? `<div class="timestamp">Sync 0x83/01: ${escapeHtml(formatHex(dev.sync_detail.device_info_response_83_hex))}</div>` : ''}
             <div class="device-info">
               <strong>Port:</strong> ${dev.port || '50000'}
             </div>

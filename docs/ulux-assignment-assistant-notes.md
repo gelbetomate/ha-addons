@@ -111,6 +111,11 @@ The binary responses are not yet decoded, but the request sequence and packet
 families are now known and can be implemented without using the UMP control or
 actuator protocol.
 
+The scanner now follows the known read-only sequence through `0x80/0x02/0x00`
+and then sends the `0x83/0x01` device-information request using the six-byte
+device token from the discovery response. All responses remain available as
+raw hex; field decoding is the next analysis step.
+
 ## What this proves
 
 The configuration software's normal synchronization/search path can discover

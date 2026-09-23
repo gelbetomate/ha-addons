@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.37
+
+- Extended read-only Discovery synchronization through `0x80/0x02/0x00` and `0x83/0x01` device information responses.
+- Retained all additional Discovery responses as raw hex without using UMP writes.
+
 ## 0.5.36
 
 - Use serial-number-based names for pending Discovery cards when the name was generated from the IP.
