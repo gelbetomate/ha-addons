@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.36
+
+- Use serial-number-based names for pending Discovery cards when the name was generated from the IP.
+
 ## 0.5.35
 
 - Merge Discovery and synchronization observations by IP to avoid duplicate cards for one switch.

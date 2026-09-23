@@ -53,7 +53,9 @@ function createDiscoveryRegistry(registryStore, log) {
         ...existing,
         ...ctx,
         switch_id: isMacAddress(existing.switch_id) ? existing.switch_id : null,
-        name: existing.name || ctx.switchName,
+        name: ctx.switchName && isGeneratedName(existing.name, existing)
+          ? ctx.switchName
+          : existing.name || ctx.switchName,
         mac_address: existing.mac_address || ctx.mac_address,
         serial_number: existing.serial_number || ctx.serial_number,
       });
