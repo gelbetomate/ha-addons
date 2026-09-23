@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.35
+
+- Merge Discovery and synchronization observations by IP to avoid duplicate cards for one switch.
+- Preserve MAC-backed identity while retaining synchronization detail data.
+
 ## 0.5.34
 
 - Fixed Discovery crashes when a response has no switch ID yet.

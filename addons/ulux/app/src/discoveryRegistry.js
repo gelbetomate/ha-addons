@@ -111,8 +111,16 @@ function createDiscoveryRegistry(registryStore, log) {
     const records = [...store.getAll(), ...pendingDiscovery.values()];
     const unique = new Map();
     for (const record of records) {
-      const key = record.switch_id || record.ip || record.senderIp;
-      if (key) unique.set(key, record);
+      const key = record.ip || record.senderIp || record.switch_id;
+      if (!key) continue;
+      const current = unique.get(key);
+      if (!current) {
+        unique.set(key, record);
+      } else if (record.mac_address && !current.mac_address) {
+        unique.set(key, { ...record, sync_detail: record.sync_detail || current.sync_detail });
+      } else if (record.sync_detail && !current.sync_detail) {
+        unique.set(key, { ...current, sync_detail: record.sync_detail });
+      }
     }
 
     return Array.from(unique.values()).sort((a, b) => {
