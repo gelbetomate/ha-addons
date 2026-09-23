@@ -139,13 +139,14 @@ function buildInitializationRequest() {
  * @param {...Buffer} messageBuffers - One or more serialised message buffers
  * @returns {Buffer} Complete telegram ready to send over UDP
  */
-function buildTelegramForDevice(deviceId = 0x5d, ...messageBuffers) {
+function buildTelegramForDevice(deviceId = 0x5d, frameVersion = 0x0232, ...messageBuffers) {
   const messagesBuffer = Buffer.concat(messageBuffers);
   const totalLength = 16 + messagesBuffer.length;
 
   const header = Buffer.from('01861000320225000000000001000100', 'hex');
   header.writeUInt16LE(totalLength, 2);
   header.writeUInt16LE(nextPacketId(), 6);
+  header.writeUInt16LE(frameVersion & 0xffff, 4);
   header.writeUInt16LE(deviceId & 0xffff, 12);
 
   return Buffer.concat([header, messagesBuffer]);

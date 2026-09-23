@@ -1,5 +1,15 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.22
+
+- Added per-device UMP Frame Version and UMP Device ID settings for testing different firmware/protocol contexts.
+- UMP Probe now uses the configured values instead of one global header context.
+
+## 0.5.21
+
+- Resolve UMP responses through the persistent registry by sender IP before falling back to the UMP header address.
+- Prevent successful UMP responses from appearing as `unknown` when the UMP context ID differs from the Ethernet MAC.
+
 ## 0.5.20
 
 - Registered Device deletion removes the registry record while retaining the device in Discovery.

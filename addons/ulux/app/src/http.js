@@ -108,6 +108,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         ip: fromRegistry.ip,
         port: fromRegistry.port,
         ump_device_id: fromRegistry.ump_device_id || 0x5d,
+        ump_frame_version: fromRegistry.ump_frame_version || 0x0232,
       };
     }
 
@@ -180,7 +181,11 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       const switchId = decodeURIComponent(umpProbeMatch[1]);
       const target = getSwitchTarget(switchId);
       if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
-      const probe = buildTelegramForDevice(target.ump_device_id, buildInitializationRequest());
+      const probe = buildTelegramForDevice(
+        target.ump_device_id,
+        target.ump_frame_version,
+        buildInitializationRequest()
+      );
       const requestedAt = new Date().toISOString();
       discoveryRegistry.updateDiagnosticsBySwitchId(switchId, {
         ump_probe_status: 'pending',

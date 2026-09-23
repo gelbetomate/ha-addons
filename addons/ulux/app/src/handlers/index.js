@@ -60,8 +60,12 @@ function createDispatcher({ config, haClient, mqttClient, discoveryRegistry, udp
       ump_page_index: readMessageValue(telegram.messages, MessageIds.PageIndex),
     });
 
-    // Resolve switch by device address embedded in the telegram header
-    const resolvedSwitch = resolveByDeviceAddress(telegram.deviceAddressHex, config.switches) || sw;
+      // Prefer the persistent registry record for this sender IP. The UMP header
+      // address is a protocol context ID, not necessarily the Ethernet MAC.
+      const registrySwitch = discoveryRegistry?.getStore?.()?.findByIp?.(senderIp);
+      const resolvedSwitch = registrySwitch
+        || resolveByDeviceAddress(telegram.deviceAddressHex, config.switches)
+        || sw;
 
     if (discoveryRegistry) {
       discoveryRegistry.upsert({

@@ -28,6 +28,7 @@ function createDeviceRecord(data) {
     mac_address: data.mac_address || data.switch_id || '',
     protocol_id: data.protocol_id || '',
     ump_device_id: data.ump_device_id ?? null,
+    ump_frame_version: data.ump_frame_version ?? 0x0232,
     serial_number: data.serial_number || data.serial_number_candidate || null,
     serial_number_source: data.serial_number_source || null,
     mqtt_discovery: Boolean(data.mqtt_discovery),

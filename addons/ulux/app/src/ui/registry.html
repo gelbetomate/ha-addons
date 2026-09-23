@@ -616,6 +616,14 @@
           <label for="devicePort">UDP Port</label>
           <input type="number" id="devicePort" placeholder="50000" min="1" max="65535" value="50000">
         </div>
+        <div class="form-group">
+          <label for="deviceFrameVersion">UMP Frame Version</label>
+          <input type="number" id="deviceFrameVersion" placeholder="562 (0x0232)" min="0" max="65535" value="562">
+        </div>
+        <div class="form-group">
+          <label for="deviceUmpId">UMP Device ID</label>
+          <input type="number" id="deviceUmpId" placeholder="93" min="0" max="65535">
+        </div>
 
         <div class="form-actions">
           <button type="submit" class="btn-primary">Save Device</button>
@@ -833,6 +841,8 @@
               <strong>UMP port:</strong> ${dev.port || '34988'}
             </div>
             <div class="device-info"><strong>Discovery port:</strong> ${dev.discovery_port || '34984'}</div>
+              <div class="device-info"><strong>Frame version:</strong> 0x${Number(dev.ump_frame_version || 0x0232).toString(16).padStart(4, '0')}</div>
+              <div class="device-info"><strong>UMP device ID:</strong> ${dev.ump_device_id ?? 'not set'}</div>
             ${dev.ump_device_address ? `<div class="device-info"><strong>UMP address:</strong> ${escapeHtml(dev.ump_device_address)}</div>` : ''}
             ${dev.ump_message_ids?.length ? `<div class="device-info"><strong>UMP messages:</strong> ${dev.ump_message_ids.map((id) => `0x${Number(id).toString(16).padStart(2, '0')}`).join(', ')}</div>` : ''}
             ${dev.ump_state_flags !== null && dev.ump_state_flags !== undefined ? `<div class="device-info"><strong>State flags:</strong> 0x${Number(dev.ump_state_flags).toString(16).padStart(8, '0')}</div>` : ''}
@@ -885,6 +895,8 @@
         document.getElementById('deviceName').value = data.device.name || '';
         document.getElementById('deviceIp').value = data.device.ip || '';
         document.getElementById('devicePort').value = data.device.port || 50000;
+        document.getElementById('deviceFrameVersion').value = data.device.ump_frame_version ?? 562;
+        document.getElementById('deviceUmpId').value = data.device.ump_device_id ?? '';
         openDeviceModal(true);
       } catch (err) {
         // Error already shown
@@ -948,6 +960,10 @@
       const deviceName = document.getElementById('deviceName').value.trim();
       const deviceIp = document.getElementById('deviceIp').value.trim();
       const devicePort = parseInt(document.getElementById('devicePort').value) || 50000;
+      const frameVersion = parseInt(document.getElementById('deviceFrameVersion').value) || 562;
+      const umpDeviceId = document.getElementById('deviceUmpId').value === ''
+        ? null
+        : parseInt(document.getElementById('deviceUmpId').value);
 
       if (!switchId || !deviceName || !deviceIp) {
         showAlert('Please fill in all required fields', 'error', 'deviceAlert');
@@ -958,13 +974,13 @@
         if (UI_STATE.currentEditingDevice) {
           await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}`, {
             method: 'PUT',
-            body: JSON.stringify({ name: deviceName, ip: deviceIp, port: devicePort }),
+            body: JSON.stringify({ name: deviceName, ip: deviceIp, port: devicePort, ump_frame_version: frameVersion, ump_device_id: umpDeviceId }),
           });
           showAlert('Device updated', 'success');
         } else {
           await fetchJson(`${API_BASE}/registry/devices`, {
             method: 'POST',
-            body: JSON.stringify({ switch_id: switchId, name: deviceName, ip: deviceIp, port: devicePort }),
+            body: JSON.stringify({ switch_id: switchId, name: deviceName, ip: deviceIp, port: devicePort, ump_frame_version: frameVersion, ump_device_id: umpDeviceId }),
           });
           showAlert('Device added', 'success');
         }
