@@ -262,8 +262,9 @@ function createDiscoveryScanner({
     const switchId = configured?.switch_id || macAddress || null;
     const name = configured?.name || (serialNumber ? `u::lux Switch (${serialNumber})` : null);
 
-    const sync = syncSessions.get(discovered.ip) || { next: 0 };
+    const sync = syncSessions.get(discovered.ip) || { next: discovered.sequence };
     sync.discovery_response = message;
+    sync.next = discovered.sequence;
     sync.discovery_response_decoded = {
       ...discovered,
       payload_hex: message.subarray(14).toString('hex'),

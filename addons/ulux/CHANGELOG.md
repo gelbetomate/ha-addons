@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.40
+
+- Continue each device's read-only synchronization sequence from the sequence number in its Discovery response.
+
 ## 0.5.39
 
 - Validate and store whether each `0x83/0x01` response echoes the request challenge.
