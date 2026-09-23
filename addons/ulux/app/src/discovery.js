@@ -240,6 +240,12 @@ function createDiscoveryScanner({
         } else if (message[2] === 0x83 && message[3] === 0x01) {
           sync.device_info_response_83_hex = message.toString('hex');
           sync.device_info_response_83 = decodeSyncPacket(message);
+          const requestHex = sync.device_info_request_8301_hex;
+          const request = requestHex ? Buffer.from(requestHex, 'hex') : null;
+          const echoedChallenge = message.subarray(8, 16);
+          sync.device_info_challenge_echo_matches = Boolean(
+            request && request.length >= 16 && echoedChallenge.equals(request.subarray(8, 16))
+          );
         }
         const { discovery_response: _discoveryResponse, ...publicSync } = sync;
         onDevice?.({ ip: remote.address, sync_detail: publicSync, last_seen: new Date().toISOString() });

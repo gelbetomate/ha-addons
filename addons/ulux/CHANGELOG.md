@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.39
+
+- Validate and store whether each `0x83/0x01` response echoes the request challenge.
+- Document the session-dependent opaque device-information payload boundary.
+
 ## 0.5.38
 
 - Corrected the read-only Discovery request lengths and 8-byte challenge payloads for `0x80/0x02/0x00` and `0x80/0x83/0x01` to match the captured wire format.

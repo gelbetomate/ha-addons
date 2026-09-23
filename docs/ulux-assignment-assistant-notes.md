@@ -117,6 +117,13 @@ and then sends the `0x83/0x01` device-information request with a fresh random
 followed by the device-information payload. All responses remain available as
 raw hex and as decoded packet envelopes.
 
+Comparison of the available captures shows that the 63-byte information
+payload after the echoed challenge is not stable between sessions, even for
+the same switch. It contains no readable text and appears to be
+session-dependent/obfuscated. The bridge therefore validates and stores the
+challenge echo, but does not assign firmware, date, hardware, or memory fields
+until the encoding is identified from additional controlled captures.
+
 ## What this proves
 
 The configuration software's normal synchronization/search path can discover
