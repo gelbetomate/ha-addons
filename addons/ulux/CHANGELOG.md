@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.30
+
+- Extended manual discovery completion to include the MAC/ARP resolution window.
+- The scan endpoint now waits for the response quiet period before refreshing the UI.
+
 ## 0.5.29
 
 - Fixed Registered Devices rendering after import by moving Frame Version helpers into global UI scope.

@@ -121,9 +121,28 @@ function createDiscoveryScanner({
     });
   }
 
-  function scanAndWait(waitMs = 5000) {
+  let scanQuietFinish = null;
+
+  function scanAndWait(waitMs = 10000) {
     sendDiscovery();
-    return new Promise((resolve) => setTimeout(resolve, waitMs));
+    return new Promise((resolve) => {
+      let settled = false;
+      let quietTimer;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        clearTimeout(quietTimer);
+        scanQuietFinish = null;
+        resolve();
+      };
+      const timer = setTimeout(finish, waitMs);
+      quietTimer = setTimeout(finish, 1500);
+      scanQuietFinish = () => {
+        clearTimeout(quietTimer);
+        quietTimer = setTimeout(finish, 1500);
+      };
+    });
   }
 
   socket.on('error', (err) => {
@@ -160,6 +179,7 @@ function createDiscoveryScanner({
       `Discovery response from ${discovered.ip} ` +
       `(protocol_id=${discovered.protocol_id}, ${message.length} bytes)`
     );
+    scanQuietFinish?.();
   });
 
   return {

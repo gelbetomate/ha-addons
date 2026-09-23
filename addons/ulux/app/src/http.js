@@ -162,7 +162,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
     // --- POST /api/discovery/scan ---
     if (method === 'POST' && pathname === '/api/discovery/scan') {
-      await discoveryScanner?.scanAndWait?.(5000);
+      await discoveryScanner?.scanAndWait?.(10000);
       return respond(res, 200, { ok: true });
     }
 
