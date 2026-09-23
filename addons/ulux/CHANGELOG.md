@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.29
+
+- Fixed Registered Devices rendering after import by moving Frame Version helpers into global UI scope.
+- UI now reports render errors instead of silently showing an empty device list.
+
 ## 0.5.28
 
 - Added an atomic registry import endpoint for Import All.

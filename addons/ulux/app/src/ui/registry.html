@@ -866,7 +866,7 @@
           </div>
         `).join('');
       } catch (err) {
-        // Error already shown in fetchJson
+        showAlert(`Device list could not be rendered: ${err.message}`, 'error');
       }
     }
 
@@ -939,6 +939,18 @@
       });
     }
 
+    function parseFrameVersion(value) {
+      const text = String(value || '').trim();
+      const match = text.match(/^(\d+)\.(\d{1,2})$/);
+      if (!match) return 0x0232;
+      return ((Number(match[1]) & 0xff) << 8) | Number(match[2]);
+    }
+
+    function formatFrameVersion(value) {
+      const number = Number(value ?? 0x0232) & 0xffff;
+      return `${(number >> 8) & 0xff}.${number & 0xff}`;
+    }
+
     async function probeUmp(switchId) {
       try {
         await fetchJson(`${API_BASE}/diagnostics/ump/${encodeURIComponent(switchId)}`, { method: 'POST' });
@@ -962,17 +974,6 @@
       const devicePort = parseInt(document.getElementById('devicePort').value) || 50000;
       const frameVersion = parseFrameVersion(document.getElementById('deviceFrameVersion').value);
 
-          function parseFrameVersion(value) {
-            const text = String(value || '').trim();
-            const match = text.match(/^(\d+)\.(\d{1,2})$/);
-            if (!match) return 0x0232;
-            return ((Number(match[1]) & 0xff) << 8) | Number(match[2]);
-          }
-
-          function formatFrameVersion(value) {
-            const number = Number(value ?? 0x0232) & 0xffff;
-            return `${(number >> 8) & 0xff}.${number & 0xff}`;
-          }
       const umpDeviceId = document.getElementById('deviceUmpId').value === ''
         ? null
         : parseInt(document.getElementById('deviceUmpId').value);
