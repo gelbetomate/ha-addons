@@ -97,7 +97,10 @@ The discovery port is only used for finding switches. It must not be stored as
 the device's UMP port. Imported registry records therefore use `34988` as the
 UMP port and retain `34984` separately as `discovery_port`.
 
-The current implementation decodes the broadcast response stage. The follow-up `0x83` and `0x02` handshake visible in `docs/UDPMitschnitt.pcapng` is reserved for a later protocol implementation.
+The current implementation decodes the broadcast response stage and stores the
+read-only `0x80`/`0x83` follow-up responses as structured packet envelopes and
+raw hex. The follow-up payloads are currently opaque; no UMP state-flag decoder
+is applied to them.
 
 Recurring scans are disabled by default (`discovery_interval_ms: 0`). A positive
 value can be configured temporarily for testing or installations that need

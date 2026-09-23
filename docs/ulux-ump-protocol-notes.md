@@ -142,6 +142,174 @@ UDP `34988`, receive `ID-State`, send `ID-Control` with `ControlFlags=0x16` for
 InitRequest, send `ID-DateTime` for TimeRequest, wait for the dummy/target page
 flow, and request `ID-VideoState` only after the target page is active.
 
+### Initialization details from independent implementations
+
+Three independent implementations provide additional interaction details. They
+all concern UMP on UDP `34988`; none implements the binary Discovery detail
+payloads on UDP `34984`.
+
+#### `bpw23/ukm`
+
+The Python project uses these transport constants:
+
+```text
+UMP / communication:  0x88AC = 34988
+audio:                0x88A4 = 34980
+management:           0x88A8 = 34984
+frame version:        2.32
+```
+
+The project binds its actual UMP protocol listener to `34988`. Its source calls
+`34984` the management port, but does not implement the `E4 80 01 02` Discovery
+exchange documented in `docs/ulux-assignment-assistant-notes.md`.
+
+Its `init_switch()` function sends a read/write UMP frame containing:
+
+```text
+08 21 00 00 BF 08 00 1F
+06 2E 00 00 <page> 00
+```
+
+The first message is `ID-Control` (`0x21`) for actor `0`. The four control flag
+bytes are configurable in the source; the example enables change reporting for
+the available state/value changes. The second message is `ID-PageIndex`
+(`0x2E`) and selects the configured initial page. This is an interaction frame,
+not a read-only diagnostic request, and must not be sent by the Discovery
+scanner.
+
+`ukm` parses the first state-flags byte as follows:
+
+| Bit | Meaning |
+|---:|---|
+| 0 | light sensor state |
+| 1 | proximity sensor detected |
+| 2 | display active |
+| 3 | audio active |
+| 4 | intro active |
+| 5 | time requested |
+| 6 | initialization requested |
+| 7 | device error |
+
+Higher state-flag bits expose hardware/sensor capabilities. The implementation
+checks flags for temperature, humidity, CO2, VOC, addon input, and motion
+sensors. These are UMP state information and are unrelated to the Discovery
+`0x83` device-information payload.
+
+The project sends the DateTime message every hour and when the switch sets
+`TimeRequest`. Its frame layout is:
+
+```text
+0C 2F 00 00 SS MM HH DOW DD MO YY YY
+```
+
+with the year in the final two bytes in little-endian order. Its parser also
+confirms that UMP messages are length-prefixed and concatenated after the
+16-byte frame header.
+
+#### `evondevelop/XAMControlUlux`
+
+The C# implementation provides a blocking connection check and initialization:
+
+```text
+ID-State + ID-Control read requests
+-> wait for ID-State and ID-Control response
+-> send ID-Control when InitRequest is set
+-> ID-PageCount + ID-PageIndex read requests
+-> wait for both responses
+-> send DateTime when TimeRequest is set
+```
+
+The source exposes these UMP message IDs:
+
+```text
+0x01  IdState
+0x21  IdControl
+0x0F  IdList
+0x0E  PageCount
+0x2E  PageIndex
+0x42  EditValue
+0x2F  DateTime
+0x71  I2C temperature
+0xA2  VideoStart
+0xA1  VideoState
+0x99  AudioPlayRemote
+```
+
+The C# stream waits up to approximately one second for the first state/control
+pair and then for the page count/index pair. It treats the switch as initialized
+only when state has been received and `InitRequest` is no longer set. If the
+state is stale for more than ten seconds, it requests state/control again.
+
+The UMP header context is configured per device as:
+
+```text
+IP:ProjectID:FirmwareVersion:SwitchID:DesignID
+```
+
+This confirms that Project ID, Firmware Version, Switch ID, and Design ID are
+required interaction parameters for normal UMP traffic. They are not the
+Ethernet MAC address and are not derived from the Discovery protocol ID.
+
+The C# implementation decodes the state flags using the same low-byte mapping
+shown above. Its video-state parser reads four signed 16-bit bounds after the
+state flags:
+
+```text
+StateFlags  : 32-bit
+BoundsLeft  : 16-bit
+BoundsTop   : 16-bit
+BoundsRight : 16-bit
+BoundsBottom: 16-bit
+```
+
+#### `Averelll/U--lux-node.js`
+
+The Node.js project is a practical UMP implementation rather than a Discovery
+implementation. It binds to UDP `34988`, uses a 16-byte UMP header beginning
+with `01 86`, and handles incoming state/page/video messages.
+
+Its startup behavior is event driven:
+
+1. Receive a state/control message from the switch.
+2. If the state contains the initialization bit, send the Control message.
+3. If the state contains the time bit, send DateTime.
+4. When the dummy page or target page becomes active, request VideoState.
+5. Read the video bounds and use them for subsequent video frames.
+
+Relevant message builders in the project are:
+
+```text
+CreateActivateMessage:     06 2D 00 00 01 00
+CreatePageIndexMessage:    06 2E 00 00 <page> 00
+CreatePageIndexReqMessage: 04 2E 00 00
+CreateVideoStateMessage:   04 A1 <actor little-endian>
+CreateVideoStartMessage:   0C A2 <actor> <state flags> <sequence ID>
+```
+
+The project reads video bounds from the VideoState response and derives image
+dimensions from them. Actor IDs and page IDs are design-specific. It therefore
+supports the conclusion that normal UMP initialization is device/design
+context dependent and must not be confused with the broadcast Discovery
+handshake.
+
+### What these repositories do not provide
+
+None of the three repositories contains a decoder for the captured Discovery
+detail responses:
+
+```text
+A8 80 01 00 ...  168-byte response
+30 80 02 04 ...   48-byte response
+08 80 02 00 ...    8-byte response
+4F 80 83 01 ...   79-byte response
+```
+
+The repositories do provide a reliable UMP interaction model: state/control
+negotiation, page metadata reads, DateTime handling, state-flag semantics, and
+VideoState bounds. The 34984 payloads remain a separate proprietary management
+protocol. Their opaque payloads must not be decoded using the UMP state-flag
+layout without additional evidence.
+
 ## DateTime message
 
 The reference project serializes `ID-DateTime` as:
