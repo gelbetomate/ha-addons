@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.44
+
+- Disable browser caching for Bridge API refreshes.
+- Preserve existing Discovery synchronization data when importing a device from a stale UI view.
+
 ## 0.5.43
 
 - Refresh Discovery and Devices once more after the monitored scan completes.

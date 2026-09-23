@@ -146,7 +146,14 @@ function createDiscoveryRegistry(registryStore, log) {
    * @returns {object} Created device record
    */
   function registerDevice(data) {
-    const record = store.upsert(data);
+    const existing = data?.switch_id ? store.get(data.switch_id) : null;
+    const pending = data?.ip ? pendingDiscovery.get(data.ip) : null;
+    const record = store.upsert({
+      ...pending,
+      ...existing,
+      ...data,
+      sync_detail: data?.sync_detail || pending?.sync_detail || existing?.sync_detail || null,
+    });
     if (record.ip) pendingDiscovery.delete(record.ip);
     if (data.switch_id) pendingDiscovery.delete(data.switch_id);
     return record;
