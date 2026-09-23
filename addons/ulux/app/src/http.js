@@ -162,8 +162,8 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
     // --- POST /api/discovery/scan ---
     if (method === 'POST' && pathname === '/api/discovery/scan') {
-      await discoveryScanner?.scanAndWait?.(10000);
-      return respond(res, 200, { ok: true });
+      discoveryScanner?.scan?.();
+      return respond(res, 202, { ok: true, message: 'Discovery scan started' });
     }
 
     if (method === 'GET' && pathname === '/api/registry/pending-deletions') {

@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.33
+
+- Made manual discovery scans asynchronous again to avoid HA ingress `502 Bad Gateway` timeouts.
+- The UI polls for responses after one scan request instead of requiring a second click.
+
 ## 0.5.32
 
 - Added the first read-only synchronization detail exchange on UDP `34984`.
