@@ -40,6 +40,41 @@ Its comments state that this variant worked with the real switch after the
 neutral header was replaced. The bytes at offsets 10-13 may therefore identify
 controller/project/protocol context and should not be assumed universally zero.
 
+### Device context IDs confirmed from the configuration software
+
+The current project data provides this mapping:
+
+| Serial number | Software/device ID | Example MAC |
+|---:|---:|---|
+| 131 | 17 | `00:50:C2:73:0F:83` |
+| 1893 | 92 | `D0:22:12:E0:07:65` |
+| 2888 | 93 | `D0:22:12:E0:0B:48` |
+| 3721 | 94 | `D0:22:12:E0:0E:89` |
+
+These IDs are used in the UMP header context for diagnostic probes. They are
+not the Ethernet MAC address and should not be displayed as the switch MAC.
+
+### Frame version input
+
+The Bridge UI accepts the frame version in the readable form used by the
+configuration software, for example:
+
+```text
+1.04
+2.32
+```
+
+It is encoded into the two-byte UMP frame-version word as:
+
+```text
+1.04 -> 0x0104
+2.32 -> 0x0232
+```
+
+The frame version and device context ID are stored per registered device and
+used when `Probe UMP` builds its TX frame. They are not global protocol values;
+different firmware/design combinations may require different values.
+
 The live capture `docs/newudpmitschnitt.pcapng` confirms the configuration
 software's first exchange for switch ID `0x005D` (decimal 93):
 

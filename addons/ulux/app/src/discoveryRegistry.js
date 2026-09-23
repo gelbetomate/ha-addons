@@ -31,6 +31,10 @@ function createDiscoveryRegistry(registryStore, log) {
       value.startsWith('u::lux switch (') || ids.some((id) => value === `u::lux ${id}`);
   }
 
+  function isMacAddress(value) {
+    return /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/i.test(String(value || ''));
+  }
+
   /**
    * Update registry when a device is observed on UDP traffic.
    * Merges discovery data (IP, port, name) into the persistent registry.
@@ -38,7 +42,23 @@ function createDiscoveryRegistry(registryStore, log) {
    */
   function upsert(ctx) {
     const switchId = normaliseSwitchId(ctx.switchId);
-    const existing = (switchId ? store.get(switchId) : null) || store.findByIp(ctx.senderIp);
+    const existing = (switchId ? store.get(switchId) : null)
+      || store.findByIp(ctx.senderIp)
+      || pendingDiscovery.get(ctx.senderIp);
+
+    // The UMP header contains a context ID, not necessarily the Ethernet MAC.
+    // Keep the already-known discovery identity when both packets share an IP.
+    if (existing && !store.get(existing.switch_id) && !isMacAddress(switchId)) {
+      pendingDiscovery.set(ctx.senderIp, {
+        ...existing,
+        ...ctx,
+        switch_id: existing.switch_id,
+        name: existing.name || ctx.switchName,
+        mac_address: existing.mac_address || ctx.mac_address,
+        serial_number: existing.serial_number || ctx.serial_number,
+      });
+      return pendingDiscovery.get(ctx.senderIp);
+    }
 
     // Discovery is a preview. Only refresh records that were already imported;
     // new devices remain pending until the user explicitly imports them.

@@ -1,5 +1,15 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.24
+
+- Added complete known UMP device ID mapping for serial numbers 131, 1893, 2888, and 3721.
+- Frame Version can now be entered as readable dotted text such as `1.04` or `2.32` and is converted to the UMP word format.
+
+## 0.5.23
+
+- Keep discovery identity when UMP context IDs arrive for the same switch IP.
+- Prevent UMP context IDs from creating duplicate `unknown` Discovery entries.
+
 ## 0.5.22
 
 - Added per-device UMP Frame Version and UMP Device ID settings for testing different firmware/protocol contexts.

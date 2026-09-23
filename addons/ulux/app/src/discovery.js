@@ -98,7 +98,7 @@ function inferSerialNumber(macAddress) {
 }
 
 function inferUmpDeviceId(serialNumber) {
-  return { 1893: 92, 2888: 93, 3721: 94 }[serialNumber] || null;
+  return { 131: 17, 1893: 92, 2888: 93, 3721: 94 }[serialNumber] || null;
 }
 
 function createDiscoveryScanner({
