@@ -47,12 +47,12 @@ function createDiscoveryRegistry(registryStore, log) {
       || pendingDiscovery.get(ctx.senderIp);
 
     // The UMP header contains a context ID, not necessarily the Ethernet MAC.
-    // Keep the already-known discovery identity when both packets share an IP.
-    if (existing && !store.get(existing.switch_id) && !isMacAddress(switchId)) {
+    // Pending discovery remains a preview until the user explicitly imports it.
+    if (existing && !store.get(existing.switch_id)) {
       pendingDiscovery.set(ctx.senderIp, {
         ...existing,
         ...ctx,
-        switch_id: existing.switch_id,
+        switch_id: isMacAddress(existing.switch_id) ? existing.switch_id : null,
         name: existing.name || ctx.switchName,
         mac_address: existing.mac_address || ctx.mac_address,
         serial_number: existing.serial_number || ctx.serial_number,

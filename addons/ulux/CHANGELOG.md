@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.25
+
+- Keep repeated Discovery and UMP observations pending until an explicit import registers the device.
+
 ## 0.5.24
 
 - Added complete known UMP device ID mapping for serial numbers 131, 1893, 2888, and 3721.
