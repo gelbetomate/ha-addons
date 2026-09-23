@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.43
+
+- Refresh Discovery and Devices once more after the monitored scan completes.
+
 ## 0.5.42
 
 - Start Discovery scans through the monitored `scanAndWait` flow so delayed synchronization responses remain in the same scan.
