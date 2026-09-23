@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.42
+
+- Start Discovery scans through the monitored `scanAndWait` flow so delayed synchronization responses remain in the same scan.
+- Preserve collected Discovery synchronization data when importing devices.
+
 ## 0.5.41
 
 - Support firmware that skips `0x80/0x01` and starts synchronization with `0x83/0x01`.

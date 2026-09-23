@@ -162,7 +162,11 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
     // --- POST /api/discovery/scan ---
     if (method === 'POST' && pathname === '/api/discovery/scan') {
-      discoveryScanner?.scan?.();
+      // Run the complete read-only exchange in the background. The UI polls
+      // the discovery endpoint while this keeps the response window open.
+      discoveryScanner?.scanAndWait?.(12000).catch((err) => {
+        log.warning(`Discovery scan failed: ${err.message}`);
+      });
       return respond(res, 202, { ok: true, message: 'Discovery scan started' });
     }
 

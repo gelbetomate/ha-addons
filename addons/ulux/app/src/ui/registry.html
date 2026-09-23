@@ -977,6 +977,12 @@
       return String(value || '').replace(/([a-f0-9]{2})(?=[a-f0-9])/gi, '$1 ');
     }
 
+    function formatSyncPacket(packet) {
+      if (!packet) return '';
+      return `${packet.actual_length} bytes; message ${packet.message_id}; variant ${packet.variant}; ` +
+        `sequence ${packet.sequence}; payload ${packet.payload_length} bytes`;
+    }
+
     async function probeUmp(switchId) {
       try {
         await fetchJson(`${API_BASE}/diagnostics/ump/${encodeURIComponent(switchId)}`, { method: 'POST' });
@@ -1058,9 +1064,13 @@
             </div>
             <div class="device-info"><strong>MAC:</strong> ${dev.mac_address ? escapeHtml(dev.mac_address) : '<span class="mac-unavailable">not available from UDP discovery</span>'}</div>
             ${dev.sync_detail?.detail_response_01_hex ? `<div class="timestamp">Sync 0x80/01: ${escapeHtml(formatHex(dev.sync_detail.detail_response_01_hex))}</div>` : ''}
+            ${dev.sync_detail?.detail_response_01 ? `<div class="timestamp">Decoded 0x80/01: ${escapeHtml(formatSyncPacket(dev.sync_detail.detail_response_01))}</div>` : ''}
             ${dev.sync_detail?.detail_response_0204_hex ? `<div class="timestamp">Sync 0x80/02/04: ${escapeHtml(formatHex(dev.sync_detail.detail_response_0204_hex))}</div>` : ''}
+            ${dev.sync_detail?.detail_response_0204 ? `<div class="timestamp">Decoded 0x80/02/04: ${escapeHtml(formatSyncPacket(dev.sync_detail.detail_response_0204))}</div>` : ''}
             ${dev.sync_detail?.detail_response_0200_hex ? `<div class="timestamp">Sync 0x80/02/00: ${escapeHtml(formatHex(dev.sync_detail.detail_response_0200_hex))}</div>` : ''}
+            ${dev.sync_detail?.detail_response_0200 ? `<div class="timestamp">Decoded 0x80/02/00: ${escapeHtml(formatSyncPacket(dev.sync_detail.detail_response_0200))}</div>` : ''}
             ${dev.sync_detail?.device_info_response_83_hex ? `<div class="timestamp">Sync 0x83/01: ${escapeHtml(formatHex(dev.sync_detail.device_info_response_83_hex))}</div>` : ''}
+            ${dev.sync_detail?.device_info_response_83 ? `<div class="timestamp">Decoded 0x83/01: ${escapeHtml(formatSyncPacket(dev.sync_detail.device_info_response_83))}</div>` : ''}
             <div class="device-info">
               <strong>Port:</strong> ${dev.port || '50000'}
             </div>
@@ -1098,7 +1108,7 @@
         scanButton.disabled = true;
         scanButton.textContent = 'Scanning...';
         await fetchJson(`${API_BASE}/discovery/scan`, { method: 'POST' });
-        for (let attempt = 0; attempt < 20; attempt += 1) {
+        for (let attempt = 0; attempt < 26; attempt += 1) {
           await new Promise((resolve) => setTimeout(resolve, 500));
           await loadDiscovery();
         }
@@ -1141,6 +1151,7 @@
                   protocol_id: dev.protocol_id,
                   serial_number: dev.serial_number,
                   serial_number_source: dev.serial_number_source,
+                  sync_detail: dev.sync_detail,
                 }),
               });
               count++;
@@ -1178,6 +1189,7 @@
           protocol_id: dev.protocol_id,
           serial_number: dev.serial_number,
           serial_number_source: dev.serial_number_source,
+          sync_detail: dev.sync_detail,
         }));
         const imported = await fetchJson(`${API_BASE}/registry/import`, {
           method: 'POST',
