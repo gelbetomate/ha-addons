@@ -156,6 +156,36 @@ The response provides video flags and bounds. `VideoStream` packets must use the
 
 The working project reads bounds from response offsets 8, 10, 12, and 14, then returns to a home page. Actor IDs and page IDs are design-specific and must not be hard-coded globally.
 
+### Known-good Bridge UI test
+
+The Bridge UI produced a successful initialization response for switch serial
+`2888` using:
+
+```text
+FrameVersion: 2.32
+UMP Device ID: 93
+```
+
+Observed response messages:
+
+```text
+0x01 ID-State
+0x21 ID-Control
+0x0E ID-PageCount
+0x2E ID-PageIndex
+```
+
+Observed decoded values in that test:
+
+```text
+PageCount:    6
+PageIndex:    3
+ControlFlags: 0x00000800
+```
+
+This is a confirmed working baseline for that switch/firmware combination. It
+must not be generalized to every u::lux switch without another test.
+
 ## Current diagnostic strategy
 
 The safe diagnostic sequence should be:
