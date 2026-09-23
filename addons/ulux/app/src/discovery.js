@@ -180,7 +180,10 @@ function createDiscoveryScanner({
     request.writeUInt16LE(session.next, 6);
     tail.copy(request, 8);
     request[0] = request.length;
-    socket.send(request, 0, request.length, port, ip);
+    socket.send(request, 0, request.length, port, ip, (err) => {
+      if (err) log?.error(`Discovery sync send failed to ${ip}:${port}: ${err.message}`);
+      else log?.info(`Discovery sync request to ${ip}:${port}: ${request.toString('hex')}`);
+    });
     return request;
   }
 
@@ -196,7 +199,10 @@ function createDiscoveryScanner({
     request[3] = variant;
     request.writeUInt16LE(session.next, 6);
     tail.copy(request, 8);
-    socket.send(request, 0, request.length, port, ip);
+    socket.send(request, 0, request.length, port, ip, (err) => {
+      if (err) log?.error(`Discovery sync send failed to ${ip}:${port}: ${err.message}`);
+      else log?.info(`Discovery sync request to ${ip}:${port}: ${request.toString('hex')}`);
+    });
     return request;
   }
 
@@ -235,6 +241,10 @@ function createDiscoveryScanner({
           hex: message.toString('hex'),
           decoded: decodeSyncPacket(message),
         });
+        log?.info(
+          `Discovery sync response from ${remote.address}:${remote.port}: ` +
+          `${message.toString('hex')}`
+        );
         if (message[2] === 0x01 && message.length >= 168) {
           clearTimeout(sync.device_info_fallback_timer);
           sync.detail_response_01_hex = message.toString('hex');
