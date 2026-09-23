@@ -249,6 +249,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
       try {
         const device = discoveryRegistry.registerDevice(payload);
+        registryStore.save();
         if (config.mode.mqtt && config.mode.mqtt_discovery && device.mqtt_discovery) {
           mqttClient?.publishDiscovery(device);
         }
@@ -277,6 +278,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
       try {
         const device = discoveryRegistry.registerDevice({ ...payload, switch_id: switchId });
+        registryStore.save();
         if (config.mode.mqtt && config.mode.mqtt_discovery) {
           if (device.mqtt_discovery) mqttClient?.publishDiscovery(device);
           else mqttClient?.removeDiscovery(device.switch_id);

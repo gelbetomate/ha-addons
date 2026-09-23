@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.27
+
+- Save Registry imports immediately instead of waiting for the periodic dirty-store save.
+- Keep Registered Devices persistent across reloads and restarts after Import All.
+
 ## 0.5.26
 
 - Import Selected and Import All now report individual registry import failures instead of silently swallowing them.
