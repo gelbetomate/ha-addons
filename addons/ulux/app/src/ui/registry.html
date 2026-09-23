@@ -504,6 +504,26 @@
       margin-top: 8px;
     }
 
+    .ump-hex-panel {
+      margin-top: 8px;
+      padding: 6px 8px;
+      border: 1px solid var(--ha-border-soft);
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.22);
+      font: 10px/1.45 monospace;
+      color: var(--ha-text-secondary);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .ump-hex-label {
+      color: var(--ha-text-primary);
+      font-family: "Roboto", "Segoe UI", sans-serif;
+      font-weight: 600;
+    }
+
     #messageAlert {
       position: fixed;
       top: 20px;
@@ -852,8 +872,10 @@
             ${dev.ump_last_seen ? `<div class="timestamp">UMP response: ${new Date(dev.ump_last_seen).toLocaleString()}</div>` : ''}
             <div class="device-info"><strong>UMP probe:</strong> <span class="probe-${(dev.ump_probe_status || 'not-tested').replace(/\s+/g, '-')}" >${escapeHtml(dev.ump_probe_status || 'not tested')}</span></div>
             ${dev.ump_probe_error ? `<div class="timestamp">${escapeHtml(dev.ump_probe_error)}</div>` : ''}
-            ${dev.ump_tx_hex ? `<div class="timestamp">UMP TX: ${escapeHtml(dev.ump_tx_hex)}</div>` : ''}
-            ${dev.ump_rx_hex ? `<div class="timestamp">UMP RX: ${escapeHtml(dev.ump_rx_hex)}</div>` : ''}
+            ${dev.ump_tx_hex || dev.ump_rx_hex ? `<div class="ump-hex-panel">
+              ${dev.ump_tx_hex ? `<div><span class="ump-hex-label">TX</span> ${escapeHtml(formatHex(dev.ump_tx_hex))}</div>` : ''}
+              ${dev.ump_rx_hex ? `<div><span class="ump-hex-label">RX</span> ${escapeHtml(formatHex(dev.ump_rx_hex))}</div>` : ''}
+            </div>` : ''}
             ${dev.linked_entry_id
               ? `<div class="linked-badge">✓ Linked to HA</div>`
               : `<div class="registry-only-badge">Bridge registry only</div>`}
@@ -948,7 +970,11 @@
 
     function formatFrameVersion(value) {
       const number = Number(value ?? 0x0232) & 0xffff;
-      return `${(number >> 8) & 0xff}.${number & 0xff}`;
+      return `${(number >> 8) & 0xff}.${String(number & 0xff).padStart(2, '0')}`;
+    }
+
+    function formatHex(value) {
+      return String(value || '').replace(/([a-f0-9]{2})(?=[a-f0-9])/gi, '$1 ');
     }
 
     async function probeUmp(switchId) {

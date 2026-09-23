@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.31
+
+- Display dotted UMP frame versions with a two-digit minor part, e.g. `1.04` instead of `1.4`.
+- Keep the stored wire value unchanged (`1.04` is encoded as `0x0104`).
+
 ## 0.5.30
 
 - Extended manual discovery completion to include the MAC/ARP resolution window.
