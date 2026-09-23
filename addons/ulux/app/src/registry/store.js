@@ -110,6 +110,7 @@ class RegistryStore {
    * @returns {object|null} Device record or null
    */
   get(switchId) {
+    if (!switchId) return null;
     return this.devices.get(switchId.toUpperCase()) || null;
   }
 

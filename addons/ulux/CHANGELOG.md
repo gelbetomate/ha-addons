@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.34
+
+- Fixed Discovery crashes when a response has no switch ID yet.
+- Discovery responses can now reach the UI instead of stopping on a null registry lookup.
+
 ## 0.5.33
 
 - Made manual discovery scans asynchronous again to avoid HA ingress `502 Bad Gateway` timeouts.
