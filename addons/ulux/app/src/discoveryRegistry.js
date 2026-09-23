@@ -41,15 +41,16 @@ function createDiscoveryRegistry(registryStore, log) {
    * @param {object} ctx - { senderIp, senderPort, switchId, switchName, configured }
    */
   function upsert(ctx) {
+    const observedIp = ctx.senderIp || ctx.ip || '';
     const switchId = normaliseSwitchId(ctx.switchId);
     const existing = (switchId ? store.get(switchId) : null)
-      || store.findByIp(ctx.senderIp)
-      || pendingDiscovery.get(ctx.senderIp);
+      || store.findByIp(observedIp)
+      || pendingDiscovery.get(observedIp);
 
     // The UMP header contains a context ID, not necessarily the Ethernet MAC.
     // Pending discovery remains a preview until the user explicitly imports it.
     if (existing && !store.get(existing.switch_id)) {
-      pendingDiscovery.set(ctx.senderIp, {
+      pendingDiscovery.set(observedIp, {
         ...existing,
         ...ctx,
         switch_id: isMacAddress(existing.switch_id) ? existing.switch_id : null,
@@ -59,18 +60,18 @@ function createDiscoveryRegistry(registryStore, log) {
         mac_address: existing.mac_address || ctx.mac_address,
         serial_number: existing.serial_number || ctx.serial_number,
       });
-      return pendingDiscovery.get(ctx.senderIp);
+      return pendingDiscovery.get(observedIp);
     }
 
     // Discovery is a preview. Only refresh records that were already imported;
     // new devices remain pending until the user explicitly imports them.
     if (!existing) {
-      pendingDiscovery.set(ctx.senderIp, { ...ctx, switch_id: switchId });
+      pendingDiscovery.set(observedIp, { ...ctx, ip: observedIp, switch_id: switchId });
       return;
     }
 
     if (!switchId) {
-      pendingDiscovery.set(ctx.senderIp, ctx);
+      pendingDiscovery.set(observedIp, { ...ctx, ip: observedIp });
       return;
     }
 
@@ -80,7 +81,7 @@ function createDiscoveryRegistry(registryStore, log) {
       : existing.name;
     const recordData = {
       switch_id: switchId,
-      ip: ctx.senderIp || existing.ip || '',
+      ip: observedIp || existing.ip || '',
       port: ctx.umpPort || existing.port || 34988,
       discovery_port: ctx.discovery_port || existing.discovery_port || 34984,
       name: nextName || ctx.switchName || `u::lux ${switchId}`,
@@ -101,7 +102,7 @@ function createDiscoveryRegistry(registryStore, log) {
     store.updateOnlineStatus(switchId, 'online');
 
     // Remove from pending if it was there
-    pendingDiscovery.delete(ctx.senderIp);
+    pendingDiscovery.delete(observedIp);
     return record;
   }
 

@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.47
+
+- Merge asynchronous Discovery synchronization responses by `ip` as well as `senderIp`, preventing sync data from being detached from its device.
+
 ## 0.5.46
 
 - Log every Discovery synchronization request and response, including destination, sequence, raw hex, and send errors.
