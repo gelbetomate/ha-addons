@@ -260,6 +260,28 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       }
     }
 
+    if (method === 'POST' && pathname === '/api/registry/import') {
+      const registryStore = discoveryRegistry?.getStore?.();
+      if (!registryStore) return respond(res, 500, { error: 'Registry not available' });
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        return respond(res, 400, { error: `Invalid JSON body: ${err.message}` });
+      }
+      if (!Array.isArray(payload.devices)) {
+        return respond(res, 400, { error: 'devices array is required' });
+      }
+      try {
+        const devices = payload.devices.map((device) => discoveryRegistry.registerDevice(device));
+        registryStore.save();
+        log.info(`HTTP API: imported ${devices.length} devices`);
+        return respond(res, 200, { devices });
+      } catch (err) {
+        return respond(res, 400, { error: err.message });
+      }
+    }
+
     // --- PUT /api/registry/devices/:switchId ---
     const registryUpdateMatch = pathname.match(/^\/api\/registry\/devices\/([^/]+)$/);
     if (method === 'PUT' && registryUpdateMatch) {

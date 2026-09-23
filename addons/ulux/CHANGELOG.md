@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.28
+
+- Added an atomic registry import endpoint for Import All.
+- Import All now saves and returns the complete registered device set in one request.
+
 ## 0.5.27
 
 - Save Registry imports immediately instead of waiting for the periodic dirty-store save.

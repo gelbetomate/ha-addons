@@ -1133,40 +1133,25 @@
     document.getElementById('importAllBtn').addEventListener('click', async () => {
       try {
         const allData = await fetchJson(`${API_BASE}/discovery/devices`);
-        let count = 0;
-        const failures = [];
+        const devices = allData.devices.filter((dev) => dev.switch_id).map((dev) => ({
+          switch_id: dev.switch_id,
+          name: dev.serial_number
+            ? `u::lux Switch (${dev.serial_number})`
+            : dev.name || `u::lux ${dev.switch_id}`,
+          ip: dev.ip,
+          port: dev.port || 34988,
+          mac_address: dev.mac_address,
+          protocol_id: dev.protocol_id,
+          serial_number: dev.serial_number,
+          serial_number_source: dev.serial_number_source,
+        }));
+        const imported = await fetchJson(`${API_BASE}/registry/import`, {
+          method: 'POST',
+          body: JSON.stringify({ devices }),
+        });
+        const count = imported.devices?.length || 0;
 
-        for (const dev of allData.devices) {
-          if (dev.switch_id) {
-            try {
-              await fetchJson(`${API_BASE}/registry/devices`, {
-                method: 'POST',
-                body: JSON.stringify({
-                  switch_id: dev.switch_id,
-                  name: dev.serial_number
-                    ? `u::lux Switch (${dev.serial_number})`
-                    : dev.name || `u::lux ${dev.switch_id}`,
-                  ip: dev.ip,
-                  port: dev.port,
-                  mac_address: dev.mac_address,
-                  protocol_id: dev.protocol_id,
-                  serial_number: dev.serial_number,
-                  serial_number_source: dev.serial_number_source,
-                }),
-              });
-              count++;
-            } catch (err) {
-              failures.push(`${dev.ip || dev.switch_id}: ${err.message}`);
-            }
-          }
-        }
-
-        showAlert(
-          failures.length
-            ? `Imported ${count}; failed ${failures.length}: ${failures.join(' | ')}`
-            : `Imported ${count} device(s)`,
-          failures.length ? 'error' : 'success'
-        );
+        showAlert(`Imported ${count} device(s)`, 'success');
         UI_STATE.selectedDiscoveryDevices.clear();
         await loadDiscovery();
         await loadDevices();
