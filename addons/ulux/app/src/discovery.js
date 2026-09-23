@@ -200,6 +200,26 @@ function createDiscoveryScanner({
     return request;
   }
 
+  function sendDeviceInfoRequest(ip, sync) {
+    if (sync.device_info_request_8301_hex) return;
+    sync.device_info_request_8301_hex = sendSyncRequestWithPayload(
+      ip,
+      0x83,
+      0x01,
+      crypto.randomBytes(8)
+    ).toString('hex');
+  }
+
+  function scheduleDirectDeviceInfoFallback(ip, sync) {
+    clearTimeout(sync.device_info_fallback_timer);
+    sync.device_info_fallback_timer = setTimeout(() => {
+      if (sync.detail_response_01_hex || sync.device_info_response_83_hex) return;
+      // Some firmware skips 0x80/0x01 and starts at 0x83/0x01.
+      sync.next = sync.discovery_response?.readUInt16LE(6) || sync.next;
+      sendDeviceInfoRequest(ip, sync);
+    }, 750);
+  }
+
   socket.on('error', (err) => {
     log?.error(`Discovery socket error: ${err.message}`);
   });
@@ -216,6 +236,7 @@ function createDiscoveryScanner({
           decoded: decodeSyncPacket(message),
         });
         if (message[2] === 0x01 && message.length >= 168) {
+          clearTimeout(sync.device_info_fallback_timer);
           sync.detail_response_01_hex = message.toString('hex');
           sync.detail_response_01 = decodeSyncPacket(message);
           sync.detail_request_0204_hex = sendSyncRequest(remote.address, 0x02, 0x04).toString('hex');
@@ -231,12 +252,7 @@ function createDiscoveryScanner({
         } else if (message[2] === 0x02 && message[3] === 0x00) {
           sync.detail_response_0200_hex = message.toString('hex');
           sync.detail_response_0200 = decodeSyncPacket(message);
-          sync.device_info_request_8301_hex = sendSyncRequestWithPayload(
-            remote.address,
-            0x83,
-            0x01,
-            crypto.randomBytes(8)
-          ).toString('hex');
+          sendDeviceInfoRequest(remote.address, sync);
         } else if (message[2] === 0x83 && message[3] === 0x01) {
           sync.device_info_response_83_hex = message.toString('hex');
           sync.device_info_response_83 = decodeSyncPacket(message);
@@ -246,6 +262,9 @@ function createDiscoveryScanner({
           sync.device_info_challenge_echo_matches = Boolean(
             request && request.length >= 16 && echoedChallenge.equals(request.subarray(8, 16))
           );
+          if (!sync.detail_response_0204_hex) {
+            sync.detail_request_0204_hex = sendSyncRequest(remote.address, 0x02, 0x04).toString('hex');
+          }
         }
         const { discovery_response: _discoveryResponse, ...publicSync } = sync;
         onDevice?.({ ip: remote.address, sync_detail: publicSync, last_seen: new Date().toISOString() });
@@ -271,6 +290,7 @@ function createDiscoveryScanner({
       payload_length: message.length - 14,
     };
     syncSessions.set(discovered.ip, sync);
+    scheduleDirectDeviceInfoFallback(discovered.ip, sync);
 
     onDevice?.({
       ...discovered,

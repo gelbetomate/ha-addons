@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.41
+
+- Support firmware that skips `0x80/0x01` and starts synchronization with `0x83/0x01`.
+- Continue the alternate read-only path with `0x80/0x02/0x04` when the device-information response arrives first.
+
 ## 0.5.40
 
 - Continue each device's read-only synchronization sequence from the sequence number in its Discovery response.
