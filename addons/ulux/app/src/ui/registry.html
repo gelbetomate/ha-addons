@@ -1113,12 +1113,15 @@
         scanButton.disabled = true;
         scanButton.textContent = 'Scanning...';
         await fetchJson(`${API_BASE}/discovery/scan`, { method: 'POST' });
-        await loadDiscovery();
-        for (let attempt = 0; attempt < 26; attempt += 1) {
+        let scan;
+        for (let attempt = 0; attempt < 40; attempt += 1) {
           await new Promise((resolve) => setTimeout(resolve, 500));
           await loadDiscovery();
+          scan = (await fetchJson(`${API_BASE}/discovery/scan`)).scan;
+          if (scan.status === 'complete' || scan.status === 'error') break;
         }
         await Promise.all([loadDiscovery(), loadDevices()]);
+        if (scan?.status === 'error') throw new Error(scan.error || 'Discovery scan failed');
         showAlert('Discovery scan complete', 'success');
       } catch (err) {
         // Error already shown

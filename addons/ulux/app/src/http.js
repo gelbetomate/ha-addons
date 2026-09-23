@@ -61,6 +61,7 @@ const { buildTelegramForDevice, buildInitializationRequest } = require('./ump/bu
 function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner, haClient, mqttClient, log }) {
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
+  let discoveryScanState = { status: 'idle', started_at: null, completed_at: null };
 
   function isApiPath(pathname) {
     return pathname === '/api' || pathname.startsWith('/api/');
@@ -162,12 +163,23 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
 
     // --- POST /api/discovery/scan ---
     if (method === 'POST' && pathname === '/api/discovery/scan') {
-      // Run the complete read-only exchange in the background. The UI polls
-      // the discovery endpoint while this keeps the response window open.
-      discoveryScanner?.scanAndWait?.(12000).catch((err) => {
-        log.warning(`Discovery scan failed: ${err.message}`);
-      });
-      return respond(res, 202, { ok: true, message: 'Discovery scan started' });
+      if (discoveryScanState.status === 'running') {
+        return respond(res, 202, { ok: true, scan: discoveryScanState });
+      }
+      discoveryScanState = { status: 'running', started_at: new Date().toISOString(), completed_at: null };
+      discoveryScanner?.scanAndWait?.(12000)
+        .then(() => {
+          discoveryScanState = { ...discoveryScanState, status: 'complete', completed_at: new Date().toISOString() };
+        })
+        .catch((err) => {
+          discoveryScanState = { ...discoveryScanState, status: 'error', error: err.message, completed_at: new Date().toISOString() };
+          log.warning(`Discovery scan failed: ${err.message}`);
+        });
+      return respond(res, 202, { ok: true, scan: discoveryScanState });
+    }
+
+    if (method === 'GET' && pathname === '/api/discovery/scan') {
+      return respond(res, 200, { scan: discoveryScanState });
     }
 
     if (method === 'GET' && pathname === '/api/registry/pending-deletions') {

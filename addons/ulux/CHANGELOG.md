@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.48
+
+- Synchronize the UI with an explicit Discovery scan status instead of a fixed polling duration.
+- Register the scan callback before sending the broadcast so the first response cannot race initialization.
+
 ## 0.5.47
 
 - Merge asynchronous Discovery synchronization responses by `ip` as well as `senderIp`, preventing sync data from being detached from its device.
