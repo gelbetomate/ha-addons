@@ -778,7 +778,11 @@
 
     async function fetchJson(url, options = {}) {
       try {
-        const res = await fetch(url, {
+        const method = String(options.method || 'GET').toUpperCase();
+        const requestUrl = method === 'GET'
+          ? `${url}${url.includes('?') ? '&' : '?'}_refresh=${Date.now()}`
+          : url;
+        const res = await fetch(requestUrl, {
           headers: { 'Content-Type': 'application/json' },
           cache: 'no-store',
           ...options,
@@ -1109,6 +1113,7 @@
         scanButton.disabled = true;
         scanButton.textContent = 'Scanning...';
         await fetchJson(`${API_BASE}/discovery/scan`, { method: 'POST' });
+        await loadDiscovery();
         for (let attempt = 0; attempt < 26; attempt += 1) {
           await new Promise((resolve) => setTimeout(resolve, 500));
           await loadDiscovery();

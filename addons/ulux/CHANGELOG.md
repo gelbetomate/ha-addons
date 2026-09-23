@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.45
+
+- Add a unique refresh query to every Bridge API GET and refresh Discovery immediately after starting a scan.
+
 ## 0.5.44
 
 - Disable browser caching for Bridge API refreshes.
