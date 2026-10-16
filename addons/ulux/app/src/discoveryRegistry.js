@@ -207,6 +207,58 @@ function createDiscoveryRegistry(registryStore, log) {
     return store.upsert({ ...device, ...data, switch_id: device.switch_id });
   }
 
+  function updateSensorReading(ip, sensorType, value, rawValue) {
+    const device = store.getAll().find((item) => item.ip === ip);
+    if (!device) return null;
+    const sensors = {
+      ...(device.sensors || {}),
+      [sensorType]: value,
+      [`${sensorType}_raw`]: rawValue,
+      [`${sensorType}_updated`]: new Date().toISOString(),
+    };
+    return store.upsert({ ...device, sensors, switch_id: device.switch_id });
+  }
+
+  function updateCurrentPage(ip, pageIndex) {
+    const device = store.getAll().find((item) => item.ip === ip);
+    if (!device) return null;
+    return store.upsert({
+      ...device,
+      current_page: pageIndex,
+      switch_id: device.switch_id,
+    });
+  }
+
+  function updatePageCount(ip, pageCount) {
+    const device = store.getAll().find((item) => item.ip === ip);
+    if (!device) return null;
+    return store.upsert({
+      ...device,
+      page_count: pageCount,
+      switch_id: device.switch_id,
+    });
+  }
+
+  function updateActorIds(ip, actorIds) {
+    const device = store.getAll().find((item) => item.ip === ip);
+    if (!device) return null;
+    return store.upsert({
+      ...device,
+      actor_ids: actorIds,
+      switch_id: device.switch_id,
+    });
+  }
+
+  function updateVideoState(ip, videoState) {
+    const device = store.getAll().find((item) => item.ip === ip);
+    if (!device) return null;
+    return store.upsert({
+      ...device,
+      video_state: videoState,
+      switch_id: device.switch_id,
+    });
+  }
+
   return {
     upsert,
     list,
@@ -216,6 +268,11 @@ function createDiscoveryRegistry(registryStore, log) {
     getStore,
     updateDiagnostics,
     updateDiagnosticsBySwitchId,
+    updateSensorReading,
+    updateCurrentPage,
+    updatePageCount,
+    updateActorIds,
+    updateVideoState,
     queueDeletion,
     listPendingDeletions,
     clearPendingDeletion,

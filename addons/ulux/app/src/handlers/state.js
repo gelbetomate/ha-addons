@@ -37,13 +37,33 @@ function handleState(msg, ctx, { config, haClient, mqttClient, udpSend, log }) {
     stateFlags = msg.data.readUInt32LE(4);
   }
 
-  const timeRequest = (stateFlags & STATE_FLAG_TIME_REQUEST) !== 0;
-  const initRequest = (stateFlags & STATE_FLAG_INIT_REQUEST) !== 0;
+  const timeRequest = (stateFlags & (1 << 5)) !== 0;
+  const initRequest = (stateFlags & (1 << 6)) !== 0;
+
+  const decodedState = {
+    light_sensor:          Boolean(stateFlags & (1 << 0)),
+    proximity_sensor:      Boolean(stateFlags & (1 << 1)),
+    display_active:        Boolean(stateFlags & (1 << 2)),
+    audio_active:          Boolean(stateFlags & (1 << 3)),
+    intro_active:          Boolean(stateFlags & (1 << 4)),
+    time_request:          timeRequest,
+    init_request:          initRequest,
+    internal_error:        Boolean(stateFlags & (1 << 7)),
+    motion_detector:       Boolean(stateFlags & (1 << 11)),
+    lux_valid:             Boolean(stateFlags & (1 << 12)),
+    temperature_valid:     Boolean(stateFlags & (1 << 24)),
+    humidity_valid:        Boolean(stateFlags & (1 << 25)),
+    co2_valid:             Boolean(stateFlags & (1 << 26)),
+    in2_valid:             Boolean(stateFlags & (1 << 27)),
+    voc_valid:             Boolean(stateFlags & (1 << 28)),
+    motion_detector_valid: Boolean(stateFlags & (1 << 29)),
+  };
 
   log.info(
-    `ID-State from ${senderIp}:${senderPort} switch="${sw.name}"` +
-    ` stateFlags=0x${stateFlags.toString(16).padStart(8, '0')}` +
-    ` initRequest=${initRequest} timeRequest=${timeRequest}`
+    `ID-State from ${senderIp}:${senderPort} switch="${sw.name}" ` +
+    `stateFlags=0x${stateFlags.toString(16).padStart(8, '0')} ` +
+    `displayActive=${decodedState.display_active} proximity=${decodedState.proximity_sensor} ` +
+    `initRequest=${initRequest} timeRequest=${timeRequest}`
   );
 
   // ── Emit HA event ──────────────────────────────────────────────────────────
@@ -53,6 +73,7 @@ function handleState(msg, ctx, { config, haClient, mqttClient, udpSend, log }) {
     ip:           senderIp,
     actor_id:     msg.actorId,
     state_flags:  stateFlags,
+    decoded:      decodedState,
     init_request: initRequest,
     time_request: timeRequest,
     timestamp,

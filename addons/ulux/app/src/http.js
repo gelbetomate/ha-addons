@@ -4,7 +4,20 @@ const { createServer } = require('http');
 const fs = require('fs');
 const path = require('path');
 const { streamImageToSwitch } = require('./ump/videoStream');
-const { buildTelegramForDevice, buildInitializationRequest } = require('./ump/builder');
+const {
+  buildTelegramForDevice,
+  buildInitializationRequest,
+  buildPageIndexMessage,
+  buildActivateMessage,
+  buildLedMessage,
+  buildTextMessage,
+  buildEditValueMessage,
+  buildRealValueMessage,
+  buildValueMessage,
+  buildAudioPlayLocalMessage,
+  buildAudioStopMessage,
+  buildAudioVolumeMessage,
+} = require('./ump/builder');
 
 /**
  * Create the bridge HTTP API server.
@@ -222,6 +235,206 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       }, 3000);
       log.info(`Sent UMP VideoState probe to ${target.ip}:${config.listen_port || 34988}`);
       return respond(res, 202, { ok: true, message: 'UMP probe sent' });
+    }
+
+    // --- POST /api/switch/:switchId/page ---
+    const pageMatch = pathname.match(/^\/api\/switch\/([^/]+)\/page$/);
+    if (method === 'POST' && pageMatch) {
+      const switchId = decodeURIComponent(pageMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const pageIndex = Number(body.page ?? body.page_index ?? 0);
+      const telegram = buildTelegramForDevice(
+        target.ump_device_id,
+        target.ump_frame_version,
+        buildPageIndexMessage(pageIndex)
+      );
+      udpSend(target.ip, target.port || 34988, telegram);
+      log.info(`API: Sent PageIndex (${pageIndex}) to ${target.ip}:${target.port || 34988}`);
+      return respond(res, 200, { ok: true, switch_id: switchId, page: pageIndex });
+    }
+
+    // --- POST /api/switch/:switchId/activate ---
+    const activateMatch = pathname.match(/^\/api\/switch\/([^/]+)\/activate$/);
+    if (method === 'POST' && activateMatch) {
+      const switchId = decodeURIComponent(activateMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const active = body.active !== false && body.activate !== false;
+      const telegram = buildTelegramForDevice(
+        target.ump_device_id,
+        target.ump_frame_version,
+        buildActivateMessage({ activate: active, deactivate: !active })
+      );
+      udpSend(target.ip, target.port || 34988, telegram);
+      log.info(`API: Sent Activate (active=${active}) to ${target.ip}:${target.port || 34988}`);
+      return respond(res, 200, { ok: true, switch_id: switchId, active });
+    }
+
+    // --- POST /api/switch/:switchId/led ---
+    const ledMatch = pathname.match(/^\/api\/switch\/([^/]+)\/led$/);
+    if (method === 'POST' && ledMatch) {
+      const switchId = decodeURIComponent(ledMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const actorId = Number(body.actor_id ?? 1);
+      const leds = Array.isArray(body.leds) ? body.leds : [];
+      const telegram = buildTelegramForDevice(
+        target.ump_device_id,
+        target.ump_frame_version,
+        buildLedMessage(actorId, leds)
+      );
+      udpSend(target.ip, target.port || 34988, telegram);
+      log.info(`API: Sent LED command to ${target.ip}:${target.port || 34988} (actor=${actorId})`);
+      return respond(res, 200, { ok: true, switch_id: switchId, actor_id: actorId });
+    }
+
+    // --- POST /api/switch/:switchId/text ---
+    const textMatch = pathname.match(/^\/api\/switch\/([^/]+)\/text$/);
+    if (method === 'POST' && textMatch) {
+      const switchId = decodeURIComponent(textMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const actorId = Number(body.actor_id ?? 1);
+      const textId = Number(body.text_id ?? 0);
+      const text = String(body.text ?? '');
+      const color = body.color || { r: 255, g: 255, b: 255 };
+      const telegram = buildTelegramForDevice(
+        target.ump_device_id,
+        target.ump_frame_version,
+        buildTextMessage(actorId, textId, text, {
+          color,
+          visible: body.visible !== false,
+          remove: Boolean(body.remove),
+        })
+      );
+      udpSend(target.ip, target.port || 34988, telegram);
+      log.info(`API: Sent Text command to ${target.ip}:${target.port || 34988} (actor=${actorId}, textId=${textId})`);
+      return respond(res, 200, { ok: true, switch_id: switchId, actor_id: actorId, text_id: textId });
+    }
+
+    // --- POST /api/switch/:switchId/value ---
+    const valueMatch = pathname.match(/^\/api\/switch\/([^/]+)\/value$/);
+    if (method === 'POST' && valueMatch) {
+      const switchId = decodeURIComponent(valueMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const actorId = Number(body.actor_id ?? 1);
+      let telegram;
+      if (body.edit_value !== undefined && body.real_values !== undefined) {
+        telegram = buildTelegramForDevice(
+          target.ump_device_id,
+          target.ump_frame_version,
+          buildValueMessage(actorId, Number(body.edit_value), body.real_values)
+        );
+      } else if (body.edit_value !== undefined) {
+        telegram = buildTelegramForDevice(
+          target.ump_device_id,
+          target.ump_frame_version,
+          buildEditValueMessage(actorId, Number(body.edit_value))
+        );
+      } else if (body.real_values !== undefined) {
+        telegram = buildTelegramForDevice(
+          target.ump_device_id,
+          target.ump_frame_version,
+          buildRealValueMessage(actorId, body.real_values)
+        );
+      } else if (typeof body.value === 'number') {
+        telegram = buildTelegramForDevice(
+          target.ump_device_id,
+          target.ump_frame_version,
+          buildEditValueMessage(actorId, body.value)
+        );
+      }
+      if (telegram) {
+        udpSend(target.ip, target.port || 34988, telegram);
+        log.info(`API: Sent Value command to ${target.ip}:${target.port || 34988} (actor=${actorId})`);
+        return respond(res, 200, { ok: true, switch_id: switchId, actor_id: actorId });
+      }
+      return respond(res, 400, { error: 'Missing edit_value, real_values, or value' });
+    }
+
+    // --- POST /api/switch/:switchId/audio/play ---
+    const audioPlayMatch = pathname.match(/^\/api\/switch\/([^/]+)\/audio\/play$/);
+    if (method === 'POST' && audioPlayMatch) {
+      const switchId = decodeURIComponent(audioPlayMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const telegram = buildTelegramForDevice(
+        target.ump_device_id,
+        target.ump_frame_version,
+        buildAudioPlayLocalMessage({
+          soundIndex: Number(body.sound_index ?? 1),
+          volume: Number(body.volume ?? 100),
+          repeats: Number(body.repeats ?? 0),
+          delayBeforeRepeat: Number(body.delay_before_repeat ?? 0),
+          equalizer: Number(body.equalizer ?? 0),
+          alarm: Boolean(body.alarm),
+          incVolumeTime: Number(body.inc_volume_time ?? 0),
+        })
+      );
+      udpSend(target.ip, target.port || 34988, telegram);
+      log.info(`API: Sent AudioPlayLocal to ${target.ip}:${target.port || 34988}`);
+      return respond(res, 200, { ok: true, switch_id: switchId });
+    }
+
+    // --- POST /api/switch/:switchId/audio/stop ---
+    const audioStopMatch = pathname.match(/^\/api\/switch\/([^/]+)\/audio\/stop$/);
+    if (method === 'POST' && audioStopMatch) {
+      const switchId = decodeURIComponent(audioStopMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const telegram = buildTelegramForDevice(
+        target.ump_device_id,
+        target.ump_frame_version,
+        buildAudioStopMessage({
+          stopNormal: body.stop_normal !== false,
+          stopAlarm: Boolean(body.stop_alarm),
+        })
+      );
+      udpSend(target.ip, target.port || 34988, telegram);
+      log.info(`API: Sent AudioStop to ${target.ip}:${target.port || 34988}`);
+      return respond(res, 200, { ok: true, switch_id: switchId });
+    }
+
+    // --- POST /api/switch/:switchId/audio/volume ---
+    const audioVolumeMatch = pathname.match(/^\/api\/switch\/([^/]+)\/audio\/volume$/);
+    if (method === 'POST' && audioVolumeMatch) {
+      const switchId = decodeURIComponent(audioVolumeMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const volume = Number(body.volume ?? 50);
+      const telegram = buildTelegramForDevice(
+        target.ump_device_id,
+        target.ump_frame_version,
+        buildAudioVolumeMessage(volume)
+      );
+      udpSend(target.ip, target.port || 34988, telegram);
+      log.info(`API: Sent AudioVolume (${volume}%) to ${target.ip}:${target.port || 34988}`);
+      return respond(res, 200, { ok: true, switch_id: switchId, volume });
+    }
+
+    // --- POST /api/switch/:switchId/ump/raw ---
+    const rawMatch = pathname.match(/^\/api\/switch\/([^/]+)\/ump\/raw$/);
+    if (method === 'POST' && rawMatch) {
+      const switchId = decodeURIComponent(rawMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const hex = typeof body === 'string' ? body : (body.hex || '');
+      const buf = Buffer.from(hex.replace(/[^0-9a-fA-F]/g, ''), 'hex');
+      if (!buf.length) return respond(res, 400, { error: 'Invalid or empty hex payload' });
+      udpSend(target.ip, target.port || 34988, buf);
+      log.info(`API: Sent raw UMP telegram (${buf.length} bytes) to ${target.ip}:${target.port || 34988}`);
+      return respond(res, 200, { ok: true, switch_id: switchId, bytes_sent: buf.length });
     }
 
     // --- GET /api/registry/devices ---

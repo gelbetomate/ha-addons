@@ -504,6 +504,25 @@
       margin-top: 8px;
     }
 
+    .sensor-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .sensor-badge {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--ha-border-soft);
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      color: var(--ha-text-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     .ump-hex-panel {
       margin-top: 8px;
       padding: 6px 8px;
@@ -836,6 +855,32 @@
       });
     });
 
+    // Device Sensor Renderer
+    function renderSensors(sensors) {
+      if (!sensors || typeof sensors !== 'object') return '';
+      const badges = [];
+      if (sensors.temperature !== null && sensors.temperature !== undefined) {
+        badges.push(`<span class="sensor-badge" title="Temperature">🌡️ ${Number(sensors.temperature).toFixed(1)} °C</span>`);
+      }
+      if (sensors.humidity !== null && sensors.humidity !== undefined) {
+        badges.push(`<span class="sensor-badge" title="Relative Humidity">💧 ${Number(sensors.humidity).toFixed(1)} %</span>`);
+      }
+      if (sensors.co2 !== null && sensors.co2 !== undefined && sensors.co2 >= 0) {
+        badges.push(`<span class="sensor-badge" title="CO2">🫧 ${sensors.co2} ppm</span>`);
+      }
+      if (sensors.voc !== null && sensors.voc !== undefined && sensors.voc >= 0) {
+        badges.push(`<span class="sensor-badge" title="VOC">🧪 ${sensors.voc} ppb</span>`);
+      }
+      if (sensors.lux !== null && sensors.lux !== undefined) {
+        badges.push(`<span class="sensor-badge" title="Ambient Light">💡 ${sensors.lux} lx</span>`);
+      }
+      if (sensors.in2 !== null && sensors.in2 !== undefined) {
+        badges.push(`<span class="sensor-badge" title="Binary Inputs">🔌 IN: ${(Number(sensors.in2) & 3).toString(2).padStart(2, '0')}</span>`);
+      }
+      if (!badges.length) return '';
+      return `<div class="sensor-badges">${badges.join('')}</div>`;
+    }
+
     // Devices
     async function loadDevices() {
       try {
@@ -850,7 +895,12 @@
         }
 
         empty.style.display = 'none';
-        list.innerHTML = data.devices.map((dev) => `
+        list.innerHTML = data.devices.map((dev) => {
+          const currentPage = dev.current_page ?? dev.ump_page_index;
+          const pageCount = dev.page_count ?? dev.ump_page_count;
+          const isDisplayActive = Boolean(dev.state_flags && dev.state_flags.display_active);
+
+          return `
           <div class="device-card">
             <div class="device-header">
               <div>
@@ -866,14 +916,14 @@
               <strong>UMP port:</strong> ${dev.port || '34988'}
             </div>
             <div class="device-info"><strong>Discovery port:</strong> ${dev.discovery_port || '34984'}</div>
-              <div class="device-info"><strong>Frame version:</strong> ${formatFrameVersion(dev.ump_frame_version)}</div>
-              <div class="device-info"><strong>UMP device ID:</strong> ${dev.ump_device_id ?? 'not set'}</div>
+            <div class="device-info"><strong>Frame version:</strong> ${formatFrameVersion(dev.ump_frame_version)}</div>
+            <div class="device-info"><strong>UMP device ID:</strong> ${dev.ump_device_id ?? 'not set'}</div>
             ${dev.ump_device_address ? `<div class="device-info"><strong>UMP address:</strong> ${escapeHtml(dev.ump_device_address)}</div>` : ''}
             ${dev.ump_message_ids?.length ? `<div class="device-info"><strong>UMP messages:</strong> ${dev.ump_message_ids.map((id) => `0x${Number(id).toString(16).padStart(2, '0')}`).join(', ')}</div>` : ''}
             ${dev.ump_state_flags !== null && dev.ump_state_flags !== undefined ? `<div class="device-info"><strong>State flags:</strong> 0x${Number(dev.ump_state_flags).toString(16).padStart(8, '0')}</div>` : ''}
             ${dev.ump_control_flags !== null && dev.ump_control_flags !== undefined ? `<div class="device-info"><strong>Control flags:</strong> 0x${Number(dev.ump_control_flags).toString(16).padStart(8, '0')}</div>` : ''}
-            ${dev.ump_page_count !== null && dev.ump_page_count !== undefined ? `<div class="device-info"><strong>Pages:</strong> ${dev.ump_page_count}</div>` : ''}
-            ${dev.ump_page_index !== null && dev.ump_page_index !== undefined ? `<div class="device-info"><strong>Page:</strong> ${dev.ump_page_index}</div>` : ''}
+            ${currentPage !== null && currentPage !== undefined ? `<div class="device-info"><strong>Page:</strong> ${currentPage}${pageCount ? ` / ${pageCount}` : ''}</div>` : ''}
+            ${renderSensors(dev.sensors)}
             ${dev.ump_last_seen ? `<div class="timestamp">UMP response: ${new Date(dev.ump_last_seen).toLocaleString()}</div>` : ''}
             <div class="device-info"><strong>UMP probe:</strong> <span class="probe-${(dev.ump_probe_status || 'not-tested').replace(/\s+/g, '-')}" >${escapeHtml(dev.ump_probe_status || 'not tested')}</span></div>
             ${dev.ump_probe_error ? `<div class="timestamp">${escapeHtml(dev.ump_probe_error)}</div>` : ''}
@@ -886,14 +936,66 @@
               : `<div class="registry-only-badge">Bridge registry only</div>`}
             ${dev.last_seen ? `<div class="timestamp">Last seen: ${new Date(dev.last_seen).toLocaleString()}</div>` : ''}
             <div class="device-actions">
-              <button class="btn-secondary btn-small" onclick="probeUmp('${dev.switch_id}')">Probe UMP</button>
+              <button class="btn-secondary btn-small" onclick="quickSetPage('${dev.switch_id}')">Set Page</button>
+              <button class="btn-secondary btn-small" onclick="quickToggleDisplay('${dev.switch_id}', ${isDisplayActive})">${isDisplayActive ? 'Standby' : 'Wake'}</button>
+              <button class="btn-secondary btn-small" onclick="quickPlayChime('${dev.switch_id}')">Chime</button>
+            </div>
+            <div class="device-actions" style="margin-top: 6px; padding-top: 6px; border-top: none;">
+              <button class="btn-secondary btn-small" onclick="probeUmp('${dev.switch_id}')">Probe</button>
               <button class="btn-secondary btn-small" onclick="editDevice('${dev.switch_id}')">Edit</button>
               <button class="btn-danger btn-small" onclick="deleteDevice('${dev.switch_id}')">Delete</button>
             </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
       } catch (err) {
         showAlert(`Device list could not be rendered: ${err.message}`, 'error');
+      }
+    }
+
+    async function quickSetPage(switchId) {
+      const pageStr = prompt('Enter page number (1-based index):', '1');
+      if (pageStr === null) return;
+      const pageIndex = parseInt(pageStr, 10);
+      if (isNaN(pageIndex) || pageIndex < 1) {
+        showAlert('Invalid page index (must be >= 1)', 'error');
+        return;
+      }
+      try {
+        await fetchJson(`${API_BASE}/switch/${encodeURIComponent(switchId)}/page`, {
+          method: 'POST',
+          body: JSON.stringify({ page: pageIndex }),
+        });
+        showAlert(`Page ${pageIndex} command sent to ${switchId}`, 'success');
+        setTimeout(loadDevices, 800);
+      } catch (err) {
+        // error already handled in fetchJson
+      }
+    }
+
+    async function quickToggleDisplay(switchId, currentlyActive) {
+      const targetState = !currentlyActive;
+      try {
+        await fetchJson(`${API_BASE}/switch/${encodeURIComponent(switchId)}/activate`, {
+          method: 'POST',
+          body: JSON.stringify({ active: targetState }),
+        });
+        showAlert(`Display ${targetState ? 'activated' : 'standby'} command sent`, 'success');
+        setTimeout(loadDevices, 800);
+      } catch (err) {
+        // error already handled in fetchJson
+      }
+    }
+
+    async function quickPlayChime(switchId) {
+      try {
+        await fetchJson(`${API_BASE}/switch/${encodeURIComponent(switchId)}/audio/play`, {
+          method: 'POST',
+          body: JSON.stringify({ sound_id: 1, volume: 80 }),
+        });
+        showAlert('Chime sound command sent', 'success');
+      } catch (err) {
+        // error already handled in fetchJson
       }
     }
 

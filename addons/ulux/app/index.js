@@ -105,7 +105,7 @@ async function main() {
       config.mqtt,
       config.switches,
       log,
-      (cmd) => handleCommandMessage(cmd, { config, udpSend: udpServer.send, log }),
+      (cmd) => handleCommandMessage(cmd, { config, udpSend: udpServer.send, discoveryRegistry, log }),
       handleMqttRegistryCommand
     );
     mqttClient.connect(); // non-blocking; reconnects on failure

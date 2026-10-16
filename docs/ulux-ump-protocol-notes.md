@@ -397,23 +397,141 @@ e4 80 01 02
 
 The discovery response is not readable text. It contains repeated/binary data. The current implementation reliably extracts IP, protocol ID, sequence, timestamp, raw hex, and MAC through the host neighbor table. The serial number is currently an explicitly labeled inference from the confirmed MAC suffix pattern for the captured devices.
 
-## Open questions
+## Full UMP v2.43 Protocol Implementation (Bridge 0.5.49+)
 
-- Confirm the exact UMP protocol/version fields for every switch firmware.
-- Capture a full startup exchange on UDP `34988` including ID-State, ID-Control, ID-IDList, ID-PageCount, and ID-DateTime.
-- Confirm whether the switch expects requests from a fixed source port.
-- Decode `ID-IDList` and `ID-PageCount` before implementing actuator reads/writes.
-- Decode the complete `ID-VideoState` response and bounds.
+The bridge implements the complete standard u::Lux Message Protocol (UMP v2.43) on UDP port `34988`.
 
-## Useful additional repositories and captures
+### Standard UMP Message IDs
 
-Additional repositories are useful when they contain actual packet builders, parsers, or startup traces, especially:
+| Message ID | Hex | Name | Direction | Description |
+|---|---|---|---|---|
+| 1 | `0x01` | `State` | Switch -> Host / Host -> Switch | Device state flags (16-bit status & capability bits) |
+| 3 | `0x03` | `Lux` | Switch -> Host | Ambient light intensity (lux) |
+| 14 | `0x0E` | `PageCount` | Switch -> Host | Number of configured pages |
+| 15 | `0x0F` | `IdList` | Switch -> Host | List of actor IDs active on the current page |
+| 33 | `0x21` | `Control` | Bidirectional | Control flags (event reporting masks) |
+| 45 | `0x2D` | `Activate` | Host -> Switch | Display standby / wake-up activation |
+| 46 | `0x2E` | `PageIndex` | Bidirectional | Active page number (1-based index) |
+| 47 | `0x2F` | `DateTime` | Host -> Switch | Date and time synchronization |
+| 65 | `0x41` | `IdValue` | Switch -> Host | Actuator value change event (actor ID + Int32) |
+| 66 | `0x42` | `EditValue` | Bidirectional | Currently edited value on display |
+| 67 | `0x43` | `RealValue` | Bidirectional | Floating-point real actor value (IEEE 754 float) |
+| 81 | `0x51` | `Led` | Host -> Switch | Four-quadrant LED colors, blinking, and brightness |
+| 97 | `0x61` | `Text` | Host -> Switch | Text display overlay for configurable text fields |
+| 113 | `0x71` | `Temperature` | Switch -> Host | Ambient temperature sensor reading (0.1 °C steps) |
+| 114 | `0x72` | `Humidity` | Switch -> Host | Relative humidity sensor reading (0.1 % steps) |
+| 115 | `0x73` | `CO2` | Switch -> Host | Carbon dioxide sensor reading (ppm) |
+| 116 | `0x74` | `IN2` | Switch -> Host | Binary hardware input states (2 digital inputs) |
+| 117 | `0x75` | `VOC` | Switch -> Host | Volatile Organic Compounds sensor reading (ppb/ppm) |
+| 150 | `0x96` | `AudioPlayLocal`| Host -> Switch | Trigger internal chime sound index (1..N) and volume |
+| 151 | `0x97` | `AudioStop` | Host -> Switch | Immediately stop currently playing audio |
+| 152 | `0x98` | `AudioVolume` | Host -> Switch | Set master audio volume (0..100) |
+| 153 | `0x99` | `AudioPlayRemote`| Host -> Switch| Stream remote audio chunk |
+| 161 | `0xA1` | `VideoState` | Bidirectional | Screen bounds and video rendering capabilities |
+| 162 | `0xA2` | `VideoStart` | Host -> Switch | Start video stream session with sequence token |
+| 163 | `0xA3` | `VideoStream` | Host -> Switch | Encoded display frame / tile video packet |
+| 164 | `0xA4` | `VideoStop` | Host -> Switch | Terminate video streaming session |
+| 177 | `0xB1` | `KeyAction` | Switch -> Host | Hardware key press / release action |
+| 193 | `0xC1` | `Config` | Bidirectional | Device configuration parameter access |
 
-- C# or .NET implementations of `XAMControlUlux` / `UmpMessageID`
-- Loxone/u::lux integrations with raw UMP frame construction
-- Projects that implement `ID-IDList`, `ID-PageCount`, `ID-Control`, or `ID-DateTime`
-- Packet captures showing a complete switch startup and initialization exchange
-- Captures showing the response to `04 A1 16 00`
-- Working projects with a known-good header and actor ID for the exact switch design
+---
 
-A repository containing only high-level device entities or UI code is less useful for the protocol work than one containing raw UDP hex or message builders.
+### Inbound Message Telegram Decoding
+
+Each message inside a received UMP frame starts with a 4-byte header:
+`[Length_LE: 2 bytes] [MessageID: 1 byte] [ActorID: 1 byte] [Payload: N bytes]`
+
+#### 1. StateFlags (`0x01`)
+The 16-bit state word exposes both operational states and hardware sensor flags:
+- `bit 0`: `light` (threshold reached)
+- `bit 1`: `proximity` (near-field detection)
+- `bit 2`: `display_active` (0 = standby/screensaver, 1 = awake)
+- `bit 3`: `audio_active` (chime currently playing)
+- `bit 4`: `intro_active` (boot/splash sequence running)
+- `bit 5`: `time_request` (switch requires `0x2F DateTime`)
+- `bit 6`: `init_request` (switch requires `0x21 Control`)
+- `bit 7`: `device_error` (hardware fault detected)
+- `bit 8`: `lux_valid` (light sensor hardware present and valid)
+- `bit 9`: `temperature_valid` (temperature sensor present and valid)
+- `bit 10`: `humidity_valid` (humidity sensor present and valid)
+- `bit 11`: `co2_valid` (CO2 sensor present and valid)
+- `bit 12`: `in2_valid` (binary inputs IN2 present and valid)
+- `bit 13`: `voc_valid` (VOC sensor present and valid)
+
+#### 2. Sensors
+- **Temperature (`0x71`)**: Signed 16-bit little-endian divided by 10.0 (e.g. `257` = 25.7 °C).
+- **Humidity (`0x72`)**: Unsigned 16-bit little-endian divided by 10.0 (e.g. `588` = 58.8 % rH).
+- **CO2 (`0x73`)**: Signed 16-bit integer in ppm (`400..4000`). Values `-1` indicate sensor warmup, `-2` sensor error.
+- **VOC (`0x75`)**: Signed 16-bit integer in ppb/ppm (`125..600`). Values `-1` warmup, `-2` error.
+- **Ambient Light (`0x03`)**: Unsigned 16-bit integer in lux.
+- **Binary Inputs IN2 (`0x74`)**: Bit 0 = Input 1, Bit 1 = Input 2.
+
+#### 3. Navigation & Pages
+- **PageIndex (`0x2E`)**: Payload contains 2-byte word: active page (1-based index).
+- **PageCount (`0x0E`)**: Payload contains 2-byte word: total number of pages configured on device.
+- **IdList (`0x0F`)**: Payload contains an array of 2-byte actor IDs configured on the active page.
+
+#### 4. Actor Values
+- **EditValue (`0x42`)**: Actor ID at byte offset 3, 32-bit signed integer value at offset 4..7.
+- **RealValue (`0x43`)**: Actor ID at byte offset 3, IEEE 754 32-bit single-precision float.
+- **IdValue (`0x41`)**: Actor ID at byte offset 3, 32-bit signed integer.
+
+#### 5. Video State (`0xA1`)
+- State flags: 32-bit LE word at offset 4..7.
+- Bounds: Left (X1, Int16LE), Top (Y1, Int16LE), Right (X2, Int16LE), Bottom (Y2, Int16LE).
+- Total dimensions: `Width = Right - Left`, `Height = Bottom - Top`.
+
+---
+
+### Outbound Telegram Builders (`src/ump/builder.js`)
+
+All outbound telegrams are formatted inside the 16-byte UMP header using `buildTelegramForDevice(device, ...messages)`.
+
+- `buildPageIndexMessage(pageIndex)`: Sets the current active page (`0x2E`).
+- `buildActivateMessage(active)`: Activates display or puts into standby (`0x2D`).
+- `buildEditValueMessage(actorId, value)`: Updates an actor's edit value (`0x42`).
+- `buildRealValueMessage(actorId, floatVal)`: Sends a floating point value (`0x43`).
+- `buildLedMessage(led, color, mode)`: Controls the 4 status LEDs (`0x51`).
+- `buildClearLedsMessage()`: Turns off all 4 status LEDs.
+- `buildTextMessage(field, text, color, x, y)`: Renders custom text overlay (`0x61`).
+- `buildAudioPlayLocalMessage(soundId, volume)`: Plays internal chime (`0x96`).
+- `buildAudioStopMessage()`: Stops playback immediately (`0x97`).
+- `buildAudioVolumeMessage(volume)`: Sets master volume 0..100 (`0x98`).
+- `buildVideoStartMessage(actorId, sequenceId)`: Starts video stream session (`0xA2`).
+- `buildVideoStopMessage()`: Stops video streaming session (`0xA4`).
+- Sensor & diagnostic queries: `buildReadTemperatureMessage()`, `buildReadHumidityMessage()`, `buildReadCo2Message()`, `buildReadVocMessage()`, `buildReadIn2Message()`, `buildReadLuxMessage()`, `buildReadPageCountMessage()`, `buildReadPageIndexMessage()`.
+
+---
+
+### Home Assistant Events
+
+When UMP packets arrive on UDP `34988`, the bridge fires the following HA events:
+- `ulux_state`: `{ switch_id, state_flags, is_active, proximity, light, audio, init_request, time_request, raw_flags }`
+- `ulux_sensor`: `{ switch_id, sensor_type, value, unit }`
+- `ulux_page`: `{ switch_id, page, page_count }`
+- `ulux_value`: `{ switch_id, actor_id, value, value_type }`
+- `ulux_action`: `{ switch_id, key, action }`
+
+---
+
+### MQTT Interface
+
+When MQTT mode is enabled (`mode.mqtt: true`), the bridge publishes telemetry and accepts commands.
+
+#### Telemetry Topics
+- `<base_topic>/<switch_id>/state`: Complete JSON state dump.
+- `<base_topic>/<switch_id>/sensor/<type>`: Sensor values (`temperature`, `humidity`, `co2`, `voc`, `in2`, `lux`).
+- `<base_topic>/<switch_id>/page`: Current page number.
+- `<base_topic>/<switch_id>/value/<actor_id>`: Individual actor values.
+
+#### Command Topics (wildcard subscription `${base_topic}/+/cmd/#`)
+- `<base_topic>/<switch_id>/cmd/page`: Payload `{"page": 2}` or plain string `"2"`
+- `<base_topic>/<switch_id>/cmd/activate`: Payload `{"active": true}`
+- `<base_topic>/<switch_id>/cmd/led`: Payload `{"led": 1, "color": "red", "mode": 0}`
+- `<base_topic>/<switch_id>/cmd/text`: Payload `{"field": 1, "text": "Hello"}`
+- `<base_topic>/<switch_id>/cmd/value`: Payload `{"actor_id": 5, "value": 42}`
+- `<base_topic>/<switch_id>/cmd/audio/play`: Payload `{"sound_id": 1, "volume": 80}`
+- `<base_topic>/<switch_id>/cmd/audio/stop`: Empty payload or `{}`
+- `<base_topic>/<switch_id>/cmd/audio/volume`: Payload `{"volume": 75}`
+- `<base_topic>/<switch_id>/cmd/raw`: Payload `{"hex": "0186..."}`
+

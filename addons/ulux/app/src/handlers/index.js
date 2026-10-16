@@ -4,17 +4,34 @@ const { parseTelegram, telegramSummary } = require('../ump/decoder');
 const { MessageIds } = require('../ump/messageIds');
 const handleState = require('./state');
 const handleEvent = require('./event');
+const handleSensor = require('./sensor');
+const handlePage = require('./page');
+const handleValue = require('./value');
+const handleVideoState = require('./video');
 
 /**
  * Map UMP message IDs to handler functions.
  * Handler signature: handler(msg, ctx, services) → void
  *   msg      — parsed message object from parseTelegram()
  *   ctx      — full packet context
- *   services — { config, haClient, mqttClient, udpSend, log }
+ *   services — { config, haClient, mqttClient, discoveryRegistry, udpSend, log }
  */
 const HANDLERS = {
   [MessageIds.IdState]: handleState,
   [MessageIds.IdEvent]: handleEvent,
+  [MessageIds.I2C_Temperature]: handleSensor,
+  [MessageIds.I2C_Humidity]: handleSensor,
+  [MessageIds.I2C_CO2]: handleSensor,
+  [MessageIds.I2C_IN2]: handleSensor,
+  [MessageIds.I2C_VOC]: handleSensor,
+  [MessageIds.IdLux]: handleSensor,
+  [MessageIds.PageIndex]: handlePage,
+  [MessageIds.PageCount]: handlePage,
+  [MessageIds.IdList]: handlePage,
+  [MessageIds.IdValue]: handleValue,
+  [MessageIds.EditValue]: handleValue,
+  [MessageIds.RealValue]: handleValue,
+  [MessageIds.VideoState]: handleVideoState,
 };
 
 /**
@@ -84,7 +101,7 @@ function createDispatcher({ config, haClient, mqttClient, discoveryRegistry, udp
       const handler = HANDLERS[msg.msgId];
       if (handler) {
         try {
-          handler(msg, enrichedCtx, { config, haClient, mqttClient, udpSend, log });
+          handler(msg, enrichedCtx, { config, haClient, mqttClient, discoveryRegistry, udpSend, log });
         } catch (err) {
           log.error(`Handler error for msgId=0x${msg.msgId.toString(16)}:`, err.message);
         }

@@ -159,20 +159,17 @@ function createMqttClient(mqttConfig, switches, log, onCommand, onRegistryComman
   }
 
   /**
-   * Subscribe to command topics for all configured switches.
+   * Subscribe to command topics for all switches (using wildcard).
    */
   function subscribeCommandTopics() {
-    for (const sw of switches) {
-      if (!sw.switch_id) continue;
-      const topic = `${mqttConfig.base_topic}/${sw.switch_id}/cmd/#`;
-      client.subscribe(topic, { qos: 0 }, (err) => {
-        if (err) {
-          log.error(`Failed to subscribe to ${topic}:`, err.message);
-        } else {
-          log.info(`Subscribed to MQTT command topic: ${topic}`);
-        }
-      });
-    }
+    const topic = `${mqttConfig.base_topic}/+/cmd/#`;
+    client.subscribe(topic, { qos: 0 }, (err) => {
+      if (err) {
+        log.error(`Failed to subscribe to ${topic}:`, err.message);
+      } else {
+        log.info(`Subscribed to MQTT command topic: ${topic}`);
+      }
+    });
   }
 
   /**

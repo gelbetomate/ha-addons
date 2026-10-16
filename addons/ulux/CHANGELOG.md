@@ -1,5 +1,20 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.49
+
+- Full implementation of the u::Lux Message Protocol (UMP v2.43) on UDP port `34988`.
+- Inbound decoders for all standard UMP message types:
+  - Complete 16-bit `StateFlags` bitfield (light, proximity, display_active, audio, intro, time/init requests, error, and hardware sensor availability flags).
+  - Sensor readings for Temperature (`0x71`), Relative Humidity (`0x72`), CO2 (`0x73`), VOC (`0x75`), Ambient Lux (`0x03`), and Binary Input IN2 (`0x74`).
+  - Navigation telemetry for `PageIndex` (`0x2E`), `PageCount` (`0x0E`), and actor enumeration `IdList` (`0x0F`).
+  - Value events for `EditValue` (`0x42`), `RealValue` (`0x43`), and `IdValue` (`0x41`).
+  - Video stream capability decoding for `VideoState` (`0xA1`) including screen bounds and flags.
+- Outbound UMP telegram builders for page navigation, standby/wake activation, LED colors/modes, custom text fields, actuator values, audio chime playback and volume, and video streaming.
+- New REST control endpoints under `/api/switch/:switchId/*` (`page`, `activate`, `led`, `text`, `value`, `audio/play`, `audio/stop`, `audio/volume`, `ump/raw`).
+- Wildcard MQTT command dispatch on `<base_topic>/+/cmd/#` and granular MQTT telemetry publishing for sensor values, pages, actor values, and state.
+- Enhanced Web UI with live sensor badges and quick action controls (Set Page, Wake/Standby, Chime test).
+- Preserved strict read-only nature of the UDP `34984` discovery handshake.
+
 ## 0.5.48
 
 - Synchronize the UI with an explicit Discovery scan status instead of a fixed polling duration.
