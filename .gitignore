@@ -4,6 +4,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Python bytecode & environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+
 # Build output (top-level only, not inside custom_components)
 /dist/
 /build/
@@ -26,3 +32,4 @@ docs/examples/
 docs/newudpmitschnitt.pcapng
 docs/MitschnittSynchronisierung2888.pcapng
 docs/MitschnittZuordnungsassistent.pcapng
+docs/MitschnittSynchronisierung2888_v2.pcapng
