@@ -31,6 +31,9 @@ from .const import (
     CONF_WIDGETS,
     DEFAULT_REFRESH_INTERVAL,
     DEFAULT_SCREEN_CYCLE_INTERVAL,
+    CONF_STREAM_PAGE,
+    CONF_STREAM_REFRESH_RATE,
+    DEFAULT_STREAM_REFRESH_RATE,
     DOMAIN,
     LAYOUT_FULLSCREEN,
     LAYOUT_GRID_2X2,
@@ -201,6 +204,8 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._weather_forecasts: dict[str, list[dict[str, Any]]] = {}  # Pre-fetched forecasts
         self._update_preview: bool = True  # Update preview on next refresh
         self._preview_just_updated: bool = False  # True if preview was updated in last refresh
+        self._stream_page_active = False
+        self._last_stream_sent: float = 0
 
         # Device state (updated on refresh)
         self._device_state: DeviceState | None = None
@@ -952,6 +957,18 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
                     "theme": self._builtin_theme,
                 }
 
+            stream_page = int(self.options.get(CONF_STREAM_PAGE, 0) or 0)
+            if stream_page and not self._stream_page_active:
+                return {"success": True, "stream_inactive": True}
+            if stream_page:
+                rate = max(
+                    0.1,
+                    float(self.options.get(CONF_STREAM_REFRESH_RATE, DEFAULT_STREAM_REFRESH_RATE)),
+                )
+                now = time.monotonic()
+                if now - self._last_stream_sent < 1 / rate:
+                    return {"success": True, "stream_rate_limited": True}
+
             # Pre-fetch async data (camera images, media art, chart history, weather forecasts)
             # (must be done in async context)
             await self._async_fetch_camera_images()
@@ -977,6 +994,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
 
             # Pass PIL Image directly; device does RGB565 conversion internally
             await self.device.send_image(img)
+            self._last_stream_sent = time.monotonic()
 
             # Track success status
             self._last_update_success = True
@@ -1265,6 +1283,21 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
 
         self._update_preview = True  # Update preview on manual refresh
         await self.async_request_refresh()
+
+    async def async_handle_device_page(self, page_number: int) -> None:
+        """Start or stop page-bound streaming after a physical page change."""
+        stream_page = int(self.options.get(CONF_STREAM_PAGE, 0) or 0)
+        if not stream_page:
+            return
+        active = page_number == stream_page
+        if active == self._stream_page_active:
+            return
+        self._stream_page_active = active
+        if active:
+            self._last_stream_sent = 0
+            await self.async_request_refresh()
+        else:
+            await self.device.stop_stream()
 
     async def async_reload_views(self) -> None:
         """Reload views from store and refresh display.

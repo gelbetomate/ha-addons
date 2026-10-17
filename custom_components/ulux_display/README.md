@@ -17,7 +17,7 @@ This Home Assistant integration renders dashboards for u::lux Switch IP devices 
 ### Home Assistant Integration
 
 - **Config entries**: One entry per u::lux Switch device
-- **Entities**: Binary sensors for state, number controls for brightness, select for display mode
+- **Entities**: Media player, status/storage sensors, brightness and stream controls, and display selection
 - **Services**: Render display, cycle views, refresh, navigate
 - **Device linking**: Devices appear in HA Device Registry
 
@@ -27,6 +27,18 @@ This Home Assistant integration renders dashboards for u::lux Switch IP devices 
 - **Auto-Registration**: Registers devices in bridge when created in HA
 - **Rendering Delegation**: Renders frames and POSTs to bridge for streaming
 - **Status Tracking**: Checks bridge connectivity on startup
+
+### u::lux Page Streaming
+
+The `Stream Page` number entity selects a physical u::lux page that should show
+the configured Pillow-rendered view. Set it to `0` to disable page-bound
+streaming. The `Stream Refresh Rate` entity limits image updates between `0.1`
+and `5` frames per second. The bridge must publish `ulux_page` events, so its
+`mode.ha_events` option must be enabled.
+
+This is a rate-limited sequence of rendered images for sensor dashboards,
+camera snapshots, clocks, and status views; it is not a conventional video
+codec stream. The existing Pillow renderer remains unchanged.
 
 ---
 

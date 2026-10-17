@@ -31,6 +31,8 @@ async def async_setup_entry(
     entities = [
         UluxDisplayRefreshIntervalNumber(coordinator),
         UluxDisplayCycleIntervalNumber(coordinator),
+        UluxDisplayStreamPageNumber(coordinator),
+        UluxDisplayStreamRefreshRateNumber(coordinator),
     ]
 
     async_add_entities(entities)
@@ -109,3 +111,50 @@ class UluxDisplayCycleIntervalNumber(UluxDisplayEntity, NumberEntity):
             "screen_cycle_interval": int(value),
         }
         self.hass.config_entries.async_update_entry(self.coordinator.entry, options=new_options)
+
+
+class UluxDisplayStreamPageNumber(UluxDisplayEntity, NumberEntity):
+    """Physical u::lux page that activates image streaming; zero disables it."""
+
+    _attr_name = "Stream Page"
+    _attr_icon = "mdi:page-next-outline"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_native_min_value = 0
+    _attr_native_max_value = 32
+    _attr_native_step = 1
+    _attr_mode = NumberMode.BOX
+
+    def __init__(self, coordinator: UluxDisplayCoordinator) -> None:
+        super().__init__(coordinator, "stream_page")
+
+    @property
+    def native_value(self) -> float:
+        return float(self.coordinator.options.get("stream_page", 0))
+
+    async def async_set_native_value(self, value: float) -> None:
+        options = {**self.coordinator.entry.options, "stream_page": int(value)}
+        self.hass.config_entries.async_update_entry(self.coordinator.entry, options=options)
+
+
+class UluxDisplayStreamRefreshRateNumber(UluxDisplayEntity, NumberEntity):
+    """Maximum rendered stream refresh rate."""
+
+    _attr_name = "Stream Refresh Rate"
+    _attr_icon = "mdi:speedometer"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_native_min_value = 0.1
+    _attr_native_max_value = 5
+    _attr_native_step = 0.1
+    _attr_native_unit_of_measurement = "fps"
+    _attr_mode = NumberMode.BOX
+
+    def __init__(self, coordinator: UluxDisplayCoordinator) -> None:
+        super().__init__(coordinator, "stream_refresh_rate")
+
+    @property
+    def native_value(self) -> float:
+        return float(self.coordinator.options.get("stream_refresh_rate", 2))
+
+    async def async_set_native_value(self, value: float) -> None:
+        options = {**self.coordinator.entry.options, "stream_refresh_rate": float(value)}
+        self.hass.config_entries.async_update_entry(self.coordinator.entry, options=options)

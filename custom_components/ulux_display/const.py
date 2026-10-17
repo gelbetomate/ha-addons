@@ -31,7 +31,10 @@ CONF_SCREEN_NAME = "screen_name"
 CONF_SCREEN_CYCLE_INTERVAL = "screen_cycle_interval"
 CONF_CURRENT_SCREEN = "current_screen"
 CONF_SCREEN_THEME = "theme"
+CONF_STREAM_PAGE = "stream_page"
+CONF_STREAM_REFRESH_RATE = "stream_refresh_rate"
 DEFAULT_SCREEN_CYCLE_INTERVAL = 0  # 0 = manual only, >0 = seconds between screens
+DEFAULT_STREAM_REFRESH_RATE = 2
 
 # Theme types
 THEME_CLASSIC = "classic"

@@ -116,6 +116,10 @@ class UluxDevice:
             if own_session:
                 await session.close()
 
+    async def stop_stream(self) -> None:
+        """Stop the bridge video stream for this switch."""
+        await self._post_json(f"/api/display/stream/{self.switch_id}/stop", {})
+
     async def test_connection(self) -> bool:
         """Check that the bridge is reachable."""
         import aiohttp  # noqa: PLC0415

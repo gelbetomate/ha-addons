@@ -45,6 +45,7 @@ class EntityWidget(Widget):
             {"key": "show_unit", "type": "boolean", "label": "Show Unit", "default": True},
             {"key": "show_icon", "type": "boolean", "label": "Show Icon", "default": True},
             {"key": "icon", "type": "icon", "label": "Icon Override"},
+            {"key": "attribute", "type": "text", "label": "Entity Attribute"},
             {"key": "show_panel", "type": "boolean", "label": "Panel Background", "default": False},
             {"key": "precision", "type": "number", "label": "Decimal Places", "min": 0, "max": 5},
         ],

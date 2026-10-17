@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import async_track_event, async_track_time_interval
 
 from .const import (
     CONF_BRIDGE_URL,
@@ -60,6 +60,24 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     hass.data[DOMAIN]["ha_delete_unsub"] = async_track_time_interval(
         hass, async_poll_pending_deletions, HA_DELETE_POLL_INTERVAL
+    )
+
+    async def async_handle_page_event(event) -> None:
+        """Activate page-bound streaming when the bridge reports a page change."""
+        event_data = event.data
+        switch_id = str(event_data.get("switch_id", "")).upper()
+        page_number = event_data.get("page_number")
+        if not switch_id or page_number is None:
+            return
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+                continue
+            coordinator = hass.data[DOMAIN].get(entry.entry_id)
+            if isinstance(coordinator, UluxDisplayCoordinator):
+                await coordinator.async_handle_device_page(int(page_number))
+
+    hass.data[DOMAIN]["page_event_unsub"] = async_track_event(
+        hass, "ulux_page", async_handle_page_event
     )
 
     async def async_handle_notify(call):

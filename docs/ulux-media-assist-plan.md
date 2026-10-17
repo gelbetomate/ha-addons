@@ -76,6 +76,13 @@ Die Integration stellt jetzt pro u::lux eine `media_player`-Entitaet bereit. Sie
 
 Beliebige URLs, `AudioPlayRemote`, Mikrofonaufnahme und Video werden in diesem ersten Schritt absichtlich abgelehnt. Dadurch wird kein unbestaetigtes UMP-Payloadformat als funktionierend dargestellt.
 
+### Erledigt: selektives GeekMagic-Update und u::lux-Seitenstream
+
+Kompatible Upstream-Verbesserungen wurden ohne Austausch des bestehenden
+Pillow-Renderers uebernommen. Dazu gehoeren das Date/Time-Widget sowie
+zusaetzliche Konfigurations-/Entity-Muster. Der u::lux kann nun eine physische
+`Stream Page` mit einer begrenzten Bildrate von bis zu 5 FPS bedienen.
+
 ## Home-Assistant-Geraet
 
 Pro u::lux werden schrittweise folgende Plattformen ergaenzt:

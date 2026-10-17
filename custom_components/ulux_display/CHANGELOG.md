@@ -1,5 +1,12 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.16
+
+- Ported compatible non-rendering GeekMagic updates without replacing the existing Pillow renderer.
+- Added the Date / Time widget with relative, date, time, datetime, custom, and entity-attribute formats.
+- Added configurable Stream Page and Stream Refresh Rate entities.
+- Added page-event-driven image streaming through the u::lux UMP Bridge with rate limiting up to 5 FPS.
+
 ## 0.2.15
 
 - Added a `media_player` entity for local u::lux sounds, stop, and volume control.
