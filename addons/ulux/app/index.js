@@ -2,11 +2,14 @@
 
 const { loadConfig } = require('./src/config');
 const { createUdpServer } = require('./src/udp');
+const { createAudioTransport } = require('./src/audio');
 const { createHaWebSocket } = require('./src/ha/websocket');
 const { createMqttClient } = require('./src/mqtt/client');
 const { createDispatcher } = require('./src/handlers/index');
 const { handleCommandMessage } = require('./src/handlers/command');
 const { createApiServer } = require('./src/http');
+const { createAssistSessionManager } = require('./src/assistSession');
+const { createWyomingServer } = require('./src/wyoming');
 const { createDiscoveryRegistry } = require('./src/discoveryRegistry');
 const { createDiscoveryScanner } = require('./src/discovery');
 const { RegistryStore } = require('./src/registry/store');
@@ -18,6 +21,7 @@ async function main() {
   log.info('u::Lux UMP Bridge starting');
   log.info(`Configured switches: ${config.switches.length}`);
   log.info(`Listen: ${config.listen_host}:${config.listen_port}`);
+  log.info(`Audio: ${config.audio_host}:${config.audio_port} (control ${config.audio_control_port})`);
   log.info(`Mode — HA events: ${config.mode.ha_events}, MQTT: ${config.mode.mqtt}`);
 
   // --- Persistent registry store ---
@@ -77,6 +81,40 @@ async function main() {
     log,
   });
 
+  const audioTransport = createAudioTransport({
+    host: config.audio_host,
+    port: config.audio_port,
+    switches: config.switches,
+    log,
+    onPacket: (ctx) => {
+      log.debug(
+        `Received opaque audio packet for switch "${ctx.switch.name}" ` +
+        `from ${ctx.senderIp}:${ctx.senderPort}`,
+      );
+    },
+    onFrame: (frame) => {
+      log.debug(
+        `Decoded audio frame for switch "${frame.switch.name}" ` +
+        `(${frame.sampleRate} Hz, ${frame.pcm.length} PCM bytes${frame.missing ? ', missing' : ''})`,
+      );
+    },
+    jitterDepth: config.audio_jitter_depth || 3,
+  });
+
+  const assistSession = createAssistSessionManager({
+    config,
+    udpSend: udpServer.send,
+    haClient,
+    log,
+  });
+
+  const wyomingServer = createWyomingServer({
+    config,
+    audioTransport,
+    assistSession,
+    log,
+  });
+
   // --- MQTT client ---
   let mqttClient = null;
   if (config.mode.mqtt) {
@@ -115,13 +153,18 @@ async function main() {
     config,
     haClient,
     mqttClient,
+    assistSession,
     discoveryRegistry,
     udpSend: udpServer.send,
     log,
   });
 
   udpServer.start();
+  audioTransport.start();
+  wyomingServer.start();
   log.info(`UDP server listening on ${config.listen_host}:${config.listen_port}`);
+  log.info(`Audio UDP listener on ${config.audio_host}:${config.audio_port}`);
+  log.info(`Wyoming server listening on ${config.listen_host}:${config.wyoming_port}`);
   discoveryScanner.start();
 
   // --- HTTP API server ---
@@ -129,6 +172,7 @@ async function main() {
   const apiServer = createApiServer({
     config,
     udpSend: udpServer.send,
+    audioTransport,
     discoveryRegistry,
     discoveryScanner,
     haClient,
@@ -143,6 +187,9 @@ async function main() {
     log.info('Bridge shutting down, saving registry...');
     discoveryScanner.stop();
     udpServer.stop();
+    audioTransport.stop();
+    wyomingServer.stop();
+    assistSession.stopAll();
     try {
       registryStore.save();
       log.info('Registry saved successfully');

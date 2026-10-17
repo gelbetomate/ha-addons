@@ -1,6 +1,6 @@
 {
   "name": "u::Lux UMP Bridge",
-  "version": "0.5.49",
+  "version": "0.5.51",
   "slug": "ulux",
   "description": "UDP bridge for u::Lux Switch IP devices. Receives UMP packets and publishes events to Home Assistant and/or MQTT.",
   "url": "https://github.com/gelbetomate/ha-addons/tree/main/addons/ulux",
@@ -15,6 +15,17 @@
     "switches": [],
     "listen_host": "0.0.0.0",
     "listen_port": 34988,
+    "audio_host": "0.0.0.0",
+    "audio_port": 35000,
+    "audio_control_port": 35004,
+    "audio_target_ip": "",
+    "audio_jitter_depth": 3,
+    "assist_ptt_key": 1,
+    "assist_mic_gain": 80,
+    "assist_speaker_volume": 70,
+    "wyoming_port": 10700,
+    "wyoming_switch_id": "",
+    "wyoming_name": "u::lux Assist Satellite",
     "discovery_port": 34984,
     "discovery_interval_ms": 0,
     "control_flags": 22,
@@ -56,6 +67,17 @@
     ],
     "listen_host": "str?",
     "listen_port": "port?",
+    "audio_host": "str?",
+    "audio_port": "port?",
+    "audio_control_port": "port?",
+    "audio_target_ip": "str?",
+    "audio_jitter_depth": "int?",
+    "assist_ptt_key": "int?",
+    "assist_mic_gain": "int?",
+    "assist_speaker_volume": "int?",
+    "wyoming_port": "port?",
+    "wyoming_switch_id": "str?",
+    "wyoming_name": "str?",
     "discovery_port": "port?",
     "discovery_interval_ms": "int?",
     "control_flags": "int?",
@@ -89,6 +111,7 @@
   "ingress": true,
   "ingress_port": 8099,
   "ports": {
-    "8099/tcp": 8099
+    "8099/tcp": 8099,
+    "10700/tcp": 10700
   }
 }

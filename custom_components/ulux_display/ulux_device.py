@@ -129,6 +129,69 @@ class UluxDevice:
             _LOGGER.debug("Bridge health check failed for %s: %s", self.switch_id, err)
             return False
 
+    async def play_local_sound(self, sound_index: int, volume: int = 100) -> None:
+        """Play a sound stored in the u::lux through the bridge."""
+        await self._post_json(
+            f"/api/switch/{self.switch_id}/audio/play",
+            {"sound_index": sound_index, "volume": volume},
+        )
+
+    async def stop_audio(self) -> None:
+        """Stop normal audio playback on the u::lux."""
+        await self._post_json(f"/api/switch/{self.switch_id}/audio/stop", {})
+
+    async def set_audio_volume(self, volume: int) -> None:
+        """Set the u::lux master audio volume."""
+        await self._post_json(
+            f"/api/switch/{self.switch_id}/audio/volume",
+            {"volume": max(0, min(100, volume))},
+        )
+
+    async def configure_audio(
+        self,
+        target_ip: str,
+        *,
+        mic_on: bool = False,
+        mic_gain: int = 0,
+        speaker_on: bool = True,
+        speaker_volume: int = 100,
+        target_port: int = 35000,
+    ) -> None:
+        """Configure the u::lux microphone and speaker through the bridge."""
+        await self._post_json(
+            f"/api/switch/{self.switch_id}/audio/config",
+            {
+                "target_ip": target_ip,
+                "target_port": target_port,
+                "mic_on": mic_on,
+                "mic_gain": mic_gain,
+                "speaker_on": speaker_on,
+                "speaker_volume": speaker_volume,
+            },
+        )
+
+    async def _post_json(self, path: str, payload: dict) -> None:
+        """POST a JSON command to the bridge and raise on failure."""
+        import aiohttp  # noqa: PLC0415 — imported lazily; provided by HA
+
+        session = self._session
+        own_session = session is None
+        if own_session:
+            session = aiohttp.ClientSession()
+
+        try:
+            async with session.post(
+                f"{self.bridge_url}{path}",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status != 200:
+                    body = await resp.text()
+                    raise RuntimeError(f"Bridge API returned HTTP {resp.status}: {body}")
+        finally:
+            if own_session:
+                await session.close()
+
     # ── No-op stubs (features not exposed via bridge API) ────────────────────
 
     async def get_state(self) -> DeviceState | None:

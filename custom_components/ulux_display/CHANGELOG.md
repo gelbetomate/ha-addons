@@ -1,5 +1,11 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.15
+
+- Added a `media_player` entity for local u::lux sounds, stop, and volume control.
+- Added the `ulux_display.configure_audio` service for microphone and speaker control through the bridge.
+- Added documented integration points for the bridge audio WebSocket and future Assist Satellite support.
+
 ## 0.2.14
 
 - Process bridge-requested HA deletions through a separate pending-deletions endpoint while keeping Discovery visible.

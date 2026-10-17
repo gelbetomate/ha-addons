@@ -1,9 +1,10 @@
 'use strict';
 
 const { createServer } = require('http');
+const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
-const { streamImageToSwitch } = require('./ump/videoStream');
+const { createStreamManager } = require('./ump/videoStream');
 const {
   buildTelegramForDevice,
   buildInitializationRequest,
@@ -15,6 +16,7 @@ const {
   buildRealValueMessage,
   buildValueMessage,
   buildAudioPlayLocalMessage,
+  buildAudioControlMessage,
   buildAudioStopMessage,
   buildAudioVolumeMessage,
 } = require('./ump/builder');
@@ -71,10 +73,55 @@ const {
  * @param {object}   opts.log      - Logger
  * @returns {{ start: Function, close: Function }}
  */
-function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner, haClient, mqttClient, log }) {
+function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, discoveryScanner, haClient, mqttClient, log }) {
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
   let discoveryScanState = { status: 'idle', started_at: null, completed_at: null };
+  const streamManager = createStreamManager({ udpSend, log });
+  const audioWebSocket = new WebSocket.Server({ noServer: true });
+
+  audioWebSocket.on('connection', (ws, request, context) => {
+    const { switchId, mode } = context;
+    const target = getSwitchTarget(switchId);
+    if (!target || !audioTransport) {
+      ws.close(1008, 'Unknown audio device');
+      return;
+    }
+
+    const receiveAudio = mode === 'receive' || mode === 'duplex';
+    const sendAudio = mode === 'send' || mode === 'duplex';
+    const unsubscribe = receiveAudio
+      ? audioTransport.subscribe(switchId, (frame) => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({
+          type: 'audio_start',
+          sample_rate: frame.sampleRate,
+          width: frame.width,
+          channels: frame.channels,
+          sequence: frame.sequence,
+          missing: Boolean(frame.missing),
+        }));
+        ws.send(frame.pcm, { binary: true });
+      })
+      : () => {};
+    const sender = sendAudio
+      ? audioTransport.createSender({
+        remoteHost: target.ip,
+        remotePort: config.audio_port || 35000,
+      })
+      : null;
+    sender?.start();
+
+    ws.on('message', (data, isBinary) => {
+      if (sender && isBinary) sender.push(Buffer.from(data));
+    });
+    ws.on('close', () => {
+      unsubscribe();
+      sender?.stop();
+    });
+    ws.send(JSON.stringify({ type: 'ready', switch_id: switchId, mode }));
+    log.info(`Audio WebSocket connected for ${switchId} (${mode})`);
+  });
 
   function isApiPath(pathname) {
     return pathname === '/api' || pathname.startsWith('/api/');
@@ -166,6 +213,25 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
     // --- GET /api/health ---
     if (method === 'GET' && pathname === '/api/health') {
       return respond(res, 200, { ok: true, ha: haClient?.getStatus?.() || { connected: false } });
+    }
+
+    const streamStatusMatch = pathname.match(/^\/api\/display\/stream\/([^/]+)$/);
+    if (method === 'GET' && streamStatusMatch) {
+      const switchId = decodeURIComponent(streamStatusMatch[1]);
+      return respond(res, 200, { switch_id: switchId, stream: streamManager.status(switchId) });
+    }
+
+    const streamStopMatch = pathname.match(/^\/api\/display\/stream\/([^/]+)\/stop$/);
+    if (method === 'POST' && streamStopMatch) {
+      const switchId = decodeURIComponent(streamStopMatch[1]);
+      const sw = getSwitchTarget(switchId);
+      if (!sw) return respond(res, 404, { error: `Unknown switch_id: ${switchId}` });
+      streamManager.stop(
+        switchId,
+        sw.ip,
+        sw.port || config.listen_port || 34988,
+      );
+      return respond(res, 200, { ok: true, switch_id: switchId });
     }
 
     // --- GET /api/discovery/devices ---
@@ -422,6 +488,43 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       return respond(res, 200, { ok: true, switch_id: switchId, volume });
     }
 
+    // --- POST /api/switch/:switchId/audio/config ---
+    const audioConfigMatch = pathname.match(/^\/api\/switch\/([^/]+)\/audio\/config$/);
+    if (method === 'POST' && audioConfigMatch) {
+      const switchId = decodeURIComponent(audioConfigMatch[1]);
+      const target = getSwitchTarget(switchId);
+      if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
+      const body = await readJsonBody(req).catch(() => ({}));
+      const targetIp = String(body.target_ip || config.audio_target_ip || '').trim();
+      if (!targetIp) return respond(res, 400, { error: 'Missing target_ip' });
+
+      let controlMessage;
+      try {
+        controlMessage = buildAudioControlMessage({
+          targetIp,
+          targetPort: Number(body.target_port ?? config.audio_port ?? 35000),
+          micOn: Boolean(body.mic_on),
+          micGain: Number(body.mic_gain ?? 0),
+          speakerOn: body.speaker_on !== false,
+          speakerVolume: Number(body.speaker_volume ?? 100),
+        });
+      } catch (err) {
+        return respond(res, 400, { error: err.message });
+      }
+
+      udpSend(target.ip, config.audio_control_port || 35004, controlMessage);
+      log.info(`API: Sent audio control to ${target.ip}:${config.audio_control_port || 35004}`);
+      return respond(res, 200, {
+        ok: true,
+        switch_id: switchId,
+        control_port: config.audio_control_port || 35004,
+        target_ip: targetIp,
+        target_port: Number(body.target_port ?? config.audio_port ?? 35000),
+        mic_on: Boolean(body.mic_on),
+        speaker_on: body.speaker_on !== false,
+      });
+    }
+
     // --- POST /api/switch/:switchId/ump/raw ---
     const rawMatch = pathname.match(/^\/api\/switch\/([^/]+)\/ump\/raw$/);
     if (method === 'POST' && rawMatch) {
@@ -651,7 +754,7 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
       const remotePort = sw.port || config.listen_port || 34988;
 
       try {
-        await streamImageToSwitch({
+        await streamManager.streamImageToSwitch(switchId, {
           source: { base64: payload.base64 },
           remoteHost: sw.ip,
           remotePort,
@@ -691,6 +794,24 @@ function createApiServer({ config, udpSend, discoveryRegistry, discoveryScanner,
         });
         res.end(text);
       }
+    });
+  });
+
+  server.on('upgrade', (request, socket, head) => {
+    const requestUrl = new URL(request.url || '/', 'http://127.0.0.1');
+    const match = requestUrl.pathname.match(/^\/api\/audio\/ws\/([^/]+)$/);
+    if (!match) {
+      socket.destroy();
+      return;
+    }
+    const switchId = decodeURIComponent(match[1]);
+    const mode = requestUrl.searchParams.get('mode') || 'receive';
+    if (!['receive', 'send', 'duplex'].includes(mode)) {
+      socket.destroy();
+      return;
+    }
+    audioWebSocket.handleUpgrade(request, socket, head, (ws) => {
+      audioWebSocket.emit('connection', ws, request, { switchId, mode });
     });
   });
 

@@ -26,6 +26,7 @@ const { MessageIds } = require('./messageIds');
 const FRAME_ID_MESSAGE = 0x8601;
 const FRAME_ID_VIDEO = 0x8602;
 const FRAME_VERSION = 0x0201;
+const AUDIO_CONTROL_HEADER = Buffer.from('ULUX', 'ascii');
 
 // Per-module outbound packet counter; wraps at 0xFFFF.
 let _packetId = 0;
@@ -399,6 +400,60 @@ function buildAudioPlayLocalMessage({
   return buf;
 }
 
+/**
+ * Build the 16-byte ULUX audio control frame for UDP port 35004.
+ *
+ * The control frame is not a regular UMP telegram: its fields are network
+ * byte order and its final byte is an XOR checksum over bytes 0..14.
+ *
+ * @param {object} opts
+ * @param {string} opts.targetIp - IPv4 destination for the audio stream
+ * @param {number} [opts.targetPort=35000]
+ * @param {boolean} [opts.micOn=false]
+ * @param {number} [opts.micGain=0]
+ * @param {boolean} [opts.speakerOn=true]
+ * @param {number} [opts.speakerVolume=100]
+ * @returns {Buffer}
+ */
+function buildAudioControlMessage({
+  targetIp,
+  targetPort = 35000,
+  micOn = false,
+  micGain = 0,
+  speakerOn = true,
+  speakerVolume = 100,
+} = {}) {
+  if (typeof targetIp !== 'string') {
+    throw new TypeError('targetIp must be an IPv4 address');
+  }
+
+  const octets = targetIp.split('.').map((part) => Number(part));
+  if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    throw new TypeError(`Invalid IPv4 targetIp: ${targetIp}`);
+  }
+
+  const buf = Buffer.alloc(16, 0);
+  AUDIO_CONTROL_HEADER.copy(buf, 0);
+  buf.writeUInt8(0x01, 4);
+  octets.forEach((octet, index) => buf.writeUInt8(octet, 5 + index));
+  buf.writeUInt16BE(clampByteRange(targetPort, 0, 65535), 9);
+  buf.writeUInt8(micOn ? 1 : 0, 11);
+  buf.writeUInt8(clampByteRange(micGain, 0, 100), 12);
+  buf.writeUInt8(speakerOn ? 1 : 0, 13);
+  buf.writeUInt8(clampByteRange(speakerVolume, 0, 100), 14);
+
+  let checksum = 0;
+  for (let index = 0; index < 15; index += 1) checksum ^= buf[index];
+  buf.writeUInt8(checksum, 15);
+  return buf;
+}
+
+function clampByteRange(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.max(min, Math.min(max, Math.round(number)));
+}
+
 /** Build a 4-byte read/request message without data. */
 function buildRequestMessage(messageId, actorId = 0) {
   const message = Buffer.alloc(4, 0);
@@ -543,6 +598,7 @@ module.exports = {
   buildAudioVolumeMessage,
   buildAudioStopMessage,
   buildAudioPlayLocalMessage,
+  buildAudioControlMessage,
   buildRequestMessage,
   buildTemperatureRequest,
   buildHumidityRequest,

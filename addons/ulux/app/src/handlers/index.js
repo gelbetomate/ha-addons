@@ -14,7 +14,7 @@ const handleVideoState = require('./video');
  * Handler signature: handler(msg, ctx, services) → void
  *   msg      — parsed message object from parseTelegram()
  *   ctx      — full packet context
- *   services — { config, haClient, mqttClient, discoveryRegistry, udpSend, log }
+ *   services — { config, haClient, mqttClient, assistSession, discoveryRegistry, udpSend, log }
  */
 const HANDLERS = {
   [MessageIds.IdState]: handleState,
@@ -46,7 +46,7 @@ const HANDLERS = {
  * @param {object}      services.log         - Logger
  * @returns {Function} dispatch(ctx) — called for each received UDP packet
  */
-function createDispatcher({ config, haClient, mqttClient, discoveryRegistry, udpSend, log }) {
+function createDispatcher({ config, haClient, mqttClient, assistSession, discoveryRegistry, udpSend, log }) {
   return function dispatch(ctx) {
     const { raw, hex, senderIp, senderPort, switch: sw, timestamp } = ctx;
 
@@ -101,7 +101,7 @@ function createDispatcher({ config, haClient, mqttClient, discoveryRegistry, udp
       const handler = HANDLERS[msg.msgId];
       if (handler) {
         try {
-          handler(msg, enrichedCtx, { config, haClient, mqttClient, discoveryRegistry, udpSend, log });
+          handler(msg, enrichedCtx, { config, haClient, mqttClient, assistSession, discoveryRegistry, udpSend, log });
         } catch (err) {
           log.error(`Handler error for msgId=0x${msg.msgId.toString(16)}:`, err.message);
         }

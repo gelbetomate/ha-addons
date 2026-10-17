@@ -54,3 +54,61 @@ notify:
             - forest
             - light
             - candy
+
+configure_audio:
+  name: Configure audio
+  description: Configure the u::lux microphone and speaker audio transport.
+  fields:
+    device_id:
+      name: Device
+      description: The u::lux Display device(s) to configure.
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+    target_ip:
+      name: Audio target IP
+      description: IPv4 address that receives microphone packets.
+      required: true
+      selector:
+        text:
+    target_port:
+      name: Audio target port
+      description: UDP port for raw audio packets.
+      required: false
+      default: 35000
+      selector:
+        number:
+          min: 1
+          max: 65535
+          mode: box
+    mic_on:
+      name: Microphone active
+      required: false
+      default: false
+      selector:
+        boolean:
+    mic_gain:
+      name: Microphone gain
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: slider
+    speaker_on:
+      name: Speaker active
+      required: false
+      default: true
+      selector:
+        boolean:
+    speaker_volume:
+      name: Speaker volume
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: slider

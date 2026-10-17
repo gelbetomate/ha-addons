@@ -1,5 +1,21 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.51
+
+- Added a native Wyoming TCP satellite endpoint on port `10700`.
+- Added Wyoming `describe`, `run-pipeline`, `audio-start`, `audio-chunk`, and `audio-stop` handling.
+- Connected push-to-talk u::lux key events to Wyoming pipeline starts and microphone streaming.
+- Connected Wyoming audio output events to the paced u::lux speaker sender.
+
+## 0.5.50
+
+- Added separate raw audio UDP transport on port `35000` (`0x88A4`).
+- Added PCM 16-bit and G.711 A-Law frame decoding, sequence handling, a 60 ms jitter buffer, and paced 20 ms PCM output.
+- Added the 16-byte `ULUX` audio control frame with Big-Endian fields and XOR checksum on UDP port `35004` (`0x88AC`).
+- Added bidirectional WebSocket audio endpoint at `/api/audio/ws/:switchId` with `receive`, `send`, and `duplex` modes.
+- Added configurable push-to-talk sessions triggered by verified `ulux_key` press/release events, including microphone on/off control and `ulux_assist_session` HA events.
+- Added per-device stream serialization, cancellation, status, and stop endpoints for display streams.
+
 ## 0.5.49
 
 - Full implementation of the u::Lux Message Protocol (UMP v2.43) on UDP port `34988`.

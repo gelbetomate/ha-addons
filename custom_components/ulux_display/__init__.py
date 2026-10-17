@@ -32,6 +32,7 @@ HA_DELETE_POLL_INTERVAL = timedelta(seconds=5)
 
 PLATFORMS: list[Platform] = [
     Platform.IMAGE,
+    Platform.MEDIA_PLAYER,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SENSOR,
@@ -77,6 +78,31 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                         await coordinator.trigger_notification(call.data)
 
     hass.services.async_register(DOMAIN, "notify", async_handle_notify)
+
+    async def async_handle_configure_audio(call) -> None:
+        """Configure microphone and speaker transport for selected devices."""
+        device_ids = call.data.get("device_id")
+        if not isinstance(device_ids, list):
+            device_ids = [device_ids]
+        dev_reg = dr.async_get(hass)
+        for device_id in device_ids:
+            device = dev_reg.async_get(device_id)
+            if not device:
+                continue
+            for entry_id in device.config_entries:
+                coordinator = hass.data[DOMAIN].get(entry_id)
+                if not isinstance(coordinator, UluxDisplayCoordinator):
+                    continue
+                await coordinator.device.configure_audio(
+                    target_ip=call.data["target_ip"],
+                    mic_on=call.data.get("mic_on", False),
+                    mic_gain=call.data.get("mic_gain", 0),
+                    speaker_on=call.data.get("speaker_on", True),
+                    speaker_volume=call.data.get("speaker_volume", 100),
+                    target_port=call.data.get("target_port", 35000),
+                )
+
+    hass.services.async_register(DOMAIN, "configure_audio", async_handle_configure_audio)
 
     _LOGGER.info("u::lux Display domain setup complete")
     return True

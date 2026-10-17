@@ -1,3 +1,7 @@
+For direct Home Assistant Assist integration, configure the Wyoming Protocol
+integration to connect to the add-on on TCP port `10700`. Set
+`wyoming_switch_id` when more than one switch is registered. The endpoint
+advertises one microphone and one speaker using 16 kHz, 16-bit, mono PCM.
 # u::Lux UMP Bridge Add-on
 
 The bridge add-on handles transport, device discovery observation, persistent registry management, and provides both HTTP and MQTT APIs for device management.
@@ -8,7 +12,9 @@ The bridge add-on handles transport, device discovery observation, persistent re
 
 ### Core Responsibilities
 
-- **UDP Listener** (port 34988): Listens for UMP packets from u::lux Switch IP devices
+- **UMP UDP Listener** (port 34988): Listens for existing UMP device/control traffic
+- **Audio UDP Listener** (port 35000 / `0x88A4`): Receives and sends raw audio datagrams
+- **Audio Control Port** (port 35004 / `0x88AC`): Reserved for UMP microphone/speaker configuration
 - **Active Discovery** (port 34984): Broadcasts discovery requests and collects u::lux responses
 - **Device Discovery**: Observes UDP traffic, extracts device info (MAC, IP, port, name)
 - **Persistent Registry** (`/data/registry.json`): Maintains canonical device list that survives restarts
@@ -16,6 +22,25 @@ The bridge add-on handles transport, device discovery observation, persistent re
 - **Web UI** (port 8099): Standalone device management interface
 - **HTTP API** (`/api/registry/*`): REST endpoints for device CRUD
 - **MQTT Integration**: Optional MQTT topics for device management
+
+The Home Assistant integration can send the verified 16-byte audio control
+frame through `ulux_display.configure_audio`. Raw audio payload decoding and
+encoding remain separate from this control path.
+
+Audio WebSocket endpoint for the normalized PCM bridge:
+
+```text
+ws://<bridge>:8099/api/audio/ws/<switch_id>?mode=receive
+ws://<bridge>:8099/api/audio/ws/<switch_id>?mode=send
+ws://<bridge>:8099/api/audio/ws/<switch_id>?mode=duplex
+```
+
+`receive` sends JSON frame metadata followed by binary PCM payloads. `send`
+accepts binary 16-bit PCM frames and packetizes them at 20 ms intervals.
+
+The audio transport is intentionally separate from the UMP listener. The bridge
+accepts the documented raw PCM/A-Law frame variants, applies sequence-aware
+jitter buffering, and emits paced PCM frames for the next Assist/Wyoming layer.
 
 ### What It Does NOT Do
 

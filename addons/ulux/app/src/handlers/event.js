@@ -76,7 +76,7 @@ function keysDown(keyState) {
  * @param {object} ctx      - Packet context {senderIp, senderPort, switch, timestamp, ...}
  * @param {object} services - {config, haClient, mqttClient, udpSend, log}
  */
-function handleEvent(msg, ctx, { config, haClient, mqttClient, log }) {
+function handleEvent(msg, ctx, { config, haClient, mqttClient, assistSession, log }) {
   const { senderIp, senderPort, switch: sw, timestamp } = ctx;
 
   // KeyState is at offset 4 of the raw message data
@@ -161,6 +161,8 @@ function handleEvent(msg, ctx, { config, haClient, mqttClient, log }) {
       const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/event/key_edge`;
       mqttClient.publish(topic, JSON.stringify(edgePayload));
     }
+
+    assistSession?.handleKey(edgePayload);
   }
 }
 

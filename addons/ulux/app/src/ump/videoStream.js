@@ -5,6 +5,7 @@ const path = require('path');
 const Jimp = require('jimp');
 const {
   buildVideoStartMessage,
+  buildVideoStopMessage,
   buildTelegram,
   buildVideoStreamTelegram,
 } = require('./builder');
@@ -13,6 +14,57 @@ const DEFAULT_WIDTH = 86;
 const DEFAULT_HEIGHT = 90;
 const DEFAULT_LINES_PER_PACKET = 5;
 const DEFAULT_INTER_PACKET_DELAY_MS = 5;
+
+function createStreamManager({ udpSend, log }) {
+  const active = new Map();
+  const chains = new Map();
+  const generations = new Map();
+
+  return {
+    async streamImageToSwitch(switchKey, options) {
+      const key = String(switchKey);
+      const generation = (generations.get(key) || 0) + 1;
+      generations.set(key, generation);
+      const previous = chains.get(key) || Promise.resolve();
+      const run = previous
+        .catch(() => undefined)
+        .then(async () => {
+          if (generations.get(key) !== generation) return { cancelled: true };
+          active.set(key, { startedAt: new Date().toISOString() });
+          try {
+            return await streamImageToSwitch({
+              udpSend,
+              log,
+              ...options,
+              shouldStop: () => generations.get(key) !== generation,
+            });
+          } finally {
+            active.delete(key);
+          }
+        });
+      chains.set(key, run);
+      try {
+        return await run;
+      } finally {
+        if (chains.get(key) === run) chains.delete(key);
+      }
+    },
+
+    stop(switchKey, remoteHost, remotePort, sequenceId = 1) {
+      const key = String(switchKey);
+      generations.set(key, (generations.get(key) || 0) + 1);
+      const telegram = buildTelegram(buildVideoStopMessage(sequenceId));
+      udpSend(remoteHost, remotePort, telegram);
+      active.delete(key);
+      return { stopped: true };
+    },
+
+    status(switchKey) {
+      const state = active.get(String(switchKey));
+      return state ? { active: true, ...state } : { active: false };
+    },
+  };
+}
 
 async function streamImageToSwitch({
   source,
@@ -25,6 +77,7 @@ async function streamImageToSwitch({
   linesPerPacket = DEFAULT_LINES_PER_PACKET,
   interPacketDelayMs = DEFAULT_INTER_PACKET_DELAY_MS,
   sequenceId,
+  shouldStop = () => false,
 }) {
   if (!remoteHost || typeof udpSend !== 'function') {
     throw new Error('streamImageToSwitch requires remoteHost and udpSend');
@@ -51,6 +104,10 @@ async function streamImageToSwitch({
   );
 
   for (let startLine = 0; startLine < height; startLine += linesPerPacket) {
+    if (shouldStop()) {
+      log.info(`Image stream cancelled for ${remoteHost}:${remotePort} (sequenceId=${seqId})`);
+      return { cancelled: true, sequenceId: seqId };
+    }
     const lineCount = Math.min(linesPerPacket, height - startLine);
     const chunkStart = startLine * bytesPerLine;
     const chunkEnd = chunkStart + (lineCount * bytesPerLine);
@@ -73,6 +130,7 @@ async function streamImageToSwitch({
   }
 
   log.info(`Image stream finished for ${remoteHost}:${remotePort} (sequenceId=${seqId})`);
+  return { cancelled: false, sequenceId: seqId };
 }
 
 async function resolveImageBuffer(source) {
@@ -146,6 +204,7 @@ function sleep(ms) {
 }
 
 module.exports = {
+  createStreamManager,
   streamImageToSwitch,
   DEFAULT_WIDTH,
   DEFAULT_HEIGHT,
