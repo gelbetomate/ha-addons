@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.17
+
+- Fixed integration startup on Home Assistant versions without `async_track_event` by using the native event bus listener API.
+
 ## 0.2.16
 
 - Ported compatible non-rendering GeekMagic updates without replacing the existing Pillow renderer.

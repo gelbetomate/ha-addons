@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.event import async_track_event, async_track_time_interval
+from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     CONF_BRIDGE_URL,
@@ -76,8 +76,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             if isinstance(coordinator, UluxDisplayCoordinator):
                 await coordinator.async_handle_device_page(int(page_number))
 
-    hass.data[DOMAIN]["page_event_unsub"] = async_track_event(
-        hass, "ulux_page", async_handle_page_event
+    hass.data[DOMAIN]["page_event_unsub"] = hass.bus.async_listen(
+        "ulux_page", async_handle_page_event
     )
 
     async def async_handle_notify(call):
