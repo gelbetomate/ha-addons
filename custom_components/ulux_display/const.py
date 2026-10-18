@@ -38,6 +38,9 @@ DEFAULT_STREAM_REFRESH_RATE = 2
 
 # Theme types
 THEME_CLASSIC = "classic"
+THEME_WATCHOS = "watchos"
+THEME_STANDBY = "standby"
+THEME_NIGHT = "night"
 THEME_MINIMAL = "minimal"
 THEME_NEON = "neon"
 THEME_RETRO = "retro"
@@ -47,8 +50,15 @@ THEME_OCEAN = "ocean"
 THEME_SUNSET = "sunset"
 THEME_FOREST = "forest"
 THEME_CANDY = "candy"
+THEME_BLUEPRINT = "blueprint"
+THEME_INK = "ink"
+THEME_AURORA = "aurora"
+THEME_BRUTAL = "brutal"
 
 THEME_OPTIONS = {
+    THEME_WATCHOS: "watchOS",
+    THEME_STANDBY: "StandBy",
+    THEME_NIGHT: "Night",
     THEME_CLASSIC: "Classic",
     THEME_MINIMAL: "Minimal",
     THEME_NEON: "Neon",
@@ -59,6 +69,10 @@ THEME_OPTIONS = {
     THEME_SUNSET: "Sunset",
     THEME_FOREST: "Forest",
     THEME_CANDY: "Candy",
+    THEME_BLUEPRINT: "Blueprint",
+    THEME_INK: "Ink",
+    THEME_AURORA: "Aurora",
+    THEME_BRUTAL: "Brutal",
 }
 
 # Layout types

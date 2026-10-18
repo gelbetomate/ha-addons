@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.18
+
+- Added the newer GeekMagic-compatible themes: watchOS, StandBy, Night, Blueprint, Ink, Aurora, and Brutal.
+- Kept all themes on the existing Pillow renderer and u::lux transport.
+
 ## 0.2.17
 
 - Fixed integration startup on Home Assistant versions without `async_track_event` by using the native event bus listener API.

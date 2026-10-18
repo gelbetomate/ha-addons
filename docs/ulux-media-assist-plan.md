@@ -80,7 +80,8 @@ Beliebige URLs, `AudioPlayRemote`, Mikrofonaufnahme und Video werden in diesem e
 
 Kompatible Upstream-Verbesserungen wurden ohne Austausch des bestehenden
 Pillow-Renderers uebernommen. Dazu gehoeren das Date/Time-Widget sowie
-zusaetzliche Konfigurations-/Entity-Muster. Der u::lux kann nun eine physische
+zusaetzliche Konfigurations-/Entity-Muster und die neuen Themes watchOS,
+StandBy, Night, Blueprint, Ink, Aurora und Brutal. Der u::lux kann nun eine physische
 `Stream Page` mit einer begrenzten Bildrate von bis zu 5 FPS bedienen.
 
 ## Home-Assistant-Geraet
