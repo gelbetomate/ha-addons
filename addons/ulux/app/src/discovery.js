@@ -287,7 +287,8 @@ function createDiscoveryScanner({
     const configured = switches.find(
       (item) => String(item.ip || '') === discovered.ip
     );
-    const serialNumber = configured?.serial_number || inferSerialNumber(macAddress);
+    const serialNumber = configured?.serial_number || null;
+    const serialNumberCandidate = serialNumber ? null : inferSerialNumber(macAddress);
     const switchId = configured?.switch_id || macAddress || null;
     const name = configured?.name || (serialNumber ? `u::lux Switch (${serialNumber})` : null);
 
@@ -306,7 +307,8 @@ function createDiscoveryScanner({
       ...discovered,
       mac_address: macAddress,
       serial_number: serialNumber,
-      serial_number_source: macAddress ? 'mac_suffix_inference' : null,
+      serial_number_candidate: serialNumberCandidate,
+      serial_number_source: serialNumber ? 'configured' : null,
       ump_device_id: inferUmpDeviceId(serialNumber),
       senderIp: discovered.ip,
       senderPort: port,
@@ -322,7 +324,8 @@ function createDiscoveryScanner({
 
     log?.info(
       `Discovery response from ${discovered.ip} ` +
-      `(protocol_id=${discovered.protocol_id}, ${message.length} bytes)`
+      `(protocol_id=${discovered.protocol_id}, ${message.length} bytes, ` +
+      `serial=${serialNumber || 'not decoded'})`
     );
     scanQuietFinish?.();
   });

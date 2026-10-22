@@ -36,6 +36,11 @@ Important offsets:
 - offset `6`: packet ID, little endian
 - remaining bytes: fixed protocol/header fields
 
+The decoder also reads the frame version at offset `4` and the 16-bit UMP
+device ID at offset `12`. For the u::lux Switch with serial `456`, the probe
+response identifies device ID `1` and frame version `2.26`; these values are
+now learned into the registry and reused for outbound control frames.
+
 The earlier implementation incorrectly treated offsets `0`, `10`, and the zeroed header as the packet length/ID fields. The current builder and decoder were corrected using this reference format.
 
 The working `U--lux-node.js-master` project uses a device-specific variant:

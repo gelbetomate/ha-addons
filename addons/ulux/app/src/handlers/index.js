@@ -65,6 +65,8 @@ function createDispatcher({ config, haClient, mqttClient, assistSession, discove
 
     discoveryRegistry?.updateDiagnostics?.(senderIp, {
       ump_device_address: telegram.deviceAddressHex,
+      ump_device_id: telegram.deviceId,
+      ump_frame_version: telegram.frameVersion,
       ump_packet_id: telegram.packetId,
       ump_message_ids: telegram.messages.map((message) => message.msgId),
       ump_last_seen: timestamp,

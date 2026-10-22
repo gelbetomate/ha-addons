@@ -124,6 +124,15 @@ session-dependent/obfuscated. The bridge therefore validates and stores the
 challenge echo, but does not assign firmware, date, hardware, or memory fields
 until the encoding is identified from additional controlled captures.
 
+## Serial number caution
+
+The MAC suffix is not a reliable serial-number field. For example, the device
+with MAC `00:50:C2:73:03:14` has serial number `456` in the u::lux TestCenter,
+while the old fallback interpreted the final two MAC octets as hexadecimal and
+displayed `788`. The bridge now stores such a value only as
+`serial_number_candidate`; confirmed serial numbers must come from configured
+metadata or a decoded protocol field.
+
 ## Live debugger capture of `uLuxConfig.exe`
 
 A live capture (x32dbg breakpoint on `ws2_32.dll!recvfrom`, running the real

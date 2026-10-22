@@ -1,5 +1,16 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.53
+
+- Learned `ump_device_id` and `ump_frame_version` from valid inbound UMP response headers.
+- Reused the learned parameters for subsequent page, wake, chime, and value control commands.
+
+## 0.5.52
+
+- Fixed discovery so MAC-suffix estimates are no longer presented as confirmed serial numbers.
+- Preserved unconfirmed MAC-derived values as `serial_number_candidate` for diagnostics.
+- Added registry UI labeling for decoded versus unconfirmed serial information.
+
 ## 0.5.51
 
 - Added a native Wyoming TCP satellite endpoint on port `10700`.

@@ -56,8 +56,10 @@ function parseTelegram(buf) {
   }
 
   const totalLength = buf.readUInt16LE(2);
+  const frameVersion = buf.readUInt16LE(4);
   const deviceAddrBytes = buf.slice(8, 14);
   const deviceAddressHex = (deviceAddrBytes.toString('hex').toUpperCase().match(/.{2}/g) || []).join(':');
+  const deviceId = buf.readUInt16LE(12);
   const packetId = buf.readUInt16LE(6);
 
   const messages = [];
@@ -90,6 +92,8 @@ function parseTelegram(buf) {
   return {
     valid: true,
     totalLength,
+    frameVersion,
+    deviceId,
     deviceAddressHex,
     packetId,
     messages,

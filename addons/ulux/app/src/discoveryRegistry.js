@@ -79,6 +79,9 @@ function createDiscoveryRegistry(registryStore, log) {
     const nextName = ctx.switchName && isGeneratedName(existing.name, existing)
       ? ctx.switchName
       : existing.name;
+    const existingSerial = existing.serial_number_source === 'mac_suffix_inference'
+      ? null
+      : existing.serial_number;
     const recordData = {
       switch_id: switchId,
       ip: observedIp || existing.ip || '',
@@ -88,8 +91,11 @@ function createDiscoveryRegistry(registryStore, log) {
       mac_address: ctx.mac_address || existing.mac_address || switchId,
       protocol_id: ctx.protocol_id || existing.protocol_id || '',
       ump_device_id: ctx.ump_device_id ?? existing.ump_device_id ?? null,
-      serial_number: ctx.serial_number || existing.serial_number || null,
-      serial_number_source: ctx.serial_number_source || existing.serial_number_source || null,
+      serial_number: ctx.serial_number || existingSerial || null,
+      serial_number_candidate: ctx.serial_number_candidate || existing.serial_number_candidate || null,
+      serial_number_source: ctx.serial_number_source || (
+        existing.serial_number_source === 'mac_suffix_inference' ? null : existing.serial_number_source
+      ),
       sync_detail: ctx.sync_detail || existing.sync_detail || null,
       mqtt_discovery: ctx.mqtt_discovery ?? existing.mqtt_discovery ?? false,
       last_seen: ctx.last_seen || new Date().toISOString(),

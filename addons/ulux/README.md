@@ -77,6 +77,11 @@ Devices observed on the network are merged into the persistent registry:
 
 The registry bridges discovery and configuration — devices don't need to be pre-configured; they're auto-added when first observed.
 
+Serial numbers are only shown when confirmed by configuration or a decoded
+protocol field. A MAC-suffix estimate is retained as
+`serial_number_candidate` for diagnostics and is not used as the device's
+serial number.
+
 ### Multiple Access Paths
 
 Manage devices via:
