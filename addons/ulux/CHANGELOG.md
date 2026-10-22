@@ -1,5 +1,12 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.55
+
+- Added periodic UMP sensor requests for temperature, humidity, CO2, VOC, IN2, and illuminance.
+- Fixed one-based Bridge UI page numbers being sent as zero-based UMP indices.
+- Aligned local audio, stop, and volume message IDs with the documented UMP table.
+- Used learned device ID and frame version for initialization replies.
+
 ## 0.5.54
 
 - Persisted decoded UMP state flags and live sensor readings in the registry for HA consumption.

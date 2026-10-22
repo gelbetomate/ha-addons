@@ -1,5 +1,11 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.20
+
+- Fixed physical Active wake/standby control.
+- Added live UMP sensor and binary-state entities backed by bridge registry polling.
+- Added physical page navigation support through the bridge control path.
+
 ## 0.2.19
 
 - Added UMP sensors for temperature, humidity, CO2, VOC, and illuminance.

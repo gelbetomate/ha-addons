@@ -555,12 +555,16 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         if len(self._layouts) > 0:
             next_screen = (self._current_screen + 1) % len(self._layouts)
             await self.async_set_screen(next_screen)
+        else:
+            await self.device.navigate_next()
 
     async def async_previous_screen(self) -> None:
         """Switch to the previous screen."""
         if len(self._layouts) > 0:
             prev_screen = (self._current_screen - 1) % len(self._layouts)
             await self.async_set_screen(prev_screen)
+        else:
+            await self.device.navigate_previous()
 
     def update_options(self, options: dict[str, Any]) -> None:
         """Update coordinator options.

@@ -18,10 +18,42 @@
  * Both replies go to remote.address:remote.port (dynamic reply-to-sender).
  */
 
-const { buildIdControlMessage, buildDateTimeMessage, buildTelegram } = require('../ump/builder');
+const {
+  buildCO2Request,
+  buildDateTimeMessage,
+  buildHumidityRequest,
+  buildIdControlMessage,
+  buildIN2Request,
+  buildLuxRequest,
+  buildTemperatureRequest,
+  buildTelegramForDevice,
+  buildVOCRequest,
+} = require('../ump/builder');
 
 const STATE_FLAG_TIME_REQUEST = 1 << 5;  // bit 5
 const STATE_FLAG_INIT_REQUEST = 1 << 6;  // bit 6
+const SENSOR_POLL_INTERVAL_MS = 10000;
+const sensorPollers = new Map();
+
+function startSensorPolling(senderIp, senderPort, deviceId, frameVersion, udpSend, log) {
+  if (sensorPollers.has(senderIp)) return;
+  const poll = () => {
+    const telegram = buildTelegramForDevice(
+      deviceId,
+      frameVersion,
+      buildTemperatureRequest(),
+      buildHumidityRequest(),
+      buildCO2Request(),
+      buildIN2Request(),
+      buildVOCRequest(),
+      buildLuxRequest(),
+    );
+    udpSend(senderIp, senderPort, telegram);
+    log.debug(`Requested UMP sensors from ${senderIp}:${senderPort}`);
+  };
+  poll();
+  sensorPollers.set(senderIp, setInterval(poll, SENSOR_POLL_INTERVAL_MS));
+}
 
 /**
  * @param {object} msg      - Parsed message object from parseTelegram()
@@ -60,6 +92,14 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
   };
 
   discoveryRegistry?.updateState?.(senderIp, decodedState, stateFlags);
+  startSensorPolling(
+    senderIp,
+    senderPort,
+    ctx.telegram?.deviceId ?? 0x5D,
+    ctx.telegram?.frameVersion ?? 0x0232,
+    udpSend,
+    log,
+  );
 
   log.info(
     `ID-State from ${senderIp}:${senderPort} switch="${sw.name}" ` +
@@ -99,13 +139,21 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
     const controlFlags = typeof config.control_flags === 'number'
       ? config.control_flags
       : 0;
-    const telegram = buildTelegram(buildIdControlMessage(controlFlags));
+    const telegram = buildTelegramForDevice(
+      ctx.telegram?.deviceId ?? 0x5D,
+      ctx.telegram?.frameVersion ?? 0x0232,
+      buildIdControlMessage(controlFlags),
+    );
     log.info(`Sending ID-Control (flags=0x${controlFlags.toString(16)}) to ${senderIp}:${senderPort}`);
     udpSend(senderIp, senderPort, telegram);
   }
 
   if (timeRequest) {
-    const telegram = buildTelegram(buildDateTimeMessage());
+    const telegram = buildTelegramForDevice(
+      ctx.telegram?.deviceId ?? 0x5D,
+      ctx.telegram?.frameVersion ?? 0x0232,
+      buildDateTimeMessage(),
+    );
     log.info(`Sending DateTime to ${senderIp}:${senderPort}`);
     udpSend(senderIp, senderPort, telegram);
   }

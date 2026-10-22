@@ -310,7 +310,8 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const target = getSwitchTarget(switchId);
       if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
       const body = await readJsonBody(req).catch(() => ({}));
-      const pageIndex = Number(body.page ?? body.page_index ?? 0);
+      const pageNumber = Number(body.page ?? body.page_number ?? 1);
+      const pageIndex = Math.max(0, pageNumber - 1);
       const telegram = buildTelegramForDevice(
         target.ump_device_id,
         target.ump_frame_version,
@@ -318,7 +319,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       );
       udpSend(target.ip, target.port || 34988, telegram);
       log.info(`API: Sent PageIndex (${pageIndex}) to ${target.ip}:${target.port || 34988}`);
-      return respond(res, 200, { ok: true, switch_id: switchId, page: pageIndex });
+      return respond(res, 200, { ok: true, switch_id: switchId, page: pageNumber, page_index: pageIndex });
     }
 
     // --- POST /api/switch/:switchId/activate ---
