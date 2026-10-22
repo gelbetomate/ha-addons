@@ -28,6 +28,7 @@ This Home Assistant integration renders dashboards for u::lux Switch IP devices 
 - **Auto-Registration**: Registers devices in bridge when created in HA
 - **Rendering Delegation**: Renders frames and POSTs to bridge for streaming
 - **Status Tracking**: Checks bridge connectivity on startup
+- **Event-driven UMP data**: Applies bridge `ulux_sensor` and `ulux_event` notifications immediately; the bridge must have `mode.ha_events` enabled.
 
 ### u::lux Page Streaming
 

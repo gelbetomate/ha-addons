@@ -15,6 +15,7 @@ const DEFAULTS = {
   audio_control_port: 35004,
   audio_target_ip: '',
   audio_jitter_depth: 3,
+  sensor_poll_interval_ms: 60000,
   assist_ptt_key: 1,
   assist_mic_gain: 80,
   assist_speaker_volume: 70,

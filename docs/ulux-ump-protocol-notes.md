@@ -517,6 +517,22 @@ When UMP packets arrive on UDP `34988`, the bridge fires the following HA events
 - `ulux_value`: `{ switch_id, actor_id, value, value_type }`
 - `ulux_action`: `{ switch_id, key, action }`
 
+The bridge publishes `ulux_sensor`, `ulux_event`, and `ulux_key` immediately
+when the device sends corresponding telegrams. The HA integration consumes
+these events directly. Temperature, humidity, and motion may therefore come
+from an external sensor integrated into the u::lux/Loxone setup; they are not
+assumed to be physically measured by the Switch itself. The Lux value is the
+separate ambient-light sensor message (`0x03`) from the Switch.
+
+The Bridge UI accepts human page numbers starting at 1 and converts them to
+the zero-based UMP page index. HA `page_index` requests use the zero-based
+form explicitly.
+
+Key presses are exposed as `ulux_key` edge events and as HA binary sensors
+`Key 1` through `Key 4`. LED output commands are implemented, but the current
+UMP input decoder has no verified inbound LED-status/color message, so LED
+state is not yet reported as a sensor.
+
 ---
 
 ### MQTT Interface

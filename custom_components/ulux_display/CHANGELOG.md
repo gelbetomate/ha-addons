@@ -1,5 +1,17 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.22
+
+- Added event-driven `Key 1` through `Key 4` binary sensors.
+- Fixed physical next/previous page fallback when no local HA views are configured.
+- Applied physical Active wake/standby and page control through the learned UMP device parameters.
+
+## 0.2.21
+
+- Switched UMP sensor and state updates to the bridge's event bus events.
+- Kept the bridge registry request only as an initial startup snapshot.
+- Motion, proximity, inputs, display state, audio state, and sensor values now update immediately when events arrive.
+
 ## 0.2.20
 
 - Fixed physical Active wake/standby control.

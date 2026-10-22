@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     import asyncio
 
 from homeassistant.const import __version__ as ha_version
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -205,6 +205,9 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._update_preview: bool = True  # Update preview on next refresh
         self._preview_just_updated: bool = False  # True if preview was updated in last refresh
         self._registry_device: dict[str, Any] = {}
+        self._live_sensors: dict[str, Any] = {}
+        self._live_state: dict[str, Any] = {}
+        self._live_keys: dict[int, bool] = {}
         self._stream_page_active = False
         self._last_stream_sent: float = 0
 
@@ -932,7 +935,6 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             try:
                 self._device_state = await self.device.get_state()
                 self._space_info = await self.device.get_space()
-                self._registry_device = await self.device.get_registry_device()
 
                 # Sync display mode with device state on first poll
                 # If device is in a built-in theme, respect that
@@ -1190,11 +1192,45 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
 
     def sensor_value(self, sensor_type: str) -> Any:
         """Return a live UMP sensor value from the bridge registry."""
+        if sensor_type in self._live_sensors:
+            return self._live_sensors[sensor_type]
         return (self._registry_device.get("sensors") or {}).get(sensor_type)
 
     def state_value(self, name: str) -> Any:
         """Return a decoded UMP state flag from the bridge registry."""
+        if name in self._live_state:
+            return self._live_state[name]
         return (self._registry_device.get("state") or {}).get(name)
+
+    async def async_load_registry(self) -> None:
+        """Load initial registry values once when the entry starts."""
+        try:
+            self._registry_device = await self.device.get_registry_device()
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("Could not load initial bridge registry values: %s", err)
+
+    @callback
+    def handle_sensor_event(self, sensor_type: str, value: Any, valid: bool) -> None:
+        """Apply an event-driven UMP sensor update."""
+        if valid and value is not None:
+            self._live_sensors[sensor_type] = value
+            self.async_update_listeners()
+
+    @callback
+    def handle_state_event(self, decoded: dict[str, Any]) -> None:
+        """Apply an event-driven UMP state update."""
+        self._live_state.update(decoded)
+        self.async_update_listeners()
+
+    @callback
+    def handle_key_event(self, key: int, action: str) -> None:
+        """Apply an event-driven physical key state."""
+        self._live_keys[int(key)] = action == "pressed"
+        self.async_update_listeners()
+
+    def key_value(self, key: int) -> bool | None:
+        """Return the last known physical key state."""
+        return self._live_keys.get(int(key))
 
     @property
     def device_brightness(self) -> int | None:

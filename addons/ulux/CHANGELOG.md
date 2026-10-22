@@ -1,5 +1,15 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.57
+
+- Fixed one-based page commands and HA `page_index` commands in the Bridge API.
+- Accepted six-byte UMP sensor responses, including ambient Lux responses without an explicit validity byte.
+
+## 0.5.56
+
+- Changed environmental sensor polling to a configurable 60-second fallback.
+- State, motion, proximity, input, and key events remain event-driven.
+
 ## 0.5.55
 
 - Added periodic UMP sensor requests for temperature, humidity, CO2, VOC, IN2, and illuminance.

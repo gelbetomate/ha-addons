@@ -32,6 +32,10 @@ async def async_setup_entry(
         UluxDisplayInputSensor(coordinator, 1),
         UluxDisplayInputSensor(coordinator, 2),
         UluxDisplayErrorSensor(coordinator),
+        UluxDisplayKeySensor(coordinator, 1),
+        UluxDisplayKeySensor(coordinator, 2),
+        UluxDisplayKeySensor(coordinator, 3),
+        UluxDisplayKeySensor(coordinator, 4),
     ])
 
 
@@ -123,3 +127,18 @@ class UluxDisplayErrorSensor(UluxDisplayStateBinarySensor):
 
     def __init__(self, coordinator: UluxDisplayCoordinator) -> None:
         super().__init__(coordinator, "device_error")
+
+
+class UluxDisplayKeySensor(UluxDisplayEntity, BinarySensorEntity):
+    """Event-driven state of one physical u::lux key."""
+
+    _attr_icon = "mdi:gesture-tap-button"
+
+    def __init__(self, coordinator: UluxDisplayCoordinator, key_number: int) -> None:
+        super().__init__(coordinator, f"key_{key_number}")
+        self._key_number = key_number
+        self._attr_name = f"Key {key_number}"
+
+    @property
+    def is_on(self) -> bool | None:
+        return self.coordinator.key_value(self._key_number)

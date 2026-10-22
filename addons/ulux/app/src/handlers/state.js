@@ -32,10 +32,10 @@ const {
 
 const STATE_FLAG_TIME_REQUEST = 1 << 5;  // bit 5
 const STATE_FLAG_INIT_REQUEST = 1 << 6;  // bit 6
-const SENSOR_POLL_INTERVAL_MS = 10000;
+const DEFAULT_SENSOR_POLL_INTERVAL_MS = 60000;
 const sensorPollers = new Map();
 
-function startSensorPolling(senderIp, senderPort, deviceId, frameVersion, udpSend, log) {
+function startSensorPolling(senderIp, senderPort, deviceId, frameVersion, udpSend, log, intervalMs) {
   if (sensorPollers.has(senderIp)) return;
   const poll = () => {
     const telegram = buildTelegramForDevice(
@@ -52,7 +52,7 @@ function startSensorPolling(senderIp, senderPort, deviceId, frameVersion, udpSen
     log.debug(`Requested UMP sensors from ${senderIp}:${senderPort}`);
   };
   poll();
-  sensorPollers.set(senderIp, setInterval(poll, SENSOR_POLL_INTERVAL_MS));
+  sensorPollers.set(senderIp, setInterval(poll, intervalMs));
 }
 
 /**
@@ -99,6 +99,7 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
     ctx.telegram?.frameVersion ?? 0x0232,
     udpSend,
     log,
+    Number(config.sensor_poll_interval_ms) || DEFAULT_SENSOR_POLL_INTERVAL_MS,
   );
 
   log.info(

@@ -81,6 +81,61 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         "ulux_page", async_handle_page_event
     )
 
+    async def async_handle_sensor_event(event) -> None:
+        """Apply a bridge UMP sensor event without waiting for polling."""
+        data = event.data
+        switch_id = str(data.get("switch_id", "")).upper()
+        sensor_type = data.get("sensor_type")
+        if not switch_id or not sensor_type:
+            return
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+                continue
+            coordinator = hass.data[DOMAIN].get(entry.entry_id)
+            if isinstance(coordinator, UluxDisplayCoordinator):
+                coordinator.handle_sensor_event(
+                    str(sensor_type), data.get("value"), bool(data.get("valid"))
+                )
+
+    async def async_handle_state_event(event) -> None:
+        """Apply a bridge UMP state event without waiting for polling."""
+        data = event.data
+        switch_id = str(data.get("switch_id", "")).upper()
+        decoded = data.get("decoded")
+        if not switch_id or not isinstance(decoded, dict):
+            return
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+                continue
+            coordinator = hass.data[DOMAIN].get(entry.entry_id)
+            if isinstance(coordinator, UluxDisplayCoordinator):
+                coordinator.handle_state_event(decoded)
+
+    async def async_handle_key_event(event) -> None:
+        """Apply a physical u::lux key edge immediately."""
+        data = event.data
+        switch_id = str(data.get("switch_id", "")).upper()
+        key = data.get("key")
+        action = data.get("action")
+        if not switch_id or key is None or action not in ("pressed", "released"):
+            return
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+                continue
+            coordinator = hass.data[DOMAIN].get(entry.entry_id)
+            if isinstance(coordinator, UluxDisplayCoordinator):
+                coordinator.handle_key_event(int(key), action)
+
+    hass.data[DOMAIN]["sensor_event_unsub"] = hass.bus.async_listen(
+        "ulux_sensor", async_handle_sensor_event
+    )
+    hass.data[DOMAIN]["state_event_unsub"] = hass.bus.async_listen(
+        "ulux_event", async_handle_state_event
+    )
+    hass.data[DOMAIN]["key_event_unsub"] = hass.bus.async_listen(
+        "ulux_key", async_handle_key_event
+    )
+
     async def async_handle_notify(call):
         device_ids = call.data.get("device_id")
         if not isinstance(device_ids, list):
@@ -183,6 +238,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         options=dict(entry.options),
         config_entry=entry,
     )
+
+    await coordinator.async_load_registry()
 
     _LOGGER.debug("Performing first refresh for switch %s", switch_id)
     await coordinator.async_config_entry_first_refresh()

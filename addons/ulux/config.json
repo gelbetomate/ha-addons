@@ -1,6 +1,6 @@
 {
   "name": "u::Lux UMP Bridge",
-  "version": "0.5.55",
+  "version": "0.5.57",
   "slug": "ulux",
   "description": "UDP bridge for u::Lux Switch IP devices. Receives UMP packets and publishes events to Home Assistant and/or MQTT.",
   "url": "https://github.com/gelbetomate/ha-addons/tree/main/addons/ulux",
@@ -20,6 +20,7 @@
     "audio_control_port": 35004,
     "audio_target_ip": "",
     "audio_jitter_depth": 3,
+    "sensor_poll_interval_ms": 60000,
     "assist_ptt_key": 1,
     "assist_mic_gain": 80,
     "assist_speaker_volume": 70,
@@ -72,6 +73,7 @@
     "audio_control_port": "port?",
     "audio_target_ip": "str?",
     "audio_jitter_depth": "int?",
+    "sensor_poll_interval_ms": "int?",
     "assist_ptt_key": "int?",
     "assist_mic_gain": "int?",
     "assist_speaker_volume": "int?",
