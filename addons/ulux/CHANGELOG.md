@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.58
+
+- Fixed registry identity handling so UMP protocol addresses do not replace the device MAC/switch ID.
+- Discovery MAC data can repair entries that were previously re-keyed to a UMP address.
+
 ## 0.5.57
 
 - Fixed one-based page commands and HA `page_index` commands in the Bridge API.

@@ -46,6 +46,10 @@ function createDiscoveryRegistry(registryStore, log) {
     const existing = (switchId ? store.get(switchId) : null)
       || store.findByIp(observedIp)
       || pendingDiscovery.get(observedIp);
+    const discoveredMac = normaliseSwitchId(ctx.mac_address);
+    const canonicalSwitchId = existing && existing.ip === observedIp
+      ? (discoveredMac || existing.switch_id)
+      : (discoveredMac || switchId);
 
     // The UMP header contains a context ID, not necessarily the Ethernet MAC.
     // Pending discovery remains a preview until the user explicitly imports it.
@@ -83,7 +87,7 @@ function createDiscoveryRegistry(registryStore, log) {
       ? null
       : existing.serial_number;
     const recordData = {
-      switch_id: switchId,
+      switch_id: canonicalSwitchId,
       ip: observedIp || existing.ip || '',
       port: ctx.umpPort || existing.port || 34988,
       discovery_port: ctx.discovery_port || existing.discovery_port || 34984,
@@ -100,7 +104,7 @@ function createDiscoveryRegistry(registryStore, log) {
       mqtt_discovery: ctx.mqtt_discovery ?? existing.mqtt_discovery ?? false,
       last_seen: ctx.last_seen || new Date().toISOString(),
     };
-    const record = existing.switch_id === switchId
+    const record = existing.switch_id === canonicalSwitchId
       ? store.upsert(recordData)
       : store.rekey(existing.switch_id, recordData);
 
