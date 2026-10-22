@@ -276,11 +276,16 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const switchId = decodeURIComponent(umpProbeMatch[1]);
       const target = getSwitchTarget(switchId);
       if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
-      const probe = buildTelegramForDevice(
-        target.ump_device_id,
+      const registryRecord = discoveryRegistry?.getStore?.()?.get?.(switchId);
+      const deviceIds = registryRecord?.ump_device_id == null
+        ? [1, 93, 0x5D]
+        : [target.ump_device_id];
+      const probes = deviceIds.map((deviceId) => buildTelegramForDevice(
+        deviceId,
         target.ump_frame_version,
-        buildInitializationRequest()
-      );
+        buildInitializationRequest(),
+      ));
+      const probe = probes[0];
       const requestedAt = new Date().toISOString();
       discoveryRegistry.updateDiagnosticsBySwitchId(switchId, {
         ump_probe_status: 'pending',
@@ -289,7 +294,9 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
         ump_tx_hex: probe.toString('hex'),
         ump_rx_hex: null,
       });
-      udpSend(target.ip, config.listen_port || 34988, probe);
+      probes.forEach((candidate, index) => {
+        setTimeout(() => udpSend(target.ip, config.listen_port || 34988, candidate), index * 100);
+      });
       setTimeout(() => {
         const current = discoveryRegistry.getStore().get(switchId);
         if (current?.ump_probe_requested_at === requestedAt && current.ump_probe_status === 'pending') {
@@ -299,7 +306,10 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
           });
         }
       }, 3000);
-      log.info(`Sent UMP VideoState probe to ${target.ip}:${config.listen_port || 34988}`);
+      log.info(
+        `Sent UMP initialization probes (device IDs ${deviceIds.join(', ')}) ` +
+        `to ${target.ip}:${config.listen_port || 34988}`,
+      );
       return respond(res, 202, { ok: true, message: 'UMP probe sent' });
     }
 

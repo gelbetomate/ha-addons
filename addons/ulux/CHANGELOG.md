@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.60
+
+- Probe now retries safe initialization requests with device-ID candidates when registry UMP metadata is missing.
+- This repairs devices whose registry entry lost learned UMP parameters without writing actuator values.
+
 ## 0.5.59
 
 - Synchronize DateTime once on the first valid UMP State message during initialization.
