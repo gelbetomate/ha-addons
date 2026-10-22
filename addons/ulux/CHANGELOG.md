@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.59
+
+- Synchronize DateTime once on the first valid UMP State message during initialization.
+- Continue responding to explicit device `TimeRequest` flags.
+
 ## 0.5.58
 
 - Fixed registry identity handling so UMP protocol addresses do not replace the device MAC/switch ID.

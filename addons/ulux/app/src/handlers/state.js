@@ -34,6 +34,7 @@ const STATE_FLAG_TIME_REQUEST = 1 << 5;  // bit 5
 const STATE_FLAG_INIT_REQUEST = 1 << 6;  // bit 6
 const DEFAULT_SENSOR_POLL_INTERVAL_MS = 60000;
 const sensorPollers = new Map();
+const timeSynced = new Set();
 
 function startSensorPolling(senderIp, senderPort, deviceId, frameVersion, udpSend, log, intervalMs) {
   if (sensorPollers.has(senderIp)) return;
@@ -149,7 +150,7 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
     udpSend(senderIp, senderPort, telegram);
   }
 
-  if (timeRequest) {
+  if (timeRequest || !timeSynced.has(senderIp)) {
     const telegram = buildTelegramForDevice(
       ctx.telegram?.deviceId ?? 0x5D,
       ctx.telegram?.frameVersion ?? 0x0232,
@@ -157,6 +158,7 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
     );
     log.info(`Sending DateTime to ${senderIp}:${senderPort}`);
     udpSend(senderIp, senderPort, telegram);
+    timeSynced.add(senderIp);
   }
 }
 

@@ -19,6 +19,9 @@ notes and must not be confused with UMP on UDP `34988`.
 - Active configuration discovery uses UDP `34984` and IPv4 broadcast `255.255.255.255`.
 - Normal UMP traffic uses UDP `34988`.
 - The reference Node.js project uses `0x88AC`, which is decimal `34988`.
+- During initialization the bridge sends a `DateTime` (`0x2F`) message once after
+  the first valid `State` response and again whenever the device sets
+  `TimeRequest`.
 
 ## UMP frame header
 
