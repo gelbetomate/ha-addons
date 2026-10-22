@@ -49,6 +49,7 @@ function createDeviceRecord(data) {
     ump_tx_hex: data.ump_tx_hex || null,
     ump_rx_hex: data.ump_rx_hex || null,
     sensors: data.sensors || {},
+    state: data.state || null,
     current_page: data.current_page ?? null,
     page_count: data.page_count ?? null,
     actor_ids: data.actor_ids || [],

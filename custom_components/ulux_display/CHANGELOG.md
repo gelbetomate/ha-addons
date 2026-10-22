@@ -1,5 +1,12 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.19
+
+- Added UMP sensors for temperature, humidity, CO2, VOC, and illuminance.
+- Added binary sensors for motion, proximity, light state, audio activity, and display activity.
+- Connected the Active control to physical u::lux wake/standby commands.
+- Added bridge-registry state polling for live UMP values.
+
 ## 0.2.18
 
 - Added the newer GeekMagic-compatible themes: watchOS, StandBy, Night, Blueprint, Ink, Aurora, and Brutal.

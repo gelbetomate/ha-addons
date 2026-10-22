@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.54
+
+- Persisted decoded UMP state flags and live sensor readings in the registry for HA consumption.
+- Preserved sensor validity and motion/proximity/display/audio state data across registry updates.
+
 ## 0.5.53
 
 - Learned `ump_device_id` and `ump_frame_version` from valid inbound UMP response headers.

@@ -18,6 +18,7 @@ This Home Assistant integration renders dashboards for u::lux Switch IP devices 
 
 - **Config entries**: One entry per u::lux Switch device
 - **Entities**: Media player, status/storage sensors, brightness and stream controls, and display selection
+- **UMP sensors**: Temperature, humidity, CO2, VOC, illuminance, motion, proximity, audio, and display state
 - **Services**: Render display, cycle views, refresh, navigate
 - **Device linking**: Devices appear in HA Device Registry
 

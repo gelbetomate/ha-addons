@@ -204,6 +204,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._weather_forecasts: dict[str, list[dict[str, Any]]] = {}  # Pre-fetched forecasts
         self._update_preview: bool = True  # Update preview on next refresh
         self._preview_just_updated: bool = False  # True if preview was updated in last refresh
+        self._registry_device: dict[str, Any] = {}
         self._stream_page_active = False
         self._last_stream_sent: float = 0
 
@@ -927,6 +928,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             try:
                 self._device_state = await self.device.get_state()
                 self._space_info = await self.device.get_space()
+                self._registry_device = await self.device.get_registry_device()
 
                 # Sync display mode with device state on first poll
                 # If device is in a built-in theme, respect that
@@ -1178,6 +1180,19 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         return self._device_state
 
     @property
+    def registry_device(self) -> dict[str, Any]:
+        """Return the latest bridge registry record."""
+        return self._registry_device
+
+    def sensor_value(self, sensor_type: str) -> Any:
+        """Return a live UMP sensor value from the bridge registry."""
+        return (self._registry_device.get("sensors") or {}).get(sensor_type)
+
+    def state_value(self, name: str) -> Any:
+        """Return a decoded UMP state flag from the bridge registry."""
+        return (self._registry_device.get("state") or {}).get(name)
+
+    @property
     def device_brightness(self) -> int | None:
         """Get device brightness from /brt.json endpoint."""
         return self._device_brightness
@@ -1252,6 +1267,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         """
         if active:
             self._paused = False
+            await self.device.set_active(True)
             if self._pre_pause_brightness is not None:
                 await self.device.set_brightness(self._pre_pause_brightness)
                 self._device_brightness = self._pre_pause_brightness
@@ -1261,7 +1277,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         else:
             if not self._paused:
                 self._pre_pause_brightness = self._device_brightness
-            await self.device.set_brightness(0)
+            await self.device.set_active(False)
             self._device_brightness = 0
             self._paused = True
             _LOGGER.debug("Display paused (pre-pause brightness: %s)", self._pre_pause_brightness)

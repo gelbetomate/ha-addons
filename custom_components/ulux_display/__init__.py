@@ -31,6 +31,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 HA_DELETE_POLL_INTERVAL = timedelta(seconds=5)
 
 PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
     Platform.IMAGE,
     Platform.MEDIA_PLAYER,
     Platform.NUMBER,

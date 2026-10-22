@@ -28,7 +28,7 @@ const STATE_FLAG_INIT_REQUEST = 1 << 6;  // bit 6
  * @param {object} ctx      - Packet context {senderIp, senderPort, switch, timestamp, ...}
  * @param {object} services - {config, haClient, mqttClient, udpSend, log}
  */
-function handleState(msg, ctx, { config, haClient, mqttClient, udpSend, log }) {
+function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry, udpSend, log }) {
   const { senderIp, senderPort, switch: sw, timestamp } = ctx;
 
   let stateFlags = 0;
@@ -58,6 +58,8 @@ function handleState(msg, ctx, { config, haClient, mqttClient, udpSend, log }) {
     voc_valid:             Boolean(stateFlags & (1 << 28)),
     motion_detector_valid: Boolean(stateFlags & (1 << 29)),
   };
+
+  discoveryRegistry?.updateState?.(senderIp, decodedState, stateFlags);
 
   log.info(
     `ID-State from ${senderIp}:${senderPort} switch="${sw.name}" ` +

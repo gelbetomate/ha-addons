@@ -225,6 +225,16 @@ function createDiscoveryRegistry(registryStore, log) {
     return store.upsert({ ...device, sensors, switch_id: device.switch_id });
   }
 
+  function updateState(ip, decoded, stateFlags) {
+    const device = store.getAll().find((item) => item.ip === ip);
+    if (!device) return null;
+    return store.upsert({
+      ...device,
+      state: { flags: stateFlags, ...decoded, updated_at: new Date().toISOString() },
+      switch_id: device.switch_id,
+    });
+  }
+
   function updateCurrentPage(ip, pageIndex) {
     const device = store.getAll().find((item) => item.ip === ip);
     if (!device) return null;
@@ -275,6 +285,7 @@ function createDiscoveryRegistry(registryStore, log) {
     updateDiagnostics,
     updateDiagnosticsBySwitchId,
     updateSensorReading,
+    updateState,
     updateCurrentPage,
     updatePageCount,
     updateActorIds,

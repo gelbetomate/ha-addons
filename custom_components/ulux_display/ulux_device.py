@@ -120,6 +120,27 @@ class UluxDevice:
         """Stop the bridge video stream for this switch."""
         await self._post_json(f"/api/display/stream/{self.switch_id}/stop", {})
 
+    async def get_registry_device(self) -> dict:
+        """Fetch the bridge registry record for this u::lux."""
+        import aiohttp  # noqa: PLC0415
+
+        session = self._session
+        own_session = session is None
+        if own_session:
+            session = aiohttp.ClientSession()
+        try:
+            async with session.get(
+                f"{self.bridge_url}/api/registry/devices/{self.switch_id}",
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as resp:
+                if resp.status != 200:
+                    return {}
+                payload = await resp.json()
+                return payload.get("device", {}) if isinstance(payload, dict) else {}
+        finally:
+            if own_session:
+                await session.close()
+
     async def test_connection(self) -> bool:
         """Check that the bridge is reachable."""
         import aiohttp  # noqa: PLC0415
@@ -196,8 +217,6 @@ class UluxDevice:
             if own_session:
                 await session.close()
 
-    # ── No-op stubs (features not exposed via bridge API) ────────────────────
-
     async def get_state(self) -> DeviceState | None:
         return None
 
@@ -218,10 +237,32 @@ class UluxDevice:
         pass
 
     async def navigate_next(self) -> None:
-        pass
+        registry = await self.get_registry_device()
+        page_count = int(registry.get("page_count") or 0)
+        current = int(registry.get("current_page") or 0)
+        if page_count:
+            await self.set_page((current + 1) % page_count)
 
     async def navigate_previous(self) -> None:
-        pass
+        registry = await self.get_registry_device()
+        page_count = int(registry.get("page_count") or 0)
+        current = int(registry.get("current_page") or 0)
+        if page_count:
+            await self.set_page((current - 1) % page_count)
+
+    async def set_page(self, page_index: int) -> None:
+        """Set the physical u::lux page through the bridge."""
+        await self._post_json(
+            f"/api/switch/{self.switch_id}/page",
+            {"page_index": max(0, int(page_index))},
+        )
+
+    async def set_active(self, active: bool) -> None:
+        """Wake or put the physical u::lux display into standby."""
+        await self._post_json(
+            f"/api/switch/{self.switch_id}/activate",
+            {"active": active},
+        )
 
     async def detect_model(self) -> None:
         pass

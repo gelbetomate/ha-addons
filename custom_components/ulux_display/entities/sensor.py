@@ -36,6 +36,11 @@ async def async_setup_entry(
         UluxDisplayStatusSensor(coordinator),
         UluxDisplayStorageUsedSensor(coordinator),
         UluxDisplayStorageFreeSensor(coordinator),
+        UluxDisplayTemperatureSensor(coordinator),
+        UluxDisplayHumiditySensor(coordinator),
+        UluxDisplayCO2Sensor(coordinator),
+        UluxDisplayVOCSensor(coordinator),
+        UluxDisplayIlluminanceSensor(coordinator),
     ]
 
     async_add_entities(entities)
@@ -111,3 +116,86 @@ class UluxDisplayStorageFreeSensor(UluxDisplayEntity, SensorEntity):
         if self.coordinator.space_info:
             return round(self.coordinator.space_info.free / 1024, 1)
         return None
+
+
+class UluxDisplayUmpSensor(UluxDisplayEntity, SensorEntity):
+    """Base sensor for a value reported by the UMP bridge."""
+
+    sensor_key = ""
+
+    def __init__(self, coordinator: UluxDisplayCoordinator, suffix: str) -> None:
+        super().__init__(coordinator, suffix)
+
+    @property
+    def native_value(self) -> float | int | None:
+        value = self.coordinator.sensor_value(self.sensor_key)
+        return value if isinstance(value, (int, float)) else None
+
+
+class UluxDisplayTemperatureSensor(UluxDisplayUmpSensor):
+    """Ambient temperature reported by the u::lux."""
+
+    sensor_key = "temperature"
+    _attr_name = "Temperature"
+    _attr_icon = "mdi:thermometer"
+    _attr_native_unit_of_measurement = "°C"
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: UluxDisplayCoordinator) -> None:
+        super().__init__(coordinator, "temperature")
+
+
+class UluxDisplayHumiditySensor(UluxDisplayUmpSensor):
+    """Relative humidity reported by the u::lux."""
+
+    sensor_key = "humidity"
+    _attr_name = "Humidity"
+    _attr_icon = "mdi:water-percent"
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_device_class = SensorDeviceClass.HUMIDITY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: UluxDisplayCoordinator) -> None:
+        super().__init__(coordinator, "humidity")
+
+
+class UluxDisplayCO2Sensor(UluxDisplayUmpSensor):
+    """CO2 concentration reported by the u::lux."""
+
+    sensor_key = "co2"
+    _attr_name = "CO2"
+    _attr_icon = "mdi:molecule-co2"
+    _attr_native_unit_of_measurement = "ppm"
+    _attr_device_class = SensorDeviceClass.CO2
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: UluxDisplayCoordinator) -> None:
+        super().__init__(coordinator, "co2")
+
+
+class UluxDisplayVOCSensor(UluxDisplayUmpSensor):
+    """VOC concentration reported by the u::lux."""
+
+    sensor_key = "voc"
+    _attr_name = "VOC"
+    _attr_icon = "mdi:air-filter"
+    _attr_native_unit_of_measurement = "ppm"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: UluxDisplayCoordinator) -> None:
+        super().__init__(coordinator, "voc")
+
+
+class UluxDisplayIlluminanceSensor(UluxDisplayUmpSensor):
+    """Ambient light level reported by the u::lux."""
+
+    sensor_key = "lux"
+    _attr_name = "Illuminance"
+    _attr_icon = "mdi:brightness-5"
+    _attr_native_unit_of_measurement = "lx"
+    _attr_device_class = SensorDeviceClass.ILLUMINANCE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: UluxDisplayCoordinator) -> None:
+        super().__init__(coordinator, "illuminance")
