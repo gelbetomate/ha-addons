@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.81
+
+- Fixed the Home Assistant WebSocket handshake by sending authentication only after `auth_required`.
+- Supervisor token authentication now follows the official Core WebSocket sequence.
+
 ## 0.5.80
 
 - Fixed Supervisor environment propagation so `SUPERVISOR_TOKEN` reaches the Node bridge process.

@@ -46,9 +46,6 @@ function createHaWebSocket(haConfig, log) {
 
     ws.on('open', () => {
       log.debug('HA WebSocket connection opened, waiting for auth_required');
-      if (haConfig.token) {
-        sendAuth();
-      }
     });
 
     ws.on('message', (data) => {
