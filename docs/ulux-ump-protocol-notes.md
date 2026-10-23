@@ -22,9 +22,34 @@ notes and must not be confused with UMP on UDP `34988`.
 - During initialization the bridge sends a `DateTime` (`0x2F`) message once after
   the first valid `State` response and again whenever the device sets
   `TimeRequest`.
-- The DateTime payload is encoded consistently from local time for seconds,
-  minutes, hour, weekday, day, month, and year; UTC fields must not be mixed
-  into this message.
+- The DateTime payload is encoded consistently as UTC for seconds, minutes,
+  hour, weekday, day, month, and year; the u::lux applies its configured local
+  timezone when displaying the clock.
+- The bridge defaults to the broader verified change-report mask
+  `ControlFlags=0xBF08001F`; it remains configurable per installation.
+
+### Observed u::lux TestCenter control-flag sequence
+
+The u::lux TestCenter was used to toggle the control flags one at a time. The
+captured values include `0x17`, `0x14`, `0x12`, `0x1E`, `0x06`, `0x36`,
+`0x0116`, `0x0216`, `0x4016`, `0x8016`, and higher variants. This confirms that
+the control word enables event/reporting capabilities; it does not create
+sensor hardware that is absent.
+
+For the tested Switch (serial `456`, firmware `V2.26`) the following replies
+were observed:
+
+- Temperature: `23.6 °C`, `Valid=1`.
+- Relative humidity: `46.2 %`, `Valid=1`.
+- CO2: `0`, `Valid=0`.
+- IN2: `0`, `Valid=0`.
+- VOC: `0`, `Valid=0`.
+
+Temperature and humidity therefore come from the add-on/external sensor path
+associated with this Switch. CO2, IN2, and VOC must be exposed as unavailable
+when their validity byte is zero. The Lux response still needs to be captured
+from the lower part of the TestCenter log; the StateFlags indicate that the
+light-sensor capability is present.
 
 ## UMP frame header
 
@@ -152,6 +177,18 @@ The working project confirms this practical order: bind the controller socket to
 UDP `34988`, receive `ID-State`, send `ID-Control` with `ControlFlags=0x16` for
 InitRequest, send `ID-DateTime` for TimeRequest, wait for the dummy/target page
 flow, and request `ID-VideoState` only after the target page is active.
+
+### Audio Parameters
+
+The same capture confirms these stream parameters:
+
+- Local playback: sound index `3`, volume `100`, repeats `5`, repeat delay `2500`.
+- Remote playback (`0x99`): volume `100`, stream flags `0x02`, sequence `3`,
+  `BytesPerFrame=882`, `DelayBetweenFrames=20000`, broadcast IP shown as
+  `255.255.255.255`.
+- Recording (`0x9A`): record flags `0`, microphone ID `1`, sequence `3`,
+  `BytesPerFrame=882`, `DelayBetweenFrames=20000`, target IP shown as
+  `255.255.255.255` and an AMSnetID field.
 
 ### Initialization details from independent implementations
 
@@ -487,7 +524,22 @@ The 16-bit state word exposes both operational states and hardware sensor flags:
 - **RealValue (`0x43`)**: Actor ID at byte offset 3, IEEE 754 32-bit single-precision float.
 - **IdValue (`0x41`)**: Actor ID at byte offset 3, 32-bit signed integer.
 
-#### 5. Video State (`0xA1`)
+#### 5. Initialization and tested V2.32 audio
+
+The TestCenter sends `ID_INIT (0x02)` with `InitFlags=0x0003` and
+`InitCode=0x5AA5` before activation and later control actions. For the tested
+V2.32 switch, the confirmed audio IDs are `0x91` volume, `0x92` stop,
+`0x98` local playback, `0x99` remote playback, and `0x9A` recording.
+
+#### 6. Text Overlay (`0x45`)
+
+The TestCenter capture confirms an outbound `ID_TEXT` message to Actor `1`
+with `TextID=5` and a variable-length text payload (`TEXT ID5_RANDOM70862`).
+The message contains color bytes, text/visibility flags, and a null-terminated
+text string. This matches the bridge `buildTextMessage()` layout and confirms
+that text overlays are a separate UMP actor feature, not part of page rendering.
+
+#### 7. Video State (`0xA1`)
 - State flags: 32-bit LE word at offset 4..7.
 - Bounds: Left (X1, Int16LE), Top (Y1, Int16LE), Right (X2, Int16LE), Bottom (Y2, Int16LE).
 - Total dimensions: `Width = Right - Left`, `Height = Bottom - Top`.
@@ -500,14 +552,15 @@ All outbound telegrams are formatted inside the 16-byte UMP header using `buildT
 
 - `buildPageIndexMessage(pageIndex)`: Sets the current active page (`0x2E`).
 - `buildActivateMessage(active)`: Activates display or puts into standby (`0x2D`).
+- `buildIdInitMessage()`: Sends `InitFlags=0x0003`, `InitCode=0x5AA5` (`0x02`).
 - `buildEditValueMessage(actorId, value)`: Updates an actor's edit value (`0x42`).
 - `buildRealValueMessage(actorId, floatVal)`: Sends a floating point value (`0x43`).
 - `buildLedMessage(led, color, mode)`: Controls the 4 status LEDs (`0x51`).
 - `buildClearLedsMessage()`: Turns off all 4 status LEDs.
-- `buildTextMessage(field, text, color, x, y)`: Renders custom text overlay (`0x61`).
-- `buildAudioPlayLocalMessage(soundId, volume)`: Plays internal chime (`0x96`).
-- `buildAudioStopMessage()`: Stops playback immediately (`0x97`).
-- `buildAudioVolumeMessage(volume)`: Sets master volume 0..100 (`0x98`).
+- `buildTextMessage(actorId, textId, text, color)`: Sends a custom text overlay (`0x45`).
+- `buildAudioPlayLocalMessage(soundId, volume)`: Plays internal chime (`0x98` on V2.32).
+- `buildAudioStopMessage()`: Stops playback immediately (`0x92` on V2.32).
+- `buildAudioVolumeMessage(volume)`: Sets master volume 0..100 (`0x91` on V2.32).
 - `buildVideoStartMessage(actorId, sequenceId)`: Starts video stream session (`0xA2`).
 - `buildVideoStopMessage()`: Stops video streaming session (`0xA4`).
 - Sensor & diagnostic queries: `buildReadTemperatureMessage()`, `buildReadHumidityMessage()`, `buildReadCo2Message()`, `buildReadVocMessage()`, `buildReadIn2Message()`, `buildReadLuxMessage()`, `buildReadPageCountMessage()`, `buildReadPageIndexMessage()`.
@@ -530,14 +583,48 @@ from an external sensor integrated into the u::lux/Loxone setup; they are not
 assumed to be physically measured by the Switch itself. The Lux value is the
 separate ambient-light sensor message (`0x03`) from the Switch.
 
+For `ID_LED (0x44)`, each of the four LED bytes is interpreted as:
+
+```text
+bits 0..2  color code (0..7)
+bits 4..6  blink mode (0..7)
+bit 7      UMP override flag
+```
+
+The TestCenter LED sequence changes the LED byte values, but the color-name
+mapping for codes `0..7` still needs one controlled test per color. The bridge
+exposes the raw byte and decoded fields so that mapping can be completed
+without losing information.
+
+The IR request is `ID_IR (0x81)` with Actor-ID `1`. The bridge sends this
+request during polling and emits any response as `ulux_ir` with raw hexadecimal
+payload until its response layout is confirmed.
+
+The TestCenter key test confirms `ID_EVENT (0x51)` as the physical key-state
+message. For Actor `0x14`, `KeyState=0x01` means the first key is pressed and
+`KeyState=0x00` means it is released. The corresponding `State` frames also
+toggle the display-active bit (`0x23000004` versus `0x23000000`).
+
+The microphone stream is directed, not broadcast by default: the audio control
+message's `TargetIP` and `TargetPort` determine where UDP audio packets are
+sent. For Home Assistant, configure the HA host/add-on address as target and
+UDP port `35000`; the u::lux UMP control messages and key events continue to
+use UDP port `34988`.
+
+The tested V2.32 device is an exception to the generic RealValue description:
+the TestCenter reports four values such as `0.3`, `1.4`, `2.5`, and `3.6`,
+which are encoded as signed 16-bit fixed-point values in tenths. The bridge
+decodes these V2.32 values accordingly.
+
 The Bridge UI accepts human page numbers starting at 1 and converts them to
 the zero-based UMP page index. HA `page_index` requests use the zero-based
 form explicitly.
 
 Key presses are exposed as `ulux_key` edge events and as HA binary sensors
 `Key 1` through `Key 4`. LED output commands are implemented, but the current
-UMP input decoder has no verified inbound LED-status/color message, so LED
-state is not yet reported as a sensor.
+UMP input decoder now handles the confirmed inbound `ID_LED (0x44)` response.
+HA exposes `LED 1` through `LED 4` with color code, blink mode, override,
+active, and raw-byte attributes.
 
 ---
 

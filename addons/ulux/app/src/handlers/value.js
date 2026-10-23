@@ -26,7 +26,7 @@ function handleValue(msg, ctx, { config, haClient, mqttClient, log }) {
     }
   } else if (msg.msgId === MessageIds.RealValue) {
     for (let offset = 4; offset + 2 <= data.length; offset += 2) {
-      realValues.push(data.readInt16LE(offset));
+      realValues.push(data.readInt16LE(offset) / 10);
     }
   } else if (msg.msgId === MessageIds.IdValue) {
     if (data.length >= 6) {

@@ -24,6 +24,7 @@ const {
   buildHumidityRequest,
   buildIdControlMessage,
   buildIN2Request,
+  buildIRRequest,
   buildLuxRequest,
   buildTemperatureRequest,
   buildTelegramForDevice,
@@ -48,6 +49,7 @@ function startSensorPolling(senderIp, senderPort, deviceId, frameVersion, udpSen
       buildIN2Request(),
       buildVOCRequest(),
       buildLuxRequest(),
+      buildIRRequest(),
     );
     udpSend(senderIp, senderPort, telegram);
     log.debug(`Requested UMP sensors from ${senderIp}:${senderPort}`);

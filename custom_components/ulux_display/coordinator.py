@@ -208,6 +208,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._live_sensors: dict[str, Any] = {}
         self._live_state: dict[str, Any] = {}
         self._live_keys: dict[int, bool] = {}
+        self._live_leds: list[dict[str, Any]] = []
         self._stream_page_active = False
         self._last_stream_sent: float = 0
 
@@ -1231,6 +1232,17 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
     def key_value(self, key: int) -> bool | None:
         """Return the last known physical key state."""
         return self._live_keys.get(int(key))
+
+    @callback
+    def handle_led_event(self, leds: list[dict[str, Any]]) -> None:
+        """Apply an event-driven LED status update."""
+        self._live_leds = leds
+        self.async_update_listeners()
+
+    def led_value(self, led: int) -> dict[str, Any] | None:
+        """Return one LED status record."""
+        index = int(led) - 1
+        return self._live_leds[index] if 0 <= index < len(self._live_leds) else None
 
     @property
     def device_brightness(self) -> int | None:

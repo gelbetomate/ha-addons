@@ -126,6 +126,20 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             if isinstance(coordinator, UluxDisplayCoordinator):
                 coordinator.handle_key_event(int(key), action)
 
+    async def async_handle_led_event(event) -> None:
+        """Apply an inbound u::lux LED status event immediately."""
+        data = event.data
+        switch_id = str(data.get("switch_id", "")).upper()
+        leds = data.get("leds")
+        if not switch_id or not isinstance(leds, list):
+            return
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+                continue
+            coordinator = hass.data[DOMAIN].get(entry.entry_id)
+            if isinstance(coordinator, UluxDisplayCoordinator):
+                coordinator.handle_led_event(leds)
+
     hass.data[DOMAIN]["sensor_event_unsub"] = hass.bus.async_listen(
         "ulux_sensor", async_handle_sensor_event
     )
@@ -134,6 +148,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     )
     hass.data[DOMAIN]["key_event_unsub"] = hass.bus.async_listen(
         "ulux_key", async_handle_key_event
+    )
+    hass.data[DOMAIN]["led_event_unsub"] = hass.bus.async_listen(
+        "ulux_led", async_handle_led_event
     )
 
     async def async_handle_notify(call):

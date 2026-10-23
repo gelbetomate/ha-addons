@@ -1,5 +1,30 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.66
+
+- Decoded the confirmed V2.32 `RealValue` fixed-point values in tenths, matching TestCenter values such as `0.3`, `1.4`, `2.5`, and `3.6`.
+
+## 0.5.65
+
+- Added periodic `ID_IR (0x81)` requests and raw `ulux_ir` response events for layout discovery.
+- Documented the confirmed `ID_LED (0x44)` bit conversion for color, blink mode, and override.
+
+## 0.5.64
+
+- Added inbound `ID_LED (0x44)` decoding with color, blink, override, and raw LED values.
+- Published LED status through `ulux_led` and MQTT registry telemetry.
+
+## 0.5.63
+
+- Corrected `ID_INIT` to send `InitFlags=0x0003` and `InitCode=0x5AA5`.
+- Aligned V2.32 audio IDs with the TestCenter capture: volume `0x91`, stop `0x92`, local playback `0x98`.
+- Prepended the confirmed initialization message to page, activation, and audio control commands.
+
+## 0.5.62
+
+- Enabled the broader verified UMP change-report mask `0xBF08001F` by default.
+- Corrected DateTime synchronization to send a consistent UTC protocol timestamp for the u::lux local timezone.
+
 ## 0.5.61
 
 - Fixed UMP DateTime synchronization by encoding all calendar and clock fields from one local-time basis.

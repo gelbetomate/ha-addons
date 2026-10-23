@@ -55,13 +55,23 @@ function buildIdControlMessage(controlFlags = 0) {
   return buf;
 }
 
+/** Build the observed u::lux initialization message (ID-Init, 0x02). */
+function buildIdInitMessage(initFlags = 0x0003, initCode = 0x5AA5) {
+  const buf = Buffer.alloc(8, 0);
+  buf.writeUInt8(0x08, 0);
+  buf.writeUInt8(MessageIds.IdInit, 1);
+  buf.writeUInt16LE(0x0000, 2);
+  buf.writeUInt16LE(initFlags & 0xFFFF, 4);
+  buf.writeUInt16LE(initCode & 0xFFFF, 6);
+  return buf;
+}
+
 /**
  * Build a DateTime message (MessageID=0x2F, 12 bytes).
  *
  * u::lux UMP layout after the actor ID is: second, minute, hour, weekday,
- * day, month, and year (little-endian). All fields must use the same local
- * time basis; mixing local clock fields with UTC calendar fields shifts the
- * device date around timezone and daylight-saving boundaries.
+ * day, month, and year (little-endian). The device interprets this block as
+ * UTC and applies its configured local timezone when displaying the clock.
  *
  * @param {Date} [date=new Date()] - Date/time to encode (defaults to now)
  * @returns {Buffer} 12-byte message buffer
@@ -72,13 +82,13 @@ function buildDateTimeMessage(date) {
   buf.writeUInt8(0x0C, 0);                          // MessageLength
   buf.writeUInt8(MessageIds.DateTime, 1);           // MessageID = 0x2F
   buf.writeUInt16LE(0x0000, 2);                     // ActorID
-  buf.writeUInt8(d.getSeconds(), 4);
-  buf.writeUInt8(d.getMinutes(), 5);
-  buf.writeUInt8(d.getHours(), 6);
-  buf.writeUInt8(d.getDay(), 7);
-  buf.writeUInt8(d.getDate(), 8);
-  buf.writeUInt8(d.getMonth() + 1, 9);
-  buf.writeUInt16LE(d.getFullYear(), 10);
+  buf.writeUInt8(d.getUTCSeconds(), 4);
+  buf.writeUInt8(d.getUTCMinutes(), 5);
+  buf.writeUInt8(d.getUTCHours(), 6);
+  buf.writeUInt8(d.getUTCDay(), 7);
+  buf.writeUInt8(d.getUTCDate(), 8);
+  buf.writeUInt8(d.getUTCMonth() + 1, 9);
+  buf.writeUInt16LE(d.getUTCFullYear(), 10);
   return buf;
 }
 
@@ -494,6 +504,10 @@ function buildLuxRequest() {
   return buildRequestMessage(MessageIds.IdLux);
 }
 
+function buildIRRequest(actorId = 1) {
+  return buildRequestMessage(MessageIds.IdIR, actorId);
+}
+
 function buildInitializationRequest() {
   return Buffer.concat([
     buildRequestMessage(MessageIds.IdState),
@@ -576,6 +590,7 @@ function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, videoData,
 
 module.exports = {
   buildIdControlMessage,
+  buildIdInitMessage,
   buildDateTimeMessage,
   buildVideoStartMessage,
   buildVideoStopMessage,
@@ -601,6 +616,7 @@ module.exports = {
   buildVOCRequest,
   buildIN2Request,
   buildLuxRequest,
+  buildIRRequest,
   buildInitializationRequest,
   buildTelegram,
   buildTelegramForDevice,

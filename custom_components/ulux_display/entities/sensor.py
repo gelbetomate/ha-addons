@@ -41,6 +41,10 @@ async def async_setup_entry(
         UluxDisplayCO2Sensor(coordinator),
         UluxDisplayVOCSensor(coordinator),
         UluxDisplayIlluminanceSensor(coordinator),
+        UluxDisplayLedSensor(coordinator, 1),
+        UluxDisplayLedSensor(coordinator, 2),
+        UluxDisplayLedSensor(coordinator, 3),
+        UluxDisplayLedSensor(coordinator, 4),
     ]
 
     async_add_entities(entities)
@@ -199,3 +203,32 @@ class UluxDisplayIlluminanceSensor(UluxDisplayUmpSensor):
 
     def __init__(self, coordinator: UluxDisplayCoordinator) -> None:
         super().__init__(coordinator, "illuminance")
+
+
+class UluxDisplayLedSensor(UluxDisplayEntity, SensorEntity):
+    """Color/status value of one u::lux LED."""
+
+    _attr_icon = "mdi:led-outline"
+
+    def __init__(self, coordinator: UluxDisplayCoordinator, led_number: int) -> None:
+        super().__init__(coordinator, f"led_{led_number}")
+        self._led_number = led_number
+        self._attr_name = f"LED {led_number}"
+
+    @property
+    def native_value(self) -> str | None:
+        led = self.coordinator.led_value(self._led_number)
+        if not led:
+            return None
+        return f"color_{led.get('color', 0)}"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        led = self.coordinator.led_value(self._led_number) or {}
+        return {
+            "raw": led.get("raw"),
+            "color": led.get("color"),
+            "blink_mode": led.get("blink_mode"),
+            "override": led.get("override"),
+            "active": led.get("active"),
+        }

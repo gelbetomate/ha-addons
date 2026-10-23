@@ -54,6 +54,7 @@ function createDeviceRecord(data) {
     page_count: data.page_count ?? null,
     actor_ids: data.actor_ids || [],
     video_state: data.video_state || null,
+    leds: data.leds || [],
     online_status: 'unknown',
     last_seen: null,
     discovered_at: now,

@@ -8,6 +8,8 @@ const handleSensor = require('./sensor');
 const handlePage = require('./page');
 const handleValue = require('./value');
 const handleVideoState = require('./video');
+const handleLed = require('./led');
+const handleIR = require('./ir');
 
 /**
  * Map UMP message IDs to handler functions.
@@ -32,6 +34,8 @@ const HANDLERS = {
   [MessageIds.EditValue]: handleValue,
   [MessageIds.RealValue]: handleValue,
   [MessageIds.VideoState]: handleVideoState,
+  [MessageIds.IdLed]: handleLed,
+  [MessageIds.IdIR]: handleIR,
 };
 
 /**

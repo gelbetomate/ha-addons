@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.23
+
+- Added event-driven LED 1-4 sensors with color, blink-mode, override, active, and raw attributes.
+
 ## 0.2.22
 
 - Added event-driven `Key 1` through `Key 4` binary sensors.

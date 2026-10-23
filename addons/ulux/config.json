@@ -1,6 +1,6 @@
 {
   "name": "u::Lux UMP Bridge",
-  "version": "0.5.61",
+  "version": "0.5.66",
   "slug": "ulux",
   "description": "UDP bridge for u::Lux Switch IP devices. Receives UMP packets and publishes events to Home Assistant and/or MQTT.",
   "url": "https://github.com/gelbetomate/ha-addons/tree/main/addons/ulux",
@@ -29,7 +29,7 @@
     "wyoming_name": "u::lux Assist Satellite",
     "discovery_port": 34984,
     "discovery_interval_ms": 0,
-    "control_flags": 22,
+    "control_flags": 3204976671,
     "mode": {
       "ha_events": true,
       "ha_device_management": true,
