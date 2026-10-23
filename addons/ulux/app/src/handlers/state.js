@@ -156,7 +156,7 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
     const telegram = buildTelegramForDevice(
       ctx.telegram?.deviceId ?? 0x5D,
       ctx.telegram?.frameVersion ?? 0x0232,
-      buildDateTimeMessage(),
+      buildDateTimeMessage(undefined, config.timezone),
     );
     log.info(`Sending DateTime to ${senderIp}:${senderPort}`);
     udpSend(senderIp, senderPort, telegram);

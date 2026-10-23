@@ -321,11 +321,10 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const target = getSwitchTarget(switchId);
       if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
       const body = await readJsonBody(req).catch(() => ({}));
-      const hasPageIndex = body.page_index !== undefined;
-      const pageIndex = hasPageIndex
-        ? Math.max(0, Number(body.page_index))
-        : Math.max(0, Number(body.page ?? body.page_number ?? 1) - 1);
-      const pageNumber = pageIndex + 1;
+      const pageIndex = Math.max(0, Number(
+        body.page_index ?? body.page ?? body.page_number ?? 0
+      ));
+      const pageNumber = pageIndex;
       const telegram = buildTelegramForDevice(
         target.ump_device_id,
         target.ump_frame_version,

@@ -1,5 +1,24 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.73
+
+- Installed timezone data in the add-on images.
+- Applied the configured `timezone` option to the Node process at startup.
+
+## 0.5.72
+
+- Added explicit `timezone` handling for UMP DateTime synchronization.
+- Default timezone is `Europe/Berlin`, avoiding UTC container offsets in the u::lux clock.
+
+## 0.5.71
+
+- Fixed PageIndex transmission for the V2.32 switch: requested page values are sent directly as captured by the TestCenter.
+
+## 0.5.70
+
+- Fixed the Bridge Chime button to send the confirmed TestCenter payload: sound index `3`, volume `100`, repeats `5`, delay `2500`.
+- Corrected the UI field name from `sound_id` to `sound_index`.
+
 ## 0.5.69
 
 - Fixed control telegram structure to match TestCenter: Page, Activate, and audio messages are sent without embedding `ID_INIT` in the same packet.

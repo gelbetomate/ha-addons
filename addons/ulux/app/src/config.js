@@ -25,6 +25,7 @@ const DEFAULTS = {
   discovery_port: 34984,
   discovery_interval_ms: 0,
   control_flags: 0xBF08001F,
+  timezone: 'Europe/Berlin',
   mode: {
     ha_events: true,
     ha_device_management: true,

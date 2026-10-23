@@ -23,8 +23,10 @@ notes and must not be confused with UMP on UDP `34988`.
   the first valid `State` response and again whenever the device sets
   `TimeRequest`.
 - For the tested V2.32 switch, the DateTime payload uses local seconds,
-  minutes, hour, weekday, day, month, and year. Sending UTC fields makes the
-  displayed clock two hours behind in the user's timezone.
+  minutes, hour, weekday, day, month, and year. The bridge converts the time
+  into the configured `timezone` (default `Europe/Berlin`) before encoding it,
+  and applies the same timezone to the Node process at startup, so the container's
+  UTC default cannot shift the displayed clock or other local-time operations.
 - The bridge defaults to the broader verified change-report mask
   `ControlFlags=0xBF08001F`; it remains configurable per installation.
 

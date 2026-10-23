@@ -16,6 +16,9 @@ const { RegistryStore } = require('./src/registry/store');
 
 async function main() {
   const config = loadConfig();
+  if (config.timezone) {
+    process.env.TZ = config.timezone;
+  }
   const log = makeLogger(config.log_level);
 
   log.info('u::Lux UMP Bridge starting');

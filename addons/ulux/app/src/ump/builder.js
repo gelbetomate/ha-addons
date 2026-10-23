@@ -76,20 +76,42 @@ function buildIdInitMessage(initFlags = 0x0003, initCode = 0x5AA5) {
  * @param {Date} [date=new Date()] - Date/time to encode (defaults to now)
  * @returns {Buffer} 12-byte message buffer
  */
-function buildDateTimeMessage(date) {
+function buildDateTimeMessage(date, timeZone = undefined) {
   const d = date instanceof Date ? date : new Date();
+  const parts = getDateParts(d, timeZone);
   const buf = Buffer.alloc(12, 0);
   buf.writeUInt8(0x0C, 0);                          // MessageLength
   buf.writeUInt8(MessageIds.DateTime, 1);           // MessageID = 0x2F
   buf.writeUInt16LE(0x0000, 2);                     // ActorID
-  buf.writeUInt8(d.getSeconds(), 4);
-  buf.writeUInt8(d.getMinutes(), 5);
-  buf.writeUInt8(d.getHours(), 6);
-  buf.writeUInt8(d.getDay(), 7);
-  buf.writeUInt8(d.getDate(), 8);
-  buf.writeUInt8(d.getMonth() + 1, 9);
-  buf.writeUInt16LE(d.getFullYear(), 10);
+  buf.writeUInt8(parts.second, 4);
+  buf.writeUInt8(parts.minute, 5);
+  buf.writeUInt8(parts.hour, 6);
+  buf.writeUInt8(parts.weekday, 7);
+  buf.writeUInt8(parts.day, 8);
+  buf.writeUInt8(parts.month, 9);
+  buf.writeUInt16LE(parts.year, 10);
   return buf;
+}
+
+function getDateParts(date, timeZone) {
+  if (!timeZone) {
+    return {
+      second: date.getSeconds(), minute: date.getMinutes(), hour: date.getHours(),
+      weekday: date.getDay(), day: date.getDate(), month: date.getMonth() + 1,
+      year: date.getFullYear(),
+    };
+  }
+  const values = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false,
+  }).formatToParts(date).filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+  const weekdays = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    second: Number(values.second), minute: Number(values.minute), hour: Number(values.hour),
+    weekday: weekdays[values.weekday] ?? 0, day: Number(values.day), month: Number(values.month),
+    year: Number(values.year),
+  };
 }
 
 /**
