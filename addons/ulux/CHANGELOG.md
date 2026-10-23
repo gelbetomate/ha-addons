@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.67
+
+- Fixed UMP frame-version parsing/display: wire value `0x0232` is shown as `2.32`, not `2.50`.
+
 ## 0.5.66
 
 - Decoded the confirmed V2.32 `RealValue` fixed-point values in tenths, matching TestCenter values such as `0.3`, `1.4`, `2.5`, and `3.6`.

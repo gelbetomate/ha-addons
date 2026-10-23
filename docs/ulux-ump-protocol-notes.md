@@ -119,6 +119,9 @@ The frame version and device context ID are stored per registered device and
 used when `Probe UMP` builds its TX frame. They are not global protocol values;
 different firmware/design combinations may require different values.
 
+Frame-version minor bytes are hexadecimal in the wire representation: wire
+value `0x0232` is displayed and entered as `2.32`, not decimal `2.50`.
+
 The live capture `docs/newudpmitschnitt.pcapng` confirms the configuration
 software's first exchange for switch ID `0x005D` (decimal 93):
 
