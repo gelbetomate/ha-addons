@@ -285,6 +285,18 @@ function createDiscoveryRegistry(registryStore, log) {
     return store.upsert({ ...device, leds, switch_id: device.switch_id });
   }
 
+  function updateKeys(ip, data) {
+    const device = store.getAll().find((item) => item.ip === ip);
+    if (!device) return null;
+    return store.upsert({ ...device, keys: data, switch_id: device.switch_id });
+  }
+
+  function updateIr(ip, data) {
+    const device = store.getAll().find((item) => item.ip === ip);
+    if (!device) return null;
+    return store.upsert({ ...device, ir: data, switch_id: device.switch_id });
+  }
+
   return {
     upsert,
     list,
@@ -301,6 +313,8 @@ function createDiscoveryRegistry(registryStore, log) {
     updateActorIds,
     updateVideoState,
     updateLeds,
+    updateKeys,
+    updateIr,
     queueDeletion,
     listPendingDeletions,
     clearPendingDeletion,

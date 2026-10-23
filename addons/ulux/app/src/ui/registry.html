@@ -923,6 +923,9 @@
             ${dev.ump_state_flags !== null && dev.ump_state_flags !== undefined ? `<div class="device-info"><strong>State flags:</strong> 0x${Number(dev.ump_state_flags).toString(16).padStart(8, '0')}</div>` : ''}
             ${dev.ump_control_flags !== null && dev.ump_control_flags !== undefined ? `<div class="device-info"><strong>Control flags:</strong> 0x${Number(dev.ump_control_flags).toString(16).padStart(8, '0')}</div>` : ''}
             ${currentPage !== null && currentPage !== undefined ? `<div class="device-info"><strong>Page:</strong> ${currentPage}${pageCount ? ` / ${pageCount}` : ''}</div>` : ''}
+            ${dev.keys ? `<div class="device-info"><strong>Keys:</strong> ${dev.keys.keys_down?.length ? `down ${dev.keys.keys_down.join(', ')}` : 'none'} <span class="timestamp">state 0x${Number(dev.keys.key_state_raw || 0).toString(16).padStart(2, '0')}</span></div>` : ''}
+            ${dev.leds?.length ? `<div class="device-info"><strong>LEDs:</strong> ${dev.leds.map((led, index) => `${index + 1}:c${led.color}/b${led.blink_mode}${led.active ? '' : ' off'}`).join(' · ')}</div>` : ''}
+            ${dev.ir ? `<div class="device-info"><strong>IR:</strong> ${escapeHtml(dev.ir.raw_hex || 'response')}</div>` : ''}
             ${renderSensors(dev.sensors)}
             ${dev.ump_last_seen ? `<div class="timestamp">UMP response: ${new Date(dev.ump_last_seen).toLocaleString()}</div>` : ''}
             <div class="device-info"><strong>UMP probe:</strong> <span class="probe-${(dev.ump_probe_status || 'not-tested').replace(/\s+/g, '-')}" >${escapeHtml(dev.ump_probe_status || 'not tested')}</span></div>
@@ -994,8 +997,8 @@
           body: JSON.stringify({
             sound_index: 1,
             volume: 100,
-            repeats: 5,
-            delay_before_repeat: 2500,
+              repeats: 0,
+              delay_before_repeat: 0,
           }),
         });
         showAlert('Chime sound command sent', 'success');

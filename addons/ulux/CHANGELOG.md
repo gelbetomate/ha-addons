@@ -1,5 +1,14 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.75
+
+- Added visible Bridge device diagnostics for key snapshots, LED values, and IR responses.
+- Changed the Bridge Chime action to play once without repeat delay.
+
+## 0.5.71
+
+- Changed the Bridge Chime button to play once with no repeat delay.
+
 ## 0.5.74
 
 - Matched the V2.32 TestCenter local-audio payload: repeat count does not set `PlayFlags=0x02`.

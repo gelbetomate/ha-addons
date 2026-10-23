@@ -110,6 +110,8 @@ function handleEvent(msg, ctx, { config, haClient, mqttClient, assistSession, lo
     timestamp,
   };
 
+  discoveryRegistry?.updateKeys?.(senderIp, snapshotPayload);
+
   if (haClient && config.mode.ha_events) {
     haClient.fireEvent('ulux_event', snapshotPayload).catch((err) =>
       log.error('Failed to fire HA event ulux_event (key):', err.message)
