@@ -76,7 +76,7 @@ function keysDown(keyState) {
  * @param {object} ctx      - Packet context {senderIp, senderPort, switch, timestamp, ...}
  * @param {object} services - {config, haClient, mqttClient, udpSend, log}
  */
-function handleEvent(msg, ctx, { config, haClient, mqttClient, assistSession, log }) {
+function handleEvent(msg, ctx, { config, haClient, mqttClient, assistSession, discoveryRegistry, log }) {
   const { senderIp, senderPort, switch: sw, timestamp } = ctx;
 
   // KeyState is at offset 4 of the raw message data

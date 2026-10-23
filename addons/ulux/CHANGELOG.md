@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.77
+
+- Fixed key-event handling by passing the discovery registry into the key handler.
+- Key snapshots can now be persisted and shown on the Bridge device page without a runtime error.
+
 ## 0.5.76
 
 - Fixed add-on metadata by removing an accidental nested `schema.version` field that could prevent Supervisor recognition.
