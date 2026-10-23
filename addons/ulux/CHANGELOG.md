@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.79
+
+- Stopped using `SUPERVISOR_TOKEN` as a Home Assistant Core WebSocket token.
+- Added explicit guidance for `ha.token` Long-Lived Access Tokens and MQTT fallback.
+
 ## 0.5.78
 
 - Added proactive Home Assistant WebSocket authentication when the Supervisor token is available.
