@@ -22,6 +22,9 @@ notes and must not be confused with UMP on UDP `34988`.
 - During initialization the bridge sends a `DateTime` (`0x2F`) message once after
   the first valid `State` response and again whenever the device sets
   `TimeRequest`.
+- The DateTime payload is encoded consistently from local time for seconds,
+  minutes, hour, weekday, day, month, and year; UTC fields must not be mixed
+  into this message.
 
 ## UMP frame header
 

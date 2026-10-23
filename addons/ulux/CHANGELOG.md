@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.61
+
+- Fixed UMP DateTime synchronization by encoding all calendar and clock fields from one local-time basis.
+
 ## 0.5.60
 
 - Probe now retries safe initialization requests with device-ID candidates when registry UMP metadata is missing.

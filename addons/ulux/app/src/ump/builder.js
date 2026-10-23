@@ -58,15 +58,10 @@ function buildIdControlMessage(controlFlags = 0) {
 /**
  * Build a DateTime message (MessageID=0x2F, 12 bytes).
  *
- * Payload layout (offsets relative to message start):
- *   Bytes 2-3  : ActorID (0x0000)
- *   Bytes 4-5  : Year (UInt16LE)
- *   Byte  6    : Month (1–12)
- *   Byte  7    : Day   (1–31)
- *   Byte  8    : Hour  (0–23)
- *   Byte  9    : Minute (0–59)
- *   Byte  10   : Second (0–59)
- *   Byte  11   : DayOfWeek (1=Monday … 7=Sunday, ISO 8601)
+ * u::lux UMP layout after the actor ID is: second, minute, hour, weekday,
+ * day, month, and year (little-endian). All fields must use the same local
+ * time basis; mixing local clock fields with UTC calendar fields shifts the
+ * device date around timezone and daylight-saving boundaries.
  *
  * @param {Date} [date=new Date()] - Date/time to encode (defaults to now)
  * @returns {Buffer} 12-byte message buffer
@@ -80,10 +75,10 @@ function buildDateTimeMessage(date) {
   buf.writeUInt8(d.getSeconds(), 4);
   buf.writeUInt8(d.getMinutes(), 5);
   buf.writeUInt8(d.getHours(), 6);
-  buf.writeUInt8(d.getUTCDay(), 7);
-  buf.writeUInt8(d.getUTCDate(), 8);
-  buf.writeUInt8(d.getUTCMonth() + 1, 9);
-  buf.writeUInt16LE(d.getUTCFullYear(), 10);
+  buf.writeUInt8(d.getDay(), 7);
+  buf.writeUInt8(d.getDate(), 8);
+  buf.writeUInt8(d.getMonth() + 1, 9);
+  buf.writeUInt16LE(d.getFullYear(), 10);
   return buf;
 }
 
