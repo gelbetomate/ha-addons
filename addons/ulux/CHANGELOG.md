@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.82
+
+- Added a Home Assistant Core REST event fallback through the Supervisor proxy when WebSocket authentication is unavailable.
+- Sensor, key, page, state, LED, and IR events can now reach HA without depending exclusively on the Core WebSocket session.
+
 ## 0.5.81
 
 - Fixed the Home Assistant WebSocket handshake by sending authentication only after `auth_required`.

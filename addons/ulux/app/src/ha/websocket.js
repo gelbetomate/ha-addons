@@ -124,11 +124,35 @@ function createHaWebSocket(haConfig, log) {
    * @returns {Promise<object>} Resolves with the HA result
    */
   function fireEvent(eventType, eventData) {
+    if (!authenticated) {
+      return fireEventRest(eventType, eventData);
+    }
     return sendCommand({
       type: 'fire_event',
       event_type: eventType,
       event_data: eventData,
     });
+  }
+
+  async function fireEventRest(eventType, eventData) {
+    if (!haConfig.token) {
+      throw new Error('No Home Assistant token available for REST event fallback');
+    }
+    const response = await fetch(
+      `http://supervisor/core/api/events/${encodeURIComponent(eventType)}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${haConfig.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`HA REST event failed: HTTP ${response.status}`);
+    }
+    return { success: true, transport: 'rest' };
   }
 
   function deleteConfigEntry(entryId) {
