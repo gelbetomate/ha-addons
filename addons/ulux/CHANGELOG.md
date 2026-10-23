@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.76
+
+- Fixed add-on metadata by removing an accidental nested `schema.version` field that could prevent Supervisor recognition.
+
 ## 0.5.75
 
 - Added visible Bridge device diagnostics for key snapshots, LED values, and IR responses.

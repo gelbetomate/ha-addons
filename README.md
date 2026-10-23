@@ -1,5 +1,9 @@
 # u::lux Integration Repository
 
+The HACS integration is located at `custom_components/ulux_display`. The
+repository default branch remains visible for HACS development installs; the
+Supervisor add-on is maintained separately under `addons/ulux`.
+
 This repository provides the **u::lux Display** HACS integration and the **u::Lux UMP Bridge** Supervisor add-on for Home Assistant.
 
 ***This project is work in progress and built for real-world personal use first. Please test carefully in your own environment.***
