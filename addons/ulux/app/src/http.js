@@ -329,7 +329,6 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const telegram = buildTelegramForDevice(
         target.ump_device_id,
         target.ump_frame_version,
-        buildIdInitMessage(),
         buildPageIndexMessage(pageIndex)
       );
       udpSend(target.ip, target.port || 34988, telegram);
@@ -348,7 +347,6 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const telegram = buildTelegramForDevice(
         target.ump_device_id,
         target.ump_frame_version,
-        buildIdInitMessage(),
         buildActivateMessage({ activate: active, deactivate: !active })
       );
       udpSend(target.ip, target.port || 34988, telegram);
@@ -452,7 +450,6 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const telegram = buildTelegramForDevice(
         target.ump_device_id,
         target.ump_frame_version,
-        buildIdInitMessage(),
         buildAudioPlayLocalMessage({
           soundIndex: Number(body.sound_index ?? 1),
           volume: Number(body.volume ?? 100),
@@ -478,7 +475,6 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const telegram = buildTelegramForDevice(
         target.ump_device_id,
         target.ump_frame_version,
-        buildIdInitMessage(),
         buildAudioStopMessage({
           stopNormal: body.stop_normal !== false,
           stopAlarm: Boolean(body.stop_alarm),
@@ -500,7 +496,6 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const telegram = buildTelegramForDevice(
         target.ump_device_id,
         target.ump_frame_version,
-        buildIdInitMessage(),
         buildAudioVolumeMessage(volume)
       );
       udpSend(target.ip, target.port || 34988, telegram);

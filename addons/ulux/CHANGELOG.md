@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.69
+
+- Fixed control telegram structure to match TestCenter: Page, Activate, and audio messages are sent without embedding `ID_INIT` in the same packet.
+- Preserved the observed six-/16-byte control packet lengths for V2.32 devices.
+
 ## 0.5.68
 
 - Corrected V2.32 DateTime synchronization to send local clock fields.

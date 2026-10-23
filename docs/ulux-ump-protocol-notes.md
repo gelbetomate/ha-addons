@@ -534,6 +534,10 @@ The TestCenter sends `ID_INIT (0x02)` with `InitFlags=0x0003` and
 V2.32 switch, the confirmed audio IDs are `0x91` volume, `0x92` stop,
 `0x98` local playback, `0x99` remote playback, and `0x9A` recording.
 
+`ID_INIT` is a separate UMP telegram. It must not be concatenated into the
+same telegram as `ID_ACTIVATE`, `ID_PAGEINDEX`, or audio messages; the
+TestCenter uses separate six-/16-byte control packets for those commands.
+
 #### 6. Text Overlay (`0x45`)
 
 The TestCenter capture confirms an outbound `ID_TEXT` message to Actor `1`
