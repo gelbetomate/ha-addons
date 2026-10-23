@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.74
+
+- Matched the V2.32 TestCenter local-audio payload: repeat count does not set `PlayFlags=0x02`.
+- Bridge Chime now uses confirmed SoundIndex `1`, volume `100`, repeats `5`, and delay `2500`.
+
 ## 0.5.73
 
 - Installed timezone data in the add-on images.

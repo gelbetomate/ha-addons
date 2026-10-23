@@ -418,7 +418,6 @@ function buildAudioPlayLocalMessage({
   buf.writeUInt8(equalizer & 0x07, 5);
   let playFlags = 0;
   if (alarm) playFlags |= 0x01;
-  if (repeats > 0) playFlags |= 0x02;
   buf.writeUInt16LE(playFlags, 6);
   buf.writeUInt16LE(incVolumeTime & 0xFFFF, 8);
   buf.writeUInt16LE(repeats & 0xFFFF, 10);
