@@ -28,9 +28,11 @@ function createHaWebSocket(haConfig, log) {
   let lastError = null;
   let reconnectTimer = null;
   let stopped = false;
+  let authSent = false;
 
   function connect() {
     if (stopped) return;
+    authSent = false;
 
     log.info(`Connecting to HA WebSocket: ${haConfig.ws_url}`);
 
@@ -44,6 +46,9 @@ function createHaWebSocket(haConfig, log) {
 
     ws.on('open', () => {
       log.debug('HA WebSocket connection opened, waiting for auth_required');
+      if (haConfig.token) {
+        sendAuth();
+      }
     });
 
     ws.on('message', (data) => {
@@ -59,6 +64,7 @@ function createHaWebSocket(haConfig, log) {
 
     ws.on('close', (code) => {
       authenticated = false;
+      authSent = false;
       lastError = `WebSocket closed (code ${code})`;
       log.warning(`HA WebSocket closed (code ${code})`);
       scheduleReconnect();
@@ -75,7 +81,7 @@ function createHaWebSocket(haConfig, log) {
     switch (msg.type) {
       case 'auth_required':
         log.debug('HA WS: auth_required — sending token');
-        send({ type: 'auth', access_token: haConfig.token });
+        sendAuth();
         break;
 
       case 'auth_ok':
@@ -106,6 +112,12 @@ function createHaWebSocket(haConfig, log) {
       default:
         log.debug(`HA WS message type "${msg.type}" (ignored)`);
     }
+  }
+
+  function sendAuth() {
+    if (authSent || !haConfig.token) return;
+    authSent = true;
+    send({ type: 'auth', access_token: haConfig.token });
   }
 
   /**

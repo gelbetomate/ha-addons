@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.78
+
+- Added proactive Home Assistant WebSocket authentication when the Supervisor token is available.
+- Reset authentication state correctly across reconnects.
+
 ## 0.5.77
 
 - Fixed key-event handling by passing the discovery registry into the key handler.

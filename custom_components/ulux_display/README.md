@@ -57,15 +57,29 @@ See the [integration changelog](CHANGELOG.md) for version history.
 3. Find **u::lux Display** and install it
 4. **Restart Home Assistant**
 
-### Step 2: Add Integration
+### Step 2: Prepare the bridge
 
-1. Go to **Settings → Devices & Services → Create Automation**
-2. Search for **u::lux Display**
-3. Choose setup method:
+1. Confirm that the **u::Lux UMP Bridge** add-on is running.
+2. Enable `mode.ha_events: true` in the add-on configuration.
+3. Confirm the bridge log contains `HA WebSocket authenticated successfully`.
+4. Run **Discovery → Scan now** in the bridge UI and import the switch into **Registered Devices**.
+
+### Step 3: Add Integration
+
+1. Go to **Settings → Devices & Services → Add Integration**.
+2. Search for **u::lux Display**.
+3. Enter the bridge URL, normally `http://localhost:8099` or `http://<home-assistant-ip>:8099`.
+4. Choose setup method:
    - **Discover**: Lists devices from bridge registry (recommended)
    - **Manual**: Enter switch MAC and IP manually
-4. Select device and configure optional name
-5. Finish setup
+5. Select the device and configure its name.
+6. Finish setup and reload Home Assistant if new entities do not appear.
+
+### Step 4: Verify live data
+
+The integration creates sensors, binary sensors, buttons, numbers, display
+selection, and a media player. UMP events are consumed immediately when the
+bridge publishes `ulux_sensor`, `ulux_event`, `ulux_key`, and `ulux_led`.
 
 ---
 

@@ -1,12 +1,80 @@
-For direct Home Assistant Assist integration, configure the Wyoming Protocol
-integration to connect to the add-on on TCP port `10700`. Set
-`wyoming_switch_id` when more than one switch is registered. The endpoint
-advertises one microphone and one speaker using 16 kHz, 16-bit, mono PCM.
 # u::Lux UMP Bridge Add-on
 
 The bridge add-on handles transport, device discovery observation, persistent registry management, and provides both HTTP and MQTT APIs for device management.
 
 ---
+
+## Installation
+
+### Voraussetzungen
+
+- Home Assistant OS oder Home Assistant Supervised mit Supervisor-Zugriff.
+- Ein u::lux Switch IP im selben lokalen Netzwerk.
+- UDP `34984` (Discovery), `34988` (UMP), `35000` (Audio) und `35004` (Audio-Control) erreichbar.
+
+### Add-on installieren
+
+1. **Einstellungen → Add-ons → Add-on Store** öffnen.
+2. Drei-Punkte-Menü → **Repositories** auswählen.
+3. Dieses Repository hinzufügen:
+
+   ```text
+   https://github.com/gelbetomate/ha-addons
+   ```
+
+4. **u::Lux UMP Bridge** installieren.
+5. Add-on starten und **Beim Start starten** aktivieren.
+6. Über **Open Web UI** die Bridge-Oberfläche öffnen.
+
+### Empfohlene Erstkonfiguration
+
+```yaml
+switches: []
+listen_host: 0.0.0.0
+listen_port: 34988
+audio_host: 0.0.0.0
+audio_port: 35000
+audio_control_port: 35004
+sensor_poll_interval_ms: 60000
+control_flags: 3204976671
+timezone: Europe/Berlin
+mode:
+  ha_events: true
+  ha_device_management: true
+  mqtt: false
+  mqtt_discovery: false
+ha:
+  ws_url: ws://supervisor/core/websocket
+  token: ""
+wyoming_port: 10700
+wyoming_switch_id: ""
+wyoming_name: u::lux Assist Satellite
+api_port: 8099
+log_level: info
+```
+
+Im Supervisor-Betrieb wird `ha.token` normalerweise über `SUPERVISOR_TOKEN`
+bereitgestellt. Falls im Log `No HA token found` erscheint, muss ein
+Long-Lived Access Token aus **Benutzerprofil → Sicherheit** privat in der
+Add-on-Konfiguration eingetragen werden. Tokens niemals committen.
+
+### Erstprüfung
+
+1. Im Add-on-Log `HA WebSocket authenticated successfully` prüfen.
+2. In der Bridge-UI **Discovery → Scan now** ausführen.
+3. Das Gerät in **Registered Devices** importieren.
+4. **Probe** ausführen und Frame-Version, UMP Device ID und PageCount prüfen.
+5. Eine Taste drücken und die Registry-/HA-Ereignisse kontrollieren.
+
+Die Bridge-UI dient hauptsächlich Einrichtung und Diagnose. Live-Zustände
+werden in Home Assistant über `ulux_sensor`, `ulux_event`, `ulux_key` und
+`ulux_led` verarbeitet.
+
+### Wyoming Assist (optional)
+
+Die Bridge stellt Wyoming auf TCP-Port `10700` bereit. In Home Assistant über
+**Einstellungen → Geräte & Dienste → Integration hinzufügen → Wyoming Protocol**
+verbinden. Bei mehreren Geräten `wyoming_switch_id` setzen.
 
 ## What It Does
 
