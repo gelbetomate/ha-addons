@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.24
+
+- Applied first-packet key snapshots so the initial physical key press is visible in HA.
+- Matched bridge events by MAC switch ID or configured IP.
+
 ## 0.2.23
 
 - Added event-driven LED 1-4 sensors with color, blink-mode, override, active, and raw attributes.

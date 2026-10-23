@@ -63,6 +63,15 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         hass, async_poll_pending_deletions, HA_DELETE_POLL_INTERVAL
     )
 
+    def event_matches_entry(entry, event_data: dict) -> bool:
+        """Match bridge events by stable switch ID or fallback device IP."""
+        switch_id = str(event_data.get("switch_id", "")).upper()
+        event_ip = str(event_data.get("ip", ""))
+        return (
+            switch_id == str(entry.data.get(CONF_SWITCH_ID, "")).upper()
+            or (event_ip and event_ip == str(entry.data.get(CONF_HOST, "")))
+        )
+
     async def async_handle_page_event(event) -> None:
         """Activate page-bound streaming when the bridge reports a page change."""
         event_data = event.data
@@ -71,7 +80,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         if not switch_id or page_number is None:
             return
         for entry in hass.config_entries.async_entries(DOMAIN):
-            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+            if not event_matches_entry(entry, event_data):
                 continue
             coordinator = hass.data[DOMAIN].get(entry.entry_id)
             if isinstance(coordinator, UluxDisplayCoordinator):
@@ -89,7 +98,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         if not switch_id or not sensor_type:
             return
         for entry in hass.config_entries.async_entries(DOMAIN):
-            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+            if not event_matches_entry(entry, data):
                 continue
             coordinator = hass.data[DOMAIN].get(entry.entry_id)
             if isinstance(coordinator, UluxDisplayCoordinator):
@@ -105,11 +114,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         if not switch_id or not isinstance(decoded, dict):
             return
         for entry in hass.config_entries.async_entries(DOMAIN):
-            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+            if not event_matches_entry(entry, data):
                 continue
             coordinator = hass.data[DOMAIN].get(entry.entry_id)
             if isinstance(coordinator, UluxDisplayCoordinator):
                 coordinator.handle_state_event(decoded)
+                if data.get("key_state_raw") is not None:
+                    coordinator.handle_key_snapshot(int(data["key_state_raw"]))
 
     async def async_handle_key_event(event) -> None:
         """Apply a physical u::lux key edge immediately."""
@@ -120,7 +131,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         if not switch_id or key is None or action not in ("pressed", "released"):
             return
         for entry in hass.config_entries.async_entries(DOMAIN):
-            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+            if not event_matches_entry(entry, data):
                 continue
             coordinator = hass.data[DOMAIN].get(entry.entry_id)
             if isinstance(coordinator, UluxDisplayCoordinator):
@@ -134,7 +145,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         if not switch_id or not isinstance(leds, list):
             return
         for entry in hass.config_entries.async_entries(DOMAIN):
-            if str(entry.data.get(CONF_SWITCH_ID, "")).upper() != switch_id:
+            if not event_matches_entry(entry, data):
                 continue
             coordinator = hass.data[DOMAIN].get(entry.entry_id)
             if isinstance(coordinator, UluxDisplayCoordinator):

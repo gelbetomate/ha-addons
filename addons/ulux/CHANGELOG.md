@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.68
+
+- Corrected V2.32 DateTime synchronization to send local clock fields.
+- Kept UMP event routing functional when a registry entry has stale identity metadata.
+
 ## 0.5.67
 
 - Fixed UMP frame-version parsing/display: wire value `0x0232` is shown as `2.32`, not `2.50`.

@@ -22,9 +22,9 @@ notes and must not be confused with UMP on UDP `34988`.
 - During initialization the bridge sends a `DateTime` (`0x2F`) message once after
   the first valid `State` response and again whenever the device sets
   `TimeRequest`.
-- The DateTime payload is encoded consistently as UTC for seconds, minutes,
-  hour, weekday, day, month, and year; the u::lux applies its configured local
-  timezone when displaying the clock.
+- For the tested V2.32 switch, the DateTime payload uses local seconds,
+  minutes, hour, weekday, day, month, and year. Sending UTC fields makes the
+  displayed clock two hours behind in the user's timezone.
 - The bridge defaults to the broader verified change-report mask
   `ControlFlags=0xBF08001F`; it remains configurable per installation.
 

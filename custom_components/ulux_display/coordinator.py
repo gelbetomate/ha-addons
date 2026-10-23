@@ -1229,6 +1229,13 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._live_keys[int(key)] = action == "pressed"
         self.async_update_listeners()
 
+    @callback
+    def handle_key_snapshot(self, key_state: int) -> None:
+        """Apply the complete key bitfield from an ID-Event snapshot."""
+        for key in range(1, 5):
+            self._live_keys[key] = bool(key_state & (1 << (key - 1)))
+        self.async_update_listeners()
+
     def key_value(self, key: int) -> bool | None:
         """Return the last known physical key state."""
         return self._live_keys.get(int(key))
