@@ -53,11 +53,11 @@ api_port: 8099
 log_level: info
 ```
 
-`SUPERVISOR_TOKEN` authentifiziert Supervisor-APIs, aber nicht die
-Home-Assistant-Core-WebSocket-API. Für `mode.ha_events: true` muss ein
-Long-Lived Access Token aus **Benutzerprofil → Sicherheit** privat als
-`ha.token` eingetragen werden. Tokens niemals committen. MQTT kann zusätzlich
-aktiviert werden, ersetzt aber nicht die HA-Core-WebSocket-Verbindung.
+Im Supervisor-Betrieb wird `SUPERVISOR_TOKEN` automatisch in den Node-Prozess
+übernommen und für den Home-Assistant-Core-WebSocket-Proxy verwendet. Ein
+manueller Long-Lived Access Token ist nur außerhalb des Supervisor-Kontexts
+nötig. Tokens niemals committen. MQTT kann zusätzlich aktiviert werden, ersetzt
+aber nicht die HA-Core-WebSocket-Verbindung.
 
 ### Erstprüfung
 
@@ -212,9 +212,8 @@ The bridge is configured via `options.json` in Supervisor. Key options:
 
 ### Key Settings
 
-- **`ha.token`**: Long-Lived Access Token for Home Assistant Core WebSocket events
-  - Required when `mode.ha_events` or `mode.ha_device_management` is enabled
-  - Do not use `SUPERVISOR_TOKEN` here; it is not a Core WebSocket token
+- **`ha.token`**: Optional explicit Core token; Supervisor uses `SUPERVISOR_TOKEN` automatically
+  - Required only outside the normal Supervisor environment
 
 - **`switches`**: Pre-configured switches (optional)
   - Used for backwards compatibility

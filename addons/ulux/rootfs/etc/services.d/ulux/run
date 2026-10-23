@@ -1,4 +1,4 @@
-#!/bin/ash
+#!/command/with-contenv ash
 set -e
 
 cd /app

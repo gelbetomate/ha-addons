@@ -74,11 +74,15 @@ function loadConfig() {
 
   const config = deepMerge(DEFAULTS, options);
 
-  // SUPERVISOR_TOKEN authenticates Supervisor APIs, not Home Assistant Core's
-  // WebSocket API. Core WebSocket events need an explicit long-lived token.
+  // Supervisor provides SUPERVISOR_TOKEN for Supervisor APIs and the
+  // Home Assistant Core proxy when homeassistant_api is enabled.
   if (!config.ha.token) {
-    console.warn('No Home Assistant Core token configured in ha.token. ' +
-      'HA events/device management disabled; use a long-lived token or MQTT.');
+    config.ha.token = process.env.SUPERVISOR_TOKEN || '';
+  }
+
+  if (!config.ha.token) {
+    console.warn('No Home Assistant token found via ha.token or SUPERVISOR_TOKEN. ' +
+      'HA events/device management disabled.');
     config.mode.ha_events = false;
     config.mode.ha_device_management = false;
   }

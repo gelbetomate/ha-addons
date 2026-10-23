@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.80
+
+- Fixed Supervisor environment propagation so `SUPERVISOR_TOKEN` reaches the Node bridge process.
+- Restored the official Supervisor token fallback for Home Assistant Core WebSocket events.
+
 ## 0.5.79
 
 - Stopped using `SUPERVISOR_TOKEN` as a Home Assistant Core WebSocket token.
