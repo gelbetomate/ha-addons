@@ -111,16 +111,17 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         data = event.data
         switch_id = str(data.get("switch_id", "")).upper()
         decoded = data.get("decoded")
-        if not switch_id or not isinstance(decoded, dict):
+        if not switch_id:
             return
         for entry in hass.config_entries.async_entries(DOMAIN):
             if not event_matches_entry(entry, data):
                 continue
             coordinator = hass.data[DOMAIN].get(entry.entry_id)
             if isinstance(coordinator, UluxDisplayCoordinator):
-                coordinator.handle_state_event(decoded)
                 if data.get("key_state_raw") is not None:
                     coordinator.handle_key_snapshot(int(data["key_state_raw"]))
+                if isinstance(decoded, dict):
+                    coordinator.handle_state_event(decoded)
 
     async def async_handle_key_event(event) -> None:
         """Apply a physical u::lux key edge immediately."""

@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.25
+
+- Fixed `ulux_event` key snapshots being discarded before updating HA Key 1-4 sensors.
+
 ## 0.2.24
 
 - Applied first-packet key snapshots so the initial physical key press is visible in HA.
