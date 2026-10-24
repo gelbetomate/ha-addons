@@ -1,5 +1,17 @@
 'use strict';
 
+const LED_COLORS = ['off', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'];
+const LED_BLINK_MODES = [
+  'permanent',
+  'slow',
+  'medium',
+  'fast',
+  'asymmetric_1_2s_on_1_4s_off',
+  'asymmetric_1_2s_on_4s_off',
+  'asymmetric_1_2s_on_16s_off',
+  'asymmetric_1_2s_on_32s_off',
+];
+
 /** Handle inbound ID-LED (0x44) status messages. */
 function handleLed(msg, ctx, { config, haClient, mqttClient, discoveryRegistry, log }) {
   const { senderIp, switch: sw, timestamp } = ctx;
@@ -10,7 +22,10 @@ function handleLed(msg, ctx, { config, haClient, mqttClient, discoveryRegistry, 
     return {
       raw,
       color: raw & 0x07,
+      color_name: LED_COLORS[raw & 0x07],
       blink_mode: (raw >> 4) & 0x07,
+      blink_value: raw & 0x70,
+      blink_mode_name: LED_BLINK_MODES[(raw >> 4) & 0x07],
       override: Boolean(raw & 0x80),
       active: (raw & 0x07) !== 0,
     };

@@ -1,5 +1,11 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.26
+
+- Added Home Assistant services for local sound, volume, page, active state, LEDs, and text overlays.
+- Added the confirmed LED color/blink encoding to the service surface.
+- Documented `ulux_key_action` events for `hit`, `make`, and `break` with press duration.
+
 ## 0.2.25
 
 - Fixed `ulux_event` key snapshots being discarded before updating HA Key 1-4 sensors.

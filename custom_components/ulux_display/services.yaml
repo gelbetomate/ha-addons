@@ -112,3 +112,151 @@ configure_audio:
           min: 0
           max: 100
           mode: slider
+
+play_sound:
+  name: Play local sound
+  description: Play a sound stored in the u::lux switch.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+    sound_index:
+      name: Sound index
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 65535
+          mode: box
+    volume:
+      name: Volume
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: slider
+
+set_volume:
+  name: Set u::lux volume
+  description: Set the master volume on the u::lux switch.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+    volume:
+      name: Volume
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: slider
+
+set_page:
+  name: Set u::lux page
+  description: Select a physical page on the u::lux switch.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+    page_index:
+      name: Page index
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+
+set_active:
+  name: Set display active
+  description: Wake the display or put it into standby.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+    active:
+      name: Active
+      required: true
+      selector:
+        boolean:
+
+set_led:
+  name: Set u::lux LEDs
+  description: Set up to four switch LEDs. Values use color 0-7, blink mode 0-7, and override true.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+    actor_id:
+      name: Actor ID
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    leds:
+      name: LEDs
+      description: JSON list, for example [{"color":1,"blinkMode":0,"override":true}].
+      required: true
+      selector:
+        text:
+
+set_text:
+  name: Set u::lux text
+  description: Set or remove a text overlay on the display.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+    actor_id:
+      name: Actor ID
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    text_id:
+      name: Text ID
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+    text:
+      name: Text
+      required: false
+      selector:
+        text:
+    visible:
+      name: Visible
+      default: true
+      selector:
+        boolean:
+    remove:
+      name: Remove
+      default: false
+      selector:
+        boolean:

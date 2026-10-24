@@ -264,6 +264,36 @@ class UluxDevice:
             {"active": active},
         )
 
+    async def set_leds(self, actor_id: int, leds: list[dict]) -> None:
+        """Set the four switch LED values using the confirmed UMP encoding."""
+        await self._post_json(
+            f"/api/switch/{self.switch_id}/led",
+            {"actor_id": actor_id, "leds": leds},
+        )
+
+    async def set_text(
+        self,
+        actor_id: int,
+        text_id: int,
+        text: str,
+        *,
+        color: dict[str, int] | None = None,
+        visible: bool = True,
+        remove: bool = False,
+    ) -> None:
+        """Set or remove a text overlay on the physical display."""
+        await self._post_json(
+            f"/api/switch/{self.switch_id}/text",
+            {
+                "actor_id": actor_id,
+                "text_id": text_id,
+                "text": text,
+                "color": color or {"r": 255, "g": 255, "b": 255},
+                "visible": visible,
+                "remove": remove,
+            },
+        )
+
     async def detect_model(self) -> None:
         pass
 

@@ -47,11 +47,19 @@ were observed:
 - IN2: `0`, `Valid=0`.
 - VOC: `0`, `Valid=0`.
 
-Temperature and humidity therefore come from the add-on/external sensor path
-associated with this Switch. CO2, IN2, and VOC must be exposed as unavailable
-when their validity byte is zero. The Lux response still needs to be captured
-from the lower part of the TestCenter log; the StateFlags indicate that the
-light-sensor capability is present.
+The TestCenter labels the add-on-backed channels explicitly as `I2C-Temp`,
+`I2C-Humidity`, `I2C-MotionDet.`, `I2C-CO2`, `I2C-IN2`, and `I2C-VOC`.
+Temperature, humidity, and motion therefore come from the attached
+`MD+RH+TEMP` add-on. CO2, IN2, and VOC are separate optional add-on channels
+and must be exposed as unavailable when their validity byte is zero. `LUX` is
+listed separately from the I2C channels and belongs to the Switch itself; its
+response still needs to be captured from the lower part of the TestCenter log.
+The latest TestCenter capture shows an explicit `LUX=0 lux, Valid=0` response
+for `0x03`, even after the intelligent-light configuration was changed. The
+u::lux configuration can additionally freeze the light value while proximity
+is active, but that behavior alone does not explain this `Valid=0` response.
+The integration must therefore keep Lux unavailable until a response with a
+valid flag is observed.
 
 ## UMP frame header
 
@@ -476,9 +484,11 @@ The bridge implements the complete standard u::Lux Message Protocol (UMP v2.43) 
 | 115 | `0x73` | `CO2` | Switch -> Host | Carbon dioxide sensor reading (ppm) |
 | 116 | `0x74` | `IN2` | Switch -> Host | Binary hardware input states (2 digital inputs) |
 | 117 | `0x75` | `VOC` | Switch -> Host | Volatile Organic Compounds sensor reading (ppb/ppm) |
-| 150 | `0x96` | `AudioPlayLocal`| Host -> Switch | Trigger internal chime sound index (1..N) and volume |
-| 151 | `0x97` | `AudioStop` | Host -> Switch | Immediately stop currently playing audio |
-| 152 | `0x98` | `AudioVolume` | Host -> Switch | Set master audio volume (0..100) |
+| 145 | `0x91` | `AudioVolume` | Host -> Switch | Tested V2.32 mapping: set master audio volume (0..100) |
+| 146 | `0x92` | `AudioStop` | Host -> Switch | Tested V2.32 mapping: immediately stop currently playing audio |
+| 150 | `0x96` | `AudioPlayLocal` | Host -> Switch | Older/reference mapping; not authoritative for the tested V2.32 device |
+| 151 | `0x97` | `AudioStop` | Host -> Switch | Older/reference mapping; not authoritative for the tested V2.32 device |
+| 152 | `0x98` | `AudioPlayLocal` | Host -> Switch | Tested V2.32 mapping: trigger internal chime sound index and volume |
 | 153 | `0x99` | `AudioPlayRemote`| Host -> Switch| Stream remote audio chunk |
 | 161 | `0xA1` | `VideoState` | Bidirectional | Screen bounds and video rendering capabilities |
 | 162 | `0xA2` | `VideoStart` | Host -> Switch | Start video stream session with sequence token |
@@ -486,6 +496,59 @@ The bridge implements the complete standard u::Lux Message Protocol (UMP v2.43) 
 | 164 | `0xA4` | `VideoStop` | Host -> Switch | Terminate video streaming session |
 | 177 | `0xB1` | `KeyAction` | Switch -> Host | Hardware key press / release action |
 | 193 | `0xC1` | `Config` | Bidirectional | Device configuration parameter access |
+
+### TestCenter request catalog (V2.32)
+
+The TestCenter request dropdown provides a useful device-side catalog. The
+following entries were visible for the tested V2.32 design and should be
+treated as the practical request surface, separate from the standard message
+table above:
+
+| TestCenter entry | ID | Current interpretation |
+|---|---:|---|
+| `ID_STATE` | `0x01` | State flags and capability/validity bits |
+| `ID_INIT` | `0x02` | Initialization request/response |
+| `ID_LUX` | `0x03` | Direct Switch ambient-light query |
+| `ID_SIGNATURE` | `0x08` | Device/project signature query |
+| `ID_PAGECOUNT` | `0x0E` | Number of configured pages |
+| `ID_IDLIST` | `0x0F` | Actor IDs on the current page |
+| `ID_CONTROL` | `0x21` | Control/event-reporting flags |
+| `ID_ACTIVATE` | `0x2D` | Wake or standby control |
+| `ID_PAGEINDEX` | `0x2E` | Current page query/set |
+| `ID_DATETIME` | `0x2F` | Date/time synchronization |
+| `ID_EDITVALUE` | `0x42` | Edit-value actor channel |
+| `ID_REALVALUE` | `0x43` | Real-value actor channel |
+| `ID_LED` | `0x44` | Switch LED query/control |
+| `ID_TEXT` | `0x45` | Text query/control |
+| `ID_I2C_TEMPERATURE` | `0x71` | Temperature from I2C add-on |
+| `ID_I2C_HUMIDITY` | `0x72` | Humidity from I2C add-on |
+| `ID_I2C_CO2` | `0x73` | CO2 I2C channel |
+| `ID_I2C_IN2` | `0x74` | Two-input I2C channel |
+| `ID_I2C_VOC` | `0x75` | VOC I2C channel |
+| `ID_IR` | `0x81` | Infrared request; response payload not decoded yet |
+| `ID_AUDIO_VOLUME` | `0x91` | Master volume on the tested V2.32 device |
+| `ID_AUDIO_STOP` | `0x92` | Stop audio on the tested V2.32 device |
+| `ID_AUDIO_PLAYLOCAL` | `0x98` | Play a local sound index |
+| `ID_AUDIO_PLAYREMOTE` | `0x99` | Remote audio stream/control channel |
+| `ID_VIDEO_STATE` | `0xA1` | Video capability/state query |
+| `ID_VIDEO_START` | `0xA2` | Start video session |
+
+The screenshots also show the TestCenter can enable individual state and
+control flags for LightSensor, ProximitySensor, MotionDetector, LUX,
+I2C-Temperature, I2C-Humidity, I2C-CO2, I2C-IN2, and I2C-VOC. These checkboxes
+select reporting capabilities; they do not add hardware to the Switch.
+
+### Additional V2.32 observations
+
+- `ID_I2C_IN2 (0x74)` responded with `InputState=0x00, Valid=0`.
+- `ID_I2C_VOC (0x75)` responded with `VOC=0 ppm, Valid=0`.
+- `ID_AUDIO_VOLUME (0x91)` responded with `Lautstaerke=100`.
+- `ID_VIDEO_STATE (0xA1)` responded with `StateFlags=0x0` and display bounds
+  `Left=0, Top=0, Right=0, Bottom=0` while no video session was active.
+- `ID_VIDEO_START (0xA2)` is accepted as a request by the TestCenter; the
+  visible exchange does not yet prove a complete image-stream session.
+- `ID_IR (0x81)` was sent, but no decoded IR response is visible in this
+  capture.
 
 ---
 
@@ -584,6 +647,8 @@ When UMP packets arrive on UDP `34988`, the bridge fires the following HA events
 - `ulux_page`: `{ switch_id, page, page_count }`
 - `ulux_value`: `{ switch_id, actor_id, value, value_type }`
 - `ulux_action`: `{ switch_id, key, action }`
+- `ulux_key_action`: `{ switch_id, key, action, press_duration_ms }`, where
+  `action` is `hit`, `make`, or `break`.
 
 The bridge publishes `ulux_sensor`, `ulux_event`, and `ulux_key` immediately
 when the device sends corresponding telegrams. The HA integration consumes

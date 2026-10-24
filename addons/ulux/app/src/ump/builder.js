@@ -276,8 +276,8 @@ function buildLedMessage(actorId = 1, leds = []) {
     const led = leds[i];
     if (!led) continue;
     let b = 0;
-    b |= (led.color ?? 0) & 0x07;                  // bits 0-2: Color (0..7)
-    b |= ((led.blinkMode ?? 0) & 0x07) << 4;       // bits 4-6: BlinkMode (0..7)
+    b |= (led.color ?? 0) & 0x07;                  // bits 0-2: off, red, green, yellow, blue, magenta, cyan, white
+    b |= ((led.blinkMode ?? 0) & 0x07) << 4;       // bits 4-6: 0, 16, 32, 48, 64, 80, 96, 112
     if (led.override !== false) {
       b |= 0x80;                                   // bit 7: Override UMP control
     }

@@ -2,6 +2,9 @@
 
 The bridge add-on handles transport, device discovery observation, persistent registry management, and provides both HTTP and MQTT APIs for device management.
 
+See the [u::lux feature matrix](../../docs/ulux-feature-matrix.md) for the
+UMP-to-Home-Assistant coverage and remaining test cases.
+
 ---
 
 ## Installation

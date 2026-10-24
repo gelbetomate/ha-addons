@@ -1,5 +1,11 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.83
+
+- Added Domiq-compatible `hit`, `make`, and `break` key action events with press duration.
+- Added confirmed V2.32 request catalog and device-specific audio/video observations.
+- Added named LED color and blink values to LED diagnostics.
+
 ## 0.5.82
 
 - Added a Home Assistant Core REST event fallback through the Supervisor proxy when WebSocket authentication is unavailable.

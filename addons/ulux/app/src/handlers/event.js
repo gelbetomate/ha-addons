@@ -23,6 +23,7 @@
  */
 
 const NUM_KEYS = 4;
+const LONG_PRESS_MS = 1000;
 
 /**
  * In-memory map tracking the last known KeyState per sender context.
@@ -40,8 +41,28 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
 /** Map<cacheKey, timestamp of last access> for TTL eviction. */
 const _cacheLastSeen = new Map();
 
+/** Map<pressKey, { pressedAt: number, timer: NodeJS.Timeout }> for long presses. */
+const _pressState = new Map();
+
 function cacheKey(senderIp, senderPort, actorId) {
   return `${senderIp}:${senderPort}:${actorId}`;
+}
+
+function pressKey(senderIp, senderPort, actorId, keyNum) {
+  return `${senderIp}:${senderPort}:${actorId}:${keyNum}`;
+}
+
+function emitKeyAction(action, payload, { config, haClient, mqttClient, log }) {
+  const actionPayload = { ...payload, action };
+  if (haClient && config.mode.ha_events) {
+    haClient.fireEvent('ulux_key_action', actionPayload).catch((err) =>
+      log.error(`Failed to fire ulux_key_action (${action}):`, err.message)
+    );
+  }
+  if (mqttClient && config.mode.mqtt) {
+    const topic = `${config.mqtt.base_topic}/${payload.switch_id || payload.ip}/event/key_action`;
+    mqttClient.publish(topic, JSON.stringify(actionPayload));
+  }
 }
 
 /**
@@ -165,6 +186,42 @@ function handleEvent(msg, ctx, { config, haClient, mqttClient, assistSession, di
     }
 
     assistSession?.handleKey(edgePayload);
+
+    const pressCacheKey = pressKey(senderIp, senderPort, actorId, keyNum);
+    if (action === 'pressed') {
+      const pressedAt = Date.now();
+      const timer = setTimeout(() => {
+        const current = _pressState.get(pressCacheKey);
+        if (!current || current.pressedAt !== pressedAt) return;
+        emitKeyAction('make', {
+          ...edgePayload,
+          timestamp: new Date().toISOString(),
+          press_duration_ms: LONG_PRESS_MS,
+        }, { config, haClient, mqttClient, log });
+      }, LONG_PRESS_MS);
+      _pressState.set(pressCacheKey, { pressedAt, timer });
+      continue;
+    }
+
+    const current = _pressState.get(pressCacheKey);
+    if (!current) {
+      emitKeyAction('break', { ...edgePayload, press_duration_ms: null },
+        { config, haClient, mqttClient, log });
+      continue;
+    }
+    clearTimeout(current.timer);
+    _pressState.delete(pressCacheKey);
+    const duration = Math.max(0, Date.now() - current.pressedAt);
+    const pressAction = duration >= LONG_PRESS_MS ? 'make' : 'hit';
+    if (pressAction === 'hit') {
+      emitKeyAction('hit', { ...edgePayload, press_duration_ms: duration },
+        { config, haClient, mqttClient, log });
+    }
+    emitKeyAction('break', {
+      ...edgePayload,
+      press_duration_ms: duration,
+      press_action: pressAction,
+    }, { config, haClient, mqttClient, log });
   }
 }
 

@@ -2,6 +2,9 @@
 
 This Home Assistant integration renders dashboards for u::lux Switch IP devices and streams them through the u::Lux UMP Bridge add-on.
 
+The supported u::lux feature comparison is documented in
+[ulux-feature-matrix.md](../../docs/ulux-feature-matrix.md).
+
 ---
 
 ## What It Does
@@ -19,7 +22,8 @@ This Home Assistant integration renders dashboards for u::lux Switch IP devices 
 - **Config entries**: One entry per u::lux Switch device
 - **Entities**: Media player, status/storage sensors, brightness and stream controls, and display selection
 - **UMP sensors**: Temperature, humidity, CO2, VOC, illuminance, motion, proximity, audio, and display state
-- **Services**: Render display, cycle views, refresh, navigate
+- **Services**: Render display, cycle views, refresh, navigate, play sound, set
+  volume/page/active state, control LEDs, and show text overlays
 - **Device linking**: Devices appear in HA Device Registry
 
 ### Bridge Communication
@@ -43,6 +47,21 @@ camera snapshots, clocks, and status views; it is not a conventional video
 codec stream. The existing Pillow renderer remains unchanged.
 
 ---
+
+## Confirmed control services
+
+The integration exposes these device services:
+
+- `ulux_display.play_sound` for sounds stored on the switch
+- `ulux_display.set_volume` for master volume `0..100`
+- `ulux_display.set_page` for physical page selection
+- `ulux_display.set_active` for wake/standby
+- `ulux_display.set_led` with the four-byte LED list and confirmed color/blink encoding
+- `ulux_display.set_text` for text overlays
+
+Physical key edges remain available as `ulux_key`. In addition, the bridge
+fires `ulux_key_action` with `hit`, `make`, or `break` and
+`press_duration_ms`.
 
 ## Installation
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
@@ -11,6 +12,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     CONF_BRIDGE_URL,
@@ -206,6 +208,75 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                 )
 
     hass.services.async_register(DOMAIN, "configure_audio", async_handle_configure_audio)
+
+    def coordinators_for_call(call):
+        """Return configured u::lux coordinators targeted by a service call."""
+        device_ids = call.data.get("device_id")
+        if not isinstance(device_ids, list):
+            device_ids = [device_ids]
+        dev_reg = dr.async_get(hass)
+        coordinators = []
+        for device_id in device_ids:
+            device = dev_reg.async_get(device_id)
+            if not device:
+                continue
+            for entry_id in device.config_entries:
+                coordinator = hass.data[DOMAIN].get(entry_id)
+                if isinstance(coordinator, UluxDisplayCoordinator) and coordinator not in coordinators:
+                    coordinators.append(coordinator)
+        return coordinators
+
+    async def async_handle_play_sound(call) -> None:
+        for coordinator in coordinators_for_call(call):
+            await coordinator.device.play_local_sound(
+                sound_index=int(call.data.get("sound_index", 1)),
+                volume=int(call.data.get("volume", 100)),
+            )
+
+    async def async_handle_set_volume(call) -> None:
+        for coordinator in coordinators_for_call(call):
+            await coordinator.device.set_audio_volume(int(call.data["volume"]))
+
+    async def async_handle_set_page(call) -> None:
+        for coordinator in coordinators_for_call(call):
+            await coordinator.device.set_page(int(call.data["page_index"]))
+
+    async def async_handle_set_active(call) -> None:
+        for coordinator in coordinators_for_call(call):
+            await coordinator.device.set_active(bool(call.data["active"]))
+
+    async def async_handle_set_led(call) -> None:
+        leds = call.data.get("leds", [])
+        if isinstance(leds, str):
+            try:
+                leds = json.loads(leds)
+            except json.JSONDecodeError as err:
+                raise HomeAssistantError("leds must be a JSON list") from err
+        if not isinstance(leds, list) or len(leds) > 4 or not all(isinstance(item, dict) for item in leds):
+            raise HomeAssistantError("leds must be a list of up to four LED objects")
+        for coordinator in coordinators_for_call(call):
+            await coordinator.device.set_leds(int(call.data.get("actor_id", 1)), leds)
+
+    async def async_handle_set_text(call) -> None:
+        color = call.data.get("color")
+        if color is not None and not isinstance(color, dict):
+            raise HomeAssistantError("color must be an object with r, g, and b values")
+        for coordinator in coordinators_for_call(call):
+            await coordinator.device.set_text(
+                actor_id=int(call.data.get("actor_id", 1)),
+                text_id=int(call.data.get("text_id", 0)),
+                text=str(call.data.get("text", "")),
+                color=color,
+                visible=bool(call.data.get("visible", True)),
+                remove=bool(call.data.get("remove", False)),
+            )
+
+    hass.services.async_register(DOMAIN, "play_sound", async_handle_play_sound)
+    hass.services.async_register(DOMAIN, "set_volume", async_handle_set_volume)
+    hass.services.async_register(DOMAIN, "set_page", async_handle_set_page)
+    hass.services.async_register(DOMAIN, "set_active", async_handle_set_active)
+    hass.services.async_register(DOMAIN, "set_led", async_handle_set_led)
+    hass.services.async_register(DOMAIN, "set_text", async_handle_set_text)
 
     _LOGGER.info("u::lux Display domain setup complete")
     return True
