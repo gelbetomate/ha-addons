@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.84
+
+- Extended `/api/health` with active HA/MQTT mode flags.
+- Added debug logging for successfully delivered HA events via WebSocket or REST.
+
 ## 0.5.83
 
 - Added Domiq-compatible `hit`, `make`, and `break` key action events with press duration.

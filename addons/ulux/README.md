@@ -5,6 +5,9 @@ The bridge add-on handles transport, device discovery observation, persistent re
 See the [u::lux feature matrix](../../docs/ulux-feature-matrix.md) for the
 UMP-to-Home-Assistant coverage and remaining test cases.
 
+The MQTT, MQTT Discovery, Node-RED, standalone Docker, and bridge UI roadmap
+is documented in the [MQTT workplan](../../docs/ulux-mqtt-workplan.md).
+
 ---
 
 ## Installation
@@ -28,6 +31,9 @@ UMP-to-Home-Assistant coverage and remaining test cases.
 4. **u::Lux UMP Bridge** installieren.
 5. Add-on starten und **Beim Start starten** aktivieren.
 6. Über **Open Web UI** die Bridge-Oberfläche öffnen.
+
+Die Oberfläche ist im Add-on-Modus über **Open Web UI** erreichbar. Bei einem
+Standalone-Docker ist sie unter `http://<docker-host>:8099/` erreichbar.
 
 ### Empfohlene Erstkonfiguration
 
@@ -232,6 +238,26 @@ The bridge is configured via `options.json` in Supervisor. Key options:
 - **`mode.mqtt_discovery`**: Publish Home Assistant MQTT Discovery entities (default: false)
   - Use this only instead of automatic HACS device creation for the same switches.
   - Publishes IP, serial number, and protocol ID sensors.
+
+MQTT bleibt dabei eine zusätzliche Schnittstelle für Node-RED und andere
+Systeme. Die geplante Discovery-Deduplizierung unterdrückt MQTT-Geräte, wenn
+ein Switch bereits über `ulux_display` mit Home Assistant verknüpft ist.
+
+### Standalone Docker
+
+Im Verzeichnis `addons/ulux`:
+
+```powershell
+Copy-Item options.example.json options.json
+# options.json anpassen
+docker compose up -d --build
+docker compose logs -f ulux-bridge
+```
+
+Die Bridge-Oberfläche ist anschließend unter
+`http://<docker-host>:8099/` verfügbar. `network_mode: host` darf in
+`docker-compose.yml` nicht entfernt werden, da u::lux Discovery und UMP UDP
+verwenden.
 
 ### Minimal Configuration Profiles
 

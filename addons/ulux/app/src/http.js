@@ -213,7 +213,15 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
 
     // --- GET /api/health ---
     if (method === 'GET' && pathname === '/api/health') {
-      return respond(res, 200, { ok: true, ha: haClient?.getStatus?.() || { connected: false } });
+      return respond(res, 200, {
+        ok: true,
+        mode: {
+          ha_events: Boolean(config.mode?.ha_events),
+          mqtt: Boolean(config.mode?.mqtt),
+          mqtt_discovery: Boolean(config.mode?.mqtt_discovery),
+        },
+        ha: haClient?.getStatus?.() || { connected: false },
+      });
     }
 
     const streamStatusMatch = pathname.match(/^\/api\/display\/stream\/([^/]+)$/);

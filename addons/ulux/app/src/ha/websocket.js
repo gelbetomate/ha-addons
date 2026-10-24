@@ -125,12 +125,18 @@ function createHaWebSocket(haConfig, log) {
    */
   function fireEvent(eventType, eventData) {
     if (!authenticated) {
-      return fireEventRest(eventType, eventData);
+      return fireEventRest(eventType, eventData).then((result) => {
+        log.debug(`HA event delivered via REST: ${eventType}`);
+        return result;
+      });
     }
     return sendCommand({
       type: 'fire_event',
       event_type: eventType,
       event_data: eventData,
+    }).then((result) => {
+      log.debug(`HA event delivered via WebSocket: ${eventType}`);
+      return result;
     });
   }
 

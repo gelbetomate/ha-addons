@@ -567,12 +567,14 @@ The 16-bit state word exposes both operational states and hardware sensor flags:
 - `bit 5`: `time_request` (switch requires `0x2F DateTime`)
 - `bit 6`: `init_request` (switch requires `0x21 Control`)
 - `bit 7`: `device_error` (hardware fault detected)
-- `bit 8`: `lux_valid` (light sensor hardware present and valid)
-- `bit 9`: `temperature_valid` (temperature sensor present and valid)
-- `bit 10`: `humidity_valid` (humidity sensor present and valid)
-- `bit 11`: `co2_valid` (CO2 sensor present and valid)
-- `bit 12`: `in2_valid` (binary inputs IN2 present and valid)
-- `bit 13`: `voc_valid` (VOC sensor present and valid)
+- `bit 11`: `motion_detector` (motion detector currently active)
+- `bit 12`: `lux_valid` (light sensor hardware present and valid)
+- `bit 24`: `temperature_valid` (temperature sensor present and valid)
+- `bit 25`: `humidity_valid` (humidity sensor present and valid)
+- `bit 26`: `co2_valid` (CO2 sensor present and valid)
+- `bit 27`: `in2_valid` (binary inputs IN2 present and valid)
+- `bit 28`: `voc_valid` (VOC sensor present and valid)
+- `bit 29`: `motion_detector_valid` (motion detector hardware present and valid)
 
 #### 2. Sensors
 - **Temperature (`0x71`)**: Signed 16-bit little-endian divided by 10.0 (e.g. `257` = 25.7 °C).
