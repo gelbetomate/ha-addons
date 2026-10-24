@@ -125,12 +125,19 @@ Die Standalone-Weboberflaeche ist der HTTP-Root-Endpunkt:
 http://<bridge-host>:8099/
 ```
 
-Geplante zusaetzliche UI-Funktionen:
+Umgesetzt in Bridge `0.5.89`:
 
-- MQTT-Verbindungsstatus und letzter Publish-Fehler.
-- Auswahl eines Switches und eines Zieltopics.
-- JSON-Payload-Editor mit Vorschau.
-- Aktionen `Publish event`, `Publish command` und `Publish retained state`.
+- MQTT-Verbindungsstatus und aktiver Base Topic.
+- Laufzeitumschaltung zwischen HA-Events, MQTT und Parallelbetrieb.
+- Laufzeitkonfiguration fuer Broker Host, Port, Benutzer, Passwort und Base Topic.
+- Auswahl eines konkreten Zieltopics.
+- JSON-Payload-Editor.
+- Aktionen `Publish to MQTT` und `Publish retained state`.
+
+Weitere geplante UI-Funktionen:
+
+- Auswahl eines Switches mit Topic-Vorlagen fuer Events und Commands.
+- JSON-Payload-Editor mit Payload-Vorschau.
 - Warnung vor retained Messages und Button zum Loeschen eines Topics.
 - Anzeige, ob native HA-Verknuepfung besteht und MQTT Discovery deshalb
   unterdrueckt wird.

@@ -582,6 +582,7 @@
     <div class="tabs">
       <button class="tab-button active" data-tab="devices">Devices</button>
       <button class="tab-button" data-tab="discovery">Discovery</button>
+      <button class="tab-button" data-tab="mqtt">MQTT</button>
     </div>
 
     <!-- Devices Tab -->
@@ -620,6 +621,63 @@
           <button class="btn-primary" id="importSelectedBtn">Import Selected</button>
           <button class="btn-secondary" id="importAllBtn">Import All</button>
         </div>
+      </div>
+    </div>
+
+    <!-- MQTT Tab -->
+    <div id="mqtt" class="tab-content">
+      <div class="section">
+        <h2>MQTT Bridge Configuration</h2>
+        <p style="color: var(--ha-text-secondary); margin-bottom: 20px; font-size: 14px;">
+          Broker settings come from the active bridge configuration. Use this tab to verify the connection and publish test messages for Home Assistant, Node-RED, or other MQTT clients.
+        </p>
+        <div id="mqttStatus" class="device-info">Loading MQTT status...</div>
+        <div class="form-group" style="margin-top: 20px;">
+          <label for="mqttHost">Broker host</label>
+          <input type="text" id="mqttHost" placeholder="core-mosquitto">
+        </div>
+        <div class="form-group">
+          <label for="mqttPort">Broker port</label>
+          <input type="number" id="mqttPort" min="1" max="65535" value="1883">
+        </div>
+        <div class="form-group">
+          <label for="mqttUsername">Username</label>
+          <input type="text" id="mqttUsername" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="mqttPassword">Password</label>
+          <input type="password" id="mqttPassword" autocomplete="new-password" placeholder="Leave blank to keep current password">
+        </div>
+        <div class="form-group">
+          <label for="mqttBaseTopic">Base topic</label>
+          <input type="text" id="mqttBaseTopic" value="ulux">
+        </div>
+        <div class="form-group" style="display: grid; gap: 8px;">
+          <label><input type="checkbox" id="modeHaEvents"> Home Assistant events</label>
+          <label><input type="checkbox" id="modeMqtt"> MQTT bridge</label>
+          <label><input type="checkbox" id="modeMqttDiscovery"> MQTT Discovery</label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-primary" id="mqttApplyBtn">Apply runtime configuration</button>
+        </div>
+        <small>Runtime changes are lost on restart. Persist the same values in the HA add-on configuration or standalone options.json.</small>
+        <div class="form-group" style="margin-top: 20px;">
+          <label for="mqttTopic">Publish topic</label>
+          <input type="text" id="mqttTopic" value="ulux/test">
+        </div>
+        <div class="form-group">
+          <label for="mqttPayload">Payload</label>
+          <textarea id="mqttPayload" rows="8">{"source":"ulux-bridge-ui","message":"test"}</textarea>
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+          <input type="checkbox" id="mqttRetain">
+          <label for="mqttRetain" style="margin: 0;">Retain message</label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-primary" id="mqttPublishBtn">Publish to MQTT</button>
+          <button type="button" class="btn-secondary" id="mqttRefreshBtn">Refresh status</button>
+        </div>
+        <div id="mqttAlert" class="alert" style="margin-top: 16px;"></div>
       </div>
     </div>
   </div>
@@ -852,6 +910,7 @@
         btn.classList.add('active');
         document.getElementById(tabName).classList.add('active');
         if (tabName === 'discovery') loadDiscovery();
+        if (tabName === 'mqtt') loadMqttStatus();
       });
     });
 
@@ -1108,6 +1167,90 @@
       }
     }
 
+    async function loadMqttStatus() {
+      const status = document.getElementById('mqttStatus');
+      try {
+        const [data, config] = await Promise.all([
+          fetchJson(`${API_BASE}/mqtt/status`),
+          fetchJson(`${API_BASE}/config`),
+        ]);
+        document.getElementById('mqttHost').value = config.mqtt.host || '';
+        document.getElementById('mqttPort').value = config.mqtt.port || 1883;
+        document.getElementById('mqttUsername').value = config.mqtt.username || '';
+        document.getElementById('mqttBaseTopic').value = config.mqtt.base_topic || 'ulux';
+        document.getElementById('modeHaEvents').checked = Boolean(config.mode.ha_events);
+        document.getElementById('modeMqtt').checked = Boolean(config.mode.mqtt);
+        document.getElementById('modeMqttDiscovery').checked = Boolean(config.mode.mqtt_discovery);
+        status.innerHTML = data.enabled
+          ? `<strong>Broker:</strong> ${escapeHtml(data.broker || 'configured')}<br>` +
+            `<strong>Base topic:</strong> ${escapeHtml(data.base_topic || 'ulux')}<br>` +
+            `<strong>Status:</strong> <span class="status-badge status-${data.connected ? 'online' : 'offline'}">${data.connected ? 'CONNECTED' : 'DISCONNECTED'}</span>`
+          : '<strong>MQTT:</strong> disabled in the active bridge configuration';
+      } catch (err) {
+        status.textContent = `MQTT status unavailable: ${err.message}`;
+      }
+    }
+
+    document.getElementById('mqttApplyBtn').addEventListener('click', async () => {
+      const alert = document.getElementById('mqttAlert');
+      try {
+        const result = await fetchJson(`${API_BASE}/config`, {
+          method: 'POST',
+          body: JSON.stringify({
+            mode: {
+              ha_events: document.getElementById('modeHaEvents').checked,
+              mqtt: document.getElementById('modeMqtt').checked,
+              mqtt_discovery: document.getElementById('modeMqttDiscovery').checked,
+            },
+            mqtt: {
+              host: document.getElementById('mqttHost').value.trim(),
+              port: Number(document.getElementById('mqttPort').value),
+              username: document.getElementById('mqttUsername').value.trim(),
+              password: document.getElementById('mqttPassword').value,
+              base_topic: document.getElementById('mqttBaseTopic').value.trim(),
+            },
+          }),
+        });
+        alert.textContent = result.message || 'Runtime configuration applied.';
+        alert.className = 'alert success';
+        document.getElementById('mqttPassword').value = '';
+        await loadMqttStatus();
+      } catch (err) {
+        alert.textContent = err.message;
+        alert.className = 'alert error';
+      }
+    });
+
+    document.getElementById('mqttRefreshBtn').addEventListener('click', loadMqttStatus);
+    document.getElementById('mqttPublishBtn').addEventListener('click', async () => {
+      const alert = document.getElementById('mqttAlert');
+      const topic = document.getElementById('mqttTopic').value.trim();
+      const rawPayload = document.getElementById('mqttPayload').value;
+      let payload;
+      try {
+        payload = JSON.parse(rawPayload);
+      } catch {
+        alert.textContent = 'Payload must be valid JSON.';
+        alert.className = 'alert error';
+        return;
+      }
+      try {
+        const result = await fetchJson(`${API_BASE}/mqtt/publish`, {
+          method: 'POST',
+          body: JSON.stringify({
+            topic,
+            payload,
+            retain: document.getElementById('mqttRetain').checked,
+          }),
+        });
+        alert.textContent = `Published to ${result.topic}${result.retained ? ' (retained)' : ''}.`;
+        alert.className = 'alert success';
+      } catch (err) {
+        alert.textContent = err.message;
+        alert.className = 'alert error';
+      }
+    });
+
     document.getElementById('addDeviceBtn').addEventListener('click', () => openDeviceModal());
     document.getElementById('closeModalBtn').addEventListener('click', closeDeviceModal);
     document.getElementById('cancelBtn').addEventListener('click', closeDeviceModal);
@@ -1336,6 +1479,7 @@
 
     // Initial load
     loadDevices();
+    loadMqttStatus();
     setInterval(loadDevices, 5000); // Refresh every 5s
   </script>
 </body>

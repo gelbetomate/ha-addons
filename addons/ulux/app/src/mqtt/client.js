@@ -33,7 +33,7 @@ function createMqttClient(mqttConfig, switches, log, onCommand, onRegistryComman
   let client = null;
   let connected = false;
 
-  const brokerUrl = `mqtt://${mqttConfig.host}:${mqttConfig.port}`;
+  let brokerUrl = `mqtt://${mqttConfig.host}:${mqttConfig.port}`;
 
   function connect() {
     log.info(`Connecting to MQTT broker: ${brokerUrl}`);
@@ -112,6 +112,31 @@ function createMqttClient(mqttConfig, switches, log, onCommand, onRegistryComman
     client.publish(topic, payload, { qos: 0, retain }, (err) => {
       if (err) log.error(`MQTT publish error on ${topic}:`, err.message);
     });
+  }
+
+  function publishTest(topic, payload, retain = false) {
+    return new Promise((resolve, reject) => {
+      if (!connected || !client) {
+        reject(new Error('MQTT client is not connected'));
+        return;
+      }
+      client.publish(topic, payload, { qos: 0, retain }, (err) => {
+        if (err) {
+          log.error(`MQTT publish error on ${topic}:`, err.message);
+          reject(err);
+          return;
+        }
+        resolve({ topic, retained: retain });
+      });
+    });
+  }
+
+  function getStatus() {
+    return {
+      connected,
+      broker: brokerUrl,
+      base_topic: mqttConfig.base_topic,
+    };
   }
 
   function publishDiscovery(device) {
@@ -248,7 +273,23 @@ function createMqttClient(mqttConfig, switches, log, onCommand, onRegistryComman
     }
   }
 
-  return { connect, publish, publishDiscovery, removeDiscovery, disconnect };
+  function reconfigure(nextConfig) {
+    if (connected || client) disconnect();
+    Object.assign(mqttConfig, nextConfig || {});
+    brokerUrl = `mqtt://${mqttConfig.host}:${mqttConfig.port}`;
+    if (mqttConfig.enabled !== false) connect();
+  }
+
+  return {
+    connect,
+    publish,
+    publishTest,
+    getStatus,
+    publishDiscovery,
+    removeDiscovery,
+    reconfigure,
+    disconnect,
+  };
 }
 
 /**

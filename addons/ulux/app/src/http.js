@@ -224,6 +224,86 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       });
     }
 
+    // --- GET /api/mqtt/status ---
+    if (method === 'GET' && pathname === '/api/mqtt/status') {
+      return respond(res, 200, {
+        enabled: Boolean(config.mode?.mqtt),
+        ...(mqttClient?.getStatus?.() || { connected: false, broker: null, base_topic: config.mqtt?.base_topic || 'ulux' }),
+      });
+    }
+
+    // --- POST /api/mqtt/publish ---
+    if (method === 'POST' && pathname === '/api/mqtt/publish') {
+      if (!config.mode?.mqtt || !mqttClient?.publishTest) {
+        return respond(res, 409, { error: 'MQTT is not enabled or connected' });
+      }
+      const body = await readJsonBody(req).catch(() => null);
+      const topic = String(body?.topic || '').trim();
+      if (!topic || topic.includes('#') || topic.includes('+')) {
+        return respond(res, 400, { error: 'A concrete MQTT topic is required' });
+      }
+      const payload = typeof body.payload === 'string'
+        ? body.payload
+        : JSON.stringify(body.payload ?? {});
+      try {
+        const result = await mqttClient.publishTest(topic, payload, Boolean(body.retain));
+        return respond(res, 200, { ok: true, ...result });
+      } catch (err) {
+        return respond(res, 503, { error: err.message });
+      }
+    }
+
+    // --- GET /api/config ---
+    if (method === 'GET' && pathname === '/api/config') {
+      return respond(res, 200, {
+        mode: {
+          ha_events: Boolean(config.mode?.ha_events),
+          mqtt: Boolean(config.mode?.mqtt),
+          mqtt_discovery: Boolean(config.mode?.mqtt_discovery),
+        },
+        mqtt: {
+          host: config.mqtt?.host || '',
+          port: Number(config.mqtt?.port || 1883),
+          username: config.mqtt?.username || '',
+          password_configured: Boolean(config.mqtt?.password),
+          base_topic: config.mqtt?.base_topic || 'ulux',
+        },
+        ha: {
+          connected: Boolean(haClient?.getStatus?.().connected),
+          ws_url: config.ha?.ws_url || '',
+        },
+      });
+    }
+
+    // --- POST /api/config ---
+    if (method === 'POST' && pathname === '/api/config') {
+      const body = await readJsonBody(req).catch(() => null);
+      const mode = body?.mode || {};
+      const mqtt = body?.mqtt || {};
+      const host = String(mqtt.host || '').trim();
+      const port = Number(mqtt.port || 1883);
+      const baseTopic = String(mqtt.base_topic || 'ulux').trim().replace(/^\/+|\/+$/g, '');
+      if (!host || !Number.isInteger(port) || port < 1 || port > 65535 || !baseTopic) {
+        return respond(res, 400, { error: 'MQTT host, valid port, and base topic are required' });
+      }
+      config.mode.ha_events = Boolean(mode.ha_events);
+      config.mode.mqtt = Boolean(mode.mqtt);
+      config.mode.mqtt_discovery = Boolean(mode.mqtt_discovery);
+      config.mqtt.host = host;
+      config.mqtt.port = port;
+      config.mqtt.base_topic = baseTopic;
+      config.mqtt.username = String(mqtt.username || '');
+      if (mqtt.password) config.mqtt.password = String(mqtt.password);
+      if (mqttClient?.reconfigure) {
+        mqttClient.reconfigure({ ...config.mqtt, enabled: config.mode.mqtt });
+      }
+      return respond(res, 200, {
+        ok: true,
+        restart_required: !haClient && config.mode.ha_events,
+        message: 'Runtime configuration applied; persist it in the HA add-on options or standalone options.json.',
+      });
+    }
+
     const streamStatusMatch = pathname.match(/^\/api\/display\/stream\/([^/]+)$/);
     if (method === 'GET' && streamStatusMatch) {
       const switchId = decodeURIComponent(streamStatusMatch[1]);

@@ -243,6 +243,12 @@ MQTT bleibt dabei eine zusätzliche Schnittstelle für Node-RED und andere
 Systeme. Die geplante Discovery-Deduplizierung unterdrückt MQTT-Geräte, wenn
 ein Switch bereits über `ulux_display` mit Home Assistant verknüpft ist.
 
+Der MQTT-Reiter der Bridge-Oberfläche kann die HA-/MQTT-Modi und Brokerdaten
+zur Laufzeit ändern. Für dauerhafte Änderungen bitte zusätzlich die Add-on-
+Konfiguration speichern; im Standalone-Modus werden die Werte in
+`options.json` gepflegt. Mögliche Modi sind HA-only, MQTT-only und
+Parallelbetrieb.
+
 ### Standalone Docker
 
 Im Verzeichnis `addons/ulux`:

@@ -120,7 +120,7 @@ async function main() {
 
   // --- MQTT client ---
   let mqttClient = null;
-  if (config.mode.mqtt) {
+  {
     /**
      * Handle registry commands from MQTT.
      * Topics: <base_topic>/registry/add_device, update_device, delete_device
@@ -149,7 +149,7 @@ async function main() {
       (cmd) => handleCommandMessage(cmd, { config, udpSend: udpServer.send, discoveryRegistry, log }),
       handleMqttRegistryCommand
     );
-    mqttClient.connect(); // non-blocking; reconnects on failure
+    if (config.mode.mqtt) mqttClient.connect(); // non-blocking; reconnects on failure
   }
 
   dispatchFn = createDispatcher({

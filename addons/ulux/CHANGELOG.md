@@ -1,5 +1,15 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.89
+
+- Added runtime configuration for HA events, MQTT, MQTT Discovery, broker host/port, credentials, and base topic.
+- MQTT can now be enabled, disabled, or run in parallel with HA events from the bridge UI.
+
+## 0.5.88
+
+- Added MQTT status and publish tester to the bridge web UI.
+- Added `/api/mqtt/status` and `/api/mqtt/publish` endpoints for controlled external-system testing.
+
 ## 0.5.87
 
 - Encode `ID_TEXT` colors as 16-bit RGB565, matching the TestCenter `Color=0xFFFF` white payload.
