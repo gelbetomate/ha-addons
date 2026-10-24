@@ -1,5 +1,17 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.87
+
+- Encode `ID_TEXT` colors as 16-bit RGB565, matching the TestCenter `Color=0xFFFF` white payload.
+
+## 0.5.86
+
+- Matched `ID_TEXT` message length and trailing padding to the 34-byte TestCenter telegram format.
+
+## 0.5.85
+
+- Poll `ID_STATE (0x01)` together with the sensor requests so motion and display state updates do not depend on unsolicited state packets.
+
 ## 0.5.84
 
 - Extended `/api/health` with active HA/MQTT mode flags.

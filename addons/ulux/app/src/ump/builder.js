@@ -294,7 +294,7 @@ function buildLedMessage(actorId = 1, leds = []) {
  * @param {number} textId - Text index (0..9)
  * @param {string} text - Text string to display
  * @param {object} [options]
- * @param {object} [options.color] - { r: 0..255, g: 0..255, b: 0..255 }
+ * @param {object} [options.color] - { r: 0..255, g: 0..255, b: 0..255 }, encoded as RGB565
  * @param {boolean} [options.visible=true]
  * @param {boolean} [options.remove=false]
  * @param {boolean} [options.updateColor=true]
@@ -323,16 +323,18 @@ function buildTextMessage(actorId = 1, textId = 0, text = '', options = {}) {
   }
 
   const textBuf = Buffer.from(String(text || ''), 'utf8');
-  const length = 12 + textBuf.length + 1;          // Null-terminated text
+  const length = 13 + textBuf.length + 1;          // Null-terminated text plus protocol padding
   const buf = Buffer.alloc(length, 0);
   buf.writeUInt8(length, 0);
   buf.writeUInt8(MessageIds.IdText, 1);
   buf.writeUInt16LE(actorId & 0xFFFF, 2);
 
-  buf.writeUInt8((color.r ?? 255) & 0xFF, 4);
-  buf.writeUInt8((color.g ?? 255) & 0xFF, 5);
-  buf.writeUInt8((color.b ?? 255) & 0xFF, 6);
-  buf.writeUInt8(0, 7);
+  const red = (color.r ?? 255) & 0xFF;
+  const green = (color.g ?? 255) & 0xFF;
+  const blue = (color.b ?? 255) & 0xFF;
+  const rgb565 = ((red & 0xF8) << 8) | ((green & 0xFC) << 3) | (blue >> 3);
+  buf.writeUInt16LE(rgb565, 4);                    // Color: RGB565 (white = 0xFFFF)
+  buf.writeUInt16LE(0, 6);                         // Reserved
 
   buf.writeUInt8(textId & 0x0F, 8);
 

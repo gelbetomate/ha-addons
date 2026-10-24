@@ -23,6 +23,7 @@ const {
   buildDateTimeMessage,
   buildHumidityRequest,
   buildIdControlMessage,
+  buildRequestMessage,
   buildIN2Request,
   buildIRRequest,
   buildLuxRequest,
@@ -43,6 +44,7 @@ function startSensorPolling(senderIp, senderPort, deviceId, frameVersion, udpSen
     const telegram = buildTelegramForDevice(
       deviceId,
       frameVersion,
+      buildRequestMessage(0x01),
       buildTemperatureRequest(),
       buildHumidityRequest(),
       buildCO2Request(),

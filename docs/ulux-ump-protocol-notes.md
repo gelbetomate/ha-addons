@@ -550,6 +550,22 @@ select reporting capabilities; they do not add hardware to the Switch.
 - `ID_IR (0x81)` was sent, but no decoded IR response is visible in this
   capture.
 
+### Text layout evidence
+
+The u::lux configuration screenshots show `Funktionslayout 2` assigned to
+`Actor-ID 23`. That layout contains a field named `Text`. The visible `23` is
+therefore the actor ID, not the UMP text-field index. The separate UMP text
+index is not displayed in the configuration view and remains a small index
+(`0..9`) in the current builder. The configured layout should therefore be
+tested with its assigned actor `23`, while the independent TestCenter probe
+below must use its explicitly shown actor `1` and text ID `2`.
+
+The TestCenter text probe additionally shows `Actor-ID=1`, `Text-ID=2`, text
+`TEXT ID2_RANDOM1076!`, and an inner message length of 34 bytes. The bridge
+builder now includes the observed trailing padding byte and encodes the
+four-byte color area as RGB565 plus reserved bytes; white is `0xFFFF`, matching
+the TestCenter display.
+
 ---
 
 ### Inbound Message Telegram Decoding
