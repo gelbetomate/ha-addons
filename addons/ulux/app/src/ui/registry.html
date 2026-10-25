@@ -1481,6 +1481,10 @@
     loadDevices();
     loadMqttStatus();
     setInterval(loadDevices, 5000); // Refresh every 5s
+    setInterval(() => {
+      const discoveryTab = document.getElementById('discovery');
+      if (discoveryTab?.classList.contains('active')) loadDiscovery();
+    }, 2000);
   </script>
 </body>
 </html>

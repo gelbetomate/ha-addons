@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.107
+
+- Refresh the Discovery tab automatically while scanning and after results arrive, removing the need to press Scan now twice.
+
 ## 0.5.106
 
 - Fixed a discovery registry startup crash caused by using the discovered MAC before initialization.

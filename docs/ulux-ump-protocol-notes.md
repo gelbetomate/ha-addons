@@ -456,7 +456,7 @@ The configuration software sends a 48-byte UDP discovery request to `255.255.255
 e4 80 01 02
 ```
 
-The discovery response is not readable text. It contains repeated/binary data. The current implementation reliably extracts IP, protocol ID, sequence, timestamp, raw hex, and MAC through the host neighbor table. The serial number is currently an explicitly labeled inference from the confirmed MAC suffix pattern for the captured devices.
+The discovery response is not readable text. It contains repeated/binary data. The current implementation reliably extracts IP, protocol ID, sequence, timestamp, raw hex, and MAC through the host neighbor table. The serial number is not decoded from the discovery payload; a MAC-suffix calculation may be retained only as an explicitly labeled candidate and can be wrong (for example, MAC suffix `0314` yields candidate `788`, while the confirmed device serial is `456`).
 
 ## Full UMP v2.43 Protocol Implementation (Bridge 0.5.49+)
 
