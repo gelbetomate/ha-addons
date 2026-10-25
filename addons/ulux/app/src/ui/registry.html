@@ -1312,10 +1312,13 @@
         empty.style.display = 'none';
         actions.style.display = 'flex';
 
-        list.innerHTML = data.devices.map((dev) => `
-          <div class="discovery-card${dev.switch_id ? '' : ' pending'}" data-switch-id="${dev.switch_id || ''}">
+        list.innerHTML = data.devices.map((dev) => {
+          const selectableId = dev.mac_address || (/^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/i.test(String(dev.switch_id || '')) ? dev.switch_id : '');
+          const displayId = selectableId || `Protocol ID: ${dev.protocol_id || 'unknown'}`;
+          return `
+          <div class="discovery-card${selectableId ? '' : ' pending'}" data-switch-id="${selectableId}">
             <div class="device-name">${escapeHtml(dev.name || `u::lux device (${dev.ip || 'unknown IP'})`)}</div>
-            <div class="device-id">${dev.switch_id || `Protocol ID: ${dev.protocol_id || 'unknown'}`}</div>
+            <div class="device-id">${escapeHtml(displayId)}</div>
               <div class="device-info"><strong>Serial number:</strong> ${dev.serial_number || '<span class="mac-unavailable">not decoded</span>'}</div>
               ${!dev.serial_number && dev.serial_number_candidate ? `<div class="device-info"><strong>MAC candidate:</strong> ${dev.serial_number_candidate} <span class="mac-unavailable">(not confirmed)</span></div>` : ''}
             <div class="device-info" style="margin-top: 10px;">
@@ -1335,7 +1338,8 @@
             </div>
             <div class="timestamp">Last seen: ${new Date(dev.last_seen).toLocaleString()}</div>
           </div>
-        `).join('');
+        `;
+        }).join('');
 
         // Add click handlers for selection
         document.querySelectorAll('.discovery-card').forEach((card) => {
@@ -1405,7 +1409,7 @@
               await fetchJson(`${API_BASE}/registry/devices`, {
                 method: 'POST',
                 body: JSON.stringify({
-                  switch_id: dev.switch_id,
+                  switch_id: dev.mac_address || dev.switch_id,
                   name: dev.serial_number
                     ? `u::lux Switch (${dev.serial_number})`
                     : dev.name || `u::lux ${dev.switch_id}`,
@@ -1443,7 +1447,7 @@
       try {
         const allData = await fetchJson(`${API_BASE}/discovery/devices`);
         const devices = allData.devices.filter((dev) => dev.switch_id).map((dev) => ({
-          switch_id: dev.switch_id,
+          switch_id: dev.mac_address || dev.switch_id,
           name: dev.serial_number
             ? `u::lux Switch (${dev.serial_number})`
             : dev.name || `u::lux ${dev.switch_id}`,

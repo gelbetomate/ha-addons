@@ -1,5 +1,13 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.110
+
+- Allow Discovery cards with a valid MAC address to be selected and imported even when switch_id is not resolved yet.
+
+## 0.5.109
+
+- Merge discovery metadata into existing IP placeholders so the first scan replaces unknown cards with real protocol and timestamp data.
+
 ## 0.5.108
 
 - Do not create Discovery entries keyed by the UMP protocol address when normal UMP traffic arrives before discovery identity is known.

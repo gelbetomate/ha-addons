@@ -56,17 +56,20 @@ function createDiscoveryRegistry(registryStore, log) {
     // The UMP header contains a context ID, not necessarily the Ethernet MAC.
     // Pending discovery remains a preview until the user explicitly imports it.
     if (existing && !store.get(existing.switch_id)) {
-      pendingDiscovery.set(observedIp, {
+      const pendingRecord = {
         ...existing,
         ...ctx,
-        switch_id: isMacAddress(existing.switch_id) ? existing.switch_id : null,
+        ip: observedIp,
+        switch_id: canonicalSwitchId || (isMacAddress(existing.switch_id) ? existing.switch_id : null),
         name: ctx.switchName && isGeneratedName(existing.name, existing)
           ? ctx.switchName
           : existing.name || ctx.switchName,
         mac_address: existing.mac_address || ctx.mac_address,
         serial_number: existing.serial_number || ctx.serial_number,
-      });
-      return pendingDiscovery.get(observedIp);
+        last_seen: ctx.last_seen || existing.last_seen || new Date().toISOString(),
+      };
+      pendingDiscovery.set(observedIp, pendingRecord);
+      return pendingRecord;
     }
 
     // Discovery is a preview. Only refresh records that were already imported;
@@ -76,7 +79,7 @@ function createDiscoveryRegistry(registryStore, log) {
       return;
     }
 
-    if (!switchId) {
+    if (!switchId && !ctx.protocol_id) {
       pendingDiscovery.set(observedIp, { ...ctx, ip: observedIp });
       return;
     }
