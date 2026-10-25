@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.100
+
+- Use only confirmed or candidate serial numbers for MQTT topic identities; remove MAC fallback.
+
 ## 0.5.99
 
 - Allow page index `0` in the bridge device setup UI.

@@ -28,9 +28,11 @@ Noch nicht vollstaendig:
 ## Ziel-Topic-Vertrag
 
 Base Topic ist standardmaessig `ulux`. Der Geraeteteil eines Topics verwendet
-eine bestaetigte Seriennummer (z.B. `serial_456`) oder ersatzweise die
-konfigurierte Switch-ID/MAC. IP-Adressen und UMP-Protokolladressen werden nie
-als MQTT-Geraeteidentitaet verwendet.
+ausschliesslich eine Seriennummer, zum Beispiel `serial_456`. Wenn nur eine
+unbestaetigte `serial_number_candidate` vorliegt, wird auch diese verwendet.
+Wenn keine Seriennummer bekannt ist, lautet der Schluessel `unresolved`; MAC-
+Adressen, IP-Adressen und UMP-Protokolladressen werden nie als MQTT-
+Geraeteidentitaet verwendet.
 
 ### Status und Ereignisse
 
