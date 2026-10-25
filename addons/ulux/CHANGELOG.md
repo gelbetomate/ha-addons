@@ -1,5 +1,14 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.112
+
+- Prevent stale concurrent Discovery responses from replacing completed scan results.
+- Force a final refresh after sync discovery data has arrived.
+
+## 0.5.111
+
+- Probe unique UMP device IDs `1`, `92`, and `93`; include the configured V2.32 device ID 92 instead of probing 93 twice.
+
 ## 0.5.110
 
 - Allow Discovery cards with a valid MAC address to be selected and imported even when switch_id is not resolved yet.

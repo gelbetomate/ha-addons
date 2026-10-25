@@ -195,7 +195,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
     if (!device?.switch_id || !device.ip || device.ump_device_id != null) return;
     if (autoProbeInFlight.has(device.switch_id)) return;
     autoProbeInFlight.add(device.switch_id);
-    const deviceIds = [1, 93, 0x5D];
+    const deviceIds = [1, 92, 93];
     const requestedAt = new Date().toISOString();
     discoveryRegistry.updateDiagnosticsBySwitchId(device.switch_id, {
       ump_probe_status: 'pending',
@@ -410,7 +410,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       if (!target) return respond(res, 404, { error: `Device not found: ${switchId}` });
       const registryRecord = discoveryRegistry?.getStore?.()?.get?.(switchId);
       const deviceIds = registryRecord?.ump_device_id == null
-        ? [1, 93, 0x5D]
+        ? [1, 92, 93]
         : [target.ump_device_id];
       const probes = deviceIds.map((deviceId) => buildTelegramForDevice(
         deviceId,

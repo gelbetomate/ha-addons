@@ -769,6 +769,7 @@
       selectedDiscoveryDevices: new Set(),
       currentEditingDevice: null,
       discoveryScanInProgress: false,
+      discoveryRequestSequence: 0,
     };
 
     function applyThemeMap(themeMap) {
@@ -1296,8 +1297,10 @@
 
     // Discovery
     async function loadDiscovery() {
+      const requestSequence = ++UI_STATE.discoveryRequestSequence;
       try {
         const data = await fetchJson(`${API_BASE}/discovery/devices`);
+        if (requestSequence !== UI_STATE.discoveryRequestSequence) return;
         const list = document.getElementById('discoveryList');
         const empty = document.getElementById('discoveryEmpty');
         const actions = document.getElementById('discoveryActions');
@@ -1377,6 +1380,9 @@
           await loadDiscovery();
           scan = (await fetchJson(`${API_BASE}/discovery/scan`)).scan;
           if (scan.status === 'complete' || scan.status === 'error') break;
+        }
+        if (scan?.status === 'complete') {
+          await new Promise((resolve) => setTimeout(resolve, 750));
         }
         await Promise.all([loadDiscovery(), loadDevices()]);
         if (scan?.status === 'error') throw new Error(scan.error || 'Discovery scan failed');
