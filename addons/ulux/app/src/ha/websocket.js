@@ -124,6 +124,22 @@ function createHaWebSocket(haConfig, log) {
    * @returns {Promise<object>} Resolves with the HA result
    */
   function fireEvent(eventType, eventData) {
+    const supervisorProxy = /^wss?:\/\/supervisor(?:\/|:)/i.test(String(haConfig.ws_url || ''));
+    if (supervisorProxy) {
+      return fireEventRest(eventType, eventData)
+        .then((result) => {
+          log.debug(`HA event delivered via REST: ${eventType}`);
+          return result;
+        })
+        .catch((restError) => {
+          log.warning(`HA REST event failed for ${eventType}; falling back to WebSocket: ${restError.message}`);
+          return sendCommand({
+            type: 'fire_event',
+            event_type: eventType,
+            event_data: eventData,
+          });
+        });
+    }
     if (!authenticated) {
       return fireEventRest(eventType, eventData).then((result) => {
         log.debug(`HA event delivered via REST: ${eventType}`);

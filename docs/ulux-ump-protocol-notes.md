@@ -684,7 +684,9 @@ one LED per message:
 ActorID=<actor>&LEDIndex=0..3&LEDColor=<combined byte>
 ```
 
-The combined `LEDColor` byte is interpreted as:
+On the wire the message stores `LEDIndex` at byte 4, one reserved byte at
+byte 5, and `LEDColor` as a little-endian 16-bit value at bytes 6-7. The
+combined color value is interpreted as:
 
 ```text
 bits 0..2  color code (0..7)

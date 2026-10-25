@@ -79,6 +79,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
   let discoveryScanState = { status: 'idle', started_at: null, completed_at: null };
+  const autoProbeInFlight = new Set();
   const streamManager = createStreamManager({ udpSend, log });
   const audioWebSocket = new WebSocket.Server({ noServer: true });
 
@@ -188,6 +189,38 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       ip: fromConfig.ip,
       port: fromConfig.port,
     };
+  }
+
+  function autoProbeDevice(device) {
+    if (!device?.switch_id || !device.ip || device.ump_device_id != null) return;
+    if (autoProbeInFlight.has(device.switch_id)) return;
+    autoProbeInFlight.add(device.switch_id);
+    const deviceIds = [1, 93, 0x5D];
+    const requestedAt = new Date().toISOString();
+    discoveryRegistry.updateDiagnosticsBySwitchId(device.switch_id, {
+      ump_probe_status: 'pending',
+      ump_probe_requested_at: requestedAt,
+      ump_probe_error: null,
+    });
+    deviceIds.forEach((deviceId, index) => {
+      const telegram = buildTelegramForDevice(
+        deviceId,
+        device.ump_frame_version || 0x0232,
+        buildInitializationRequest(),
+      );
+      setTimeout(() => udpSend(device.ip, device.port || config.listen_port || 34988, telegram), index * 100);
+    });
+    setTimeout(() => {
+      autoProbeInFlight.delete(device.switch_id);
+      const current = discoveryRegistry.getStore().get(device.switch_id);
+      if (current?.ump_probe_requested_at === requestedAt && current.ump_probe_status === 'pending') {
+        discoveryRegistry.updateDiagnosticsBySwitchId(device.switch_id, {
+          ump_probe_status: 'timeout',
+          ump_probe_error: 'Automatic UMP probe timed out',
+        });
+      }
+    }, 3000);
+    log.info(`Automatic UMP probe started for ${device.switch_id} (${device.ip})`);
   }
 
   async function handleRequest(req, res) {
@@ -697,6 +730,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       try {
         const device = discoveryRegistry.registerDevice(payload);
         registryStore.save();
+        autoProbeDevice(device);
         if (config.mode.mqtt && config.mode.mqtt_discovery && device.mqtt_discovery) {
           mqttClient?.publishDiscovery(device);
         }
@@ -722,6 +756,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       try {
         const devices = payload.devices.map((device) => discoveryRegistry.registerDevice(device));
         registryStore.save();
+        devices.forEach(autoProbeDevice);
         log.info(`HTTP API: imported ${devices.length} devices`);
         return respond(res, 200, { devices });
       } catch (err) {
@@ -748,6 +783,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       try {
         const device = discoveryRegistry.registerDevice({ ...payload, switch_id: switchId });
         registryStore.save();
+        autoProbeDevice(device);
         if (config.mode.mqtt && config.mode.mqtt_discovery) {
           if (device.mqtt_discovery) mqttClient?.publishDiscovery(device);
           else mqttClient?.removeDiscovery(device.switch_id);
@@ -935,6 +971,10 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
     start() {
       server.listen(apiPort, '0.0.0.0', () => {
         log.info(`HTTP API server listening on port ${apiPort}`);
+        setTimeout(() => {
+          const devices = discoveryRegistry?.getStore?.()?.getAll?.() || [];
+          devices.forEach(autoProbeDevice);
+        }, 500);
       });
       server.on('error', (err) => {
         if (err.code === 'EADDRINUSE') {

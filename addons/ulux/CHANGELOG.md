@@ -1,5 +1,14 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.95
+
+- Corrected `ID_LED` to encode the combined `LEDColor` as the 16-bit field after `LEDIndex`.
+- Prefer the Supervisor REST event endpoint for HA event delivery, with WebSocket fallback.
+
+## 0.5.94
+
+- Automatically probe registered devices without a learned UMP device ID at bridge startup, import, or registration.
+
 ## 0.5.93
 
 - Persist learned UMP device ID and frame version during normal packet registry updates so UI, HTTP, and MQTT commands use the real device target.

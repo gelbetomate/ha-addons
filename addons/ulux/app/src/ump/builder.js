@@ -284,7 +284,8 @@ function buildLedMessage(actorId = 1, ledIndex = 0, led = 0) {
   buf.writeUInt8(MessageIds.IdLed, 1);             // MessageID = 0x44
   buf.writeUInt16LE(actorId & 0xFFFF, 2);          // ActorID
   buf.writeUInt8(Number(ledIndex) & 0x03, 4);      // LEDIndex
-  buf.writeUInt8(buildLedColorValue(led), 5);      // LEDColor
+  buf.writeUInt8(0, 5);                             // Reserved
+  buf.writeUInt16LE(buildLedColorValue(led), 6);   // LEDColor (UInt16LE)
   return buf;
 }
 
