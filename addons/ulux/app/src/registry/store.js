@@ -126,6 +126,21 @@ class RegistryStore {
     return this.getAll().find((device) => device.ip === ip) || null;
   }
 
+  findByMac(macAddress) {
+    const wanted = String(macAddress || '').toUpperCase();
+    if (!wanted) return null;
+    return this.getAll().find((device) =>
+      String(device.mac_address || '').toUpperCase() === wanted
+      || String(device.switch_id || '').toUpperCase() === wanted
+    ) || null;
+  }
+
+  findByProtocolId(protocolId) {
+    const wanted = String(protocolId || '').toUpperCase();
+    if (!wanted) return null;
+    return this.getAll().find((device) => String(device.protocol_id || '').toUpperCase() === wanted) || null;
+  }
+
   rekey(oldSwitchId, data) {
     const oldKey = String(oldSwitchId || '').toUpperCase();
     const old = this.devices.get(oldKey);

@@ -44,11 +44,13 @@ function createDiscoveryRegistry(registryStore, log) {
     const observedIp = ctx.senderIp || ctx.ip || '';
     const switchId = normaliseSwitchId(ctx.switchId);
     const existing = (switchId ? store.get(switchId) : null)
+      || (discoveredMac ? store.findByMac(discoveredMac) : null)
+      || (ctx.protocol_id ? store.findByProtocolId(ctx.protocol_id) : null)
       || store.findByIp(observedIp)
       || pendingDiscovery.get(observedIp);
     const discoveredMac = normaliseSwitchId(ctx.mac_address);
-    const canonicalSwitchId = existing && existing.ip === observedIp
-      ? (discoveredMac || existing.switch_id)
+    const canonicalSwitchId = existing
+      ? (discoveredMac || switchId || existing.switch_id)
       : (discoveredMac || switchId);
 
     // The UMP header contains a context ID, not necessarily the Ethernet MAC.

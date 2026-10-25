@@ -1,5 +1,17 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.105
+
+- Match discovered devices by stable discovery `protocol_id` when MAC resolution is unavailable during an IP change.
+
+## 0.5.104
+
+- Treat a known MAC on a new IP as a legitimate device move instead of a duplicate identity.
+
+## 0.5.103
+
+- Ignore stale duplicate discovery MAC addresses already assigned to another registered IP.
+
 ## 0.5.102
 
 - Keep discovery scans open until sync metadata responses arrive instead of completing on the first broadcast response.
