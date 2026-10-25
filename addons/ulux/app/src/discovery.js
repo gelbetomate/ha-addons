@@ -326,7 +326,6 @@ function createDiscoveryScanner({
       `(protocol_id=${discovered.protocol_id}, ${message.length} bytes, ` +
       `serial=${serialNumber || 'not decoded'})`
     );
-    scanQuietFinish?.();
   });
 
   return {

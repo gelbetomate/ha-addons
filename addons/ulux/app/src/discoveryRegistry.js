@@ -157,6 +157,10 @@ function createDiscoveryRegistry(registryStore, log) {
    * @returns {object} Created device record
    */
   function registerDevice(data) {
+    const switchId = String(data?.switch_id || '').toUpperCase();
+    if (/^00:00:26:02:[0-9A-F]{2}:[0-9A-F]{2}$/.test(switchId)) {
+      throw new Error('UMP protocol address cannot be used as switch_id; provide a MAC address or serial number');
+    }
     const existing = data?.switch_id ? store.get(data.switch_id) : null;
     const pending = data?.ip ? pendingDiscovery.get(data.ip) : null;
     const record = store.upsert({

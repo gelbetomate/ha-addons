@@ -1,5 +1,13 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.102
+
+- Keep discovery scans open until sync metadata responses arrive instead of completing on the first broadcast response.
+
+## 0.5.101
+
+- Reject UMP protocol addresses as registry switch IDs during device import.
+
 ## 0.5.100
 
 - Use only confirmed or candidate serial numbers for MQTT topic identities; remove MAC fallback.
