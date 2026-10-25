@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.108
+
+- Do not create Discovery entries keyed by the UMP protocol address when normal UMP traffic arrives before discovery identity is known.
+
 ## 0.5.107
 
 - Refresh the Discovery tab automatically while scanning and after results arrive, removing the need to press Scan now twice.

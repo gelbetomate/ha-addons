@@ -93,10 +93,14 @@ function createDispatcher({ config, haClient, mqttClient, assistSession, discove
         || sw;
 
     if (discoveryRegistry) {
+      const resolvedSwitchId = resolvedSwitch.switch_id && resolvedSwitch.name !== 'unknown'
+        ? resolvedSwitch.switch_id
+        : null;
       discoveryRegistry.upsert({
         senderIp,
         senderPort,
-        switchId: resolvedSwitch.switch_id || telegram.deviceAddressHex,
+        switchId: resolvedSwitchId,
+        protocol_id: discoveryRegistry.getStore?.()?.findByIp?.(senderIp)?.protocol_id || null,
         switchName: resolvedSwitch.name,
         configured: resolvedSwitch.name !== 'unknown' || Boolean(resolvedSwitch.switch_id),
         ump_device_id: telegram.deviceId,
