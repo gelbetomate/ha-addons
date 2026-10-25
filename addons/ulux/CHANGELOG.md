@@ -1,5 +1,14 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.97
+
+- Separate polled `ulux_state` events from real `ID_EVENT` key events exposed as `ulux_event`.
+
+## 0.5.96
+
+- Fixed discovery scan completion so the first scan response is not missed before the result is rendered.
+- Expose the last HA REST event delivery error through `/api/health`.
+
 ## 0.5.95
 
 - Corrected `ID_LED` to encode the combined `LEDColor` as the 16-bit field after `LEDIndex`.

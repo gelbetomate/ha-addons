@@ -158,6 +158,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         "ulux_sensor", async_handle_sensor_event
     )
     hass.data[DOMAIN]["state_event_unsub"] = hass.bus.async_listen(
+        "ulux_state", async_handle_state_event
+    )
+    hass.data[DOMAIN]["key_snapshot_event_unsub"] = hass.bus.async_listen(
         "ulux_event", async_handle_state_event
     )
     hass.data[DOMAIN]["key_event_unsub"] = hass.bus.async_listen(

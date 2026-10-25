@@ -29,6 +29,7 @@ function createHaWebSocket(haConfig, log) {
   let reconnectTimer = null;
   let stopped = false;
   let authSent = false;
+  let lastEventError = null;
 
   function connect() {
     if (stopped) return;
@@ -128,10 +129,12 @@ function createHaWebSocket(haConfig, log) {
     if (supervisorProxy) {
       return fireEventRest(eventType, eventData)
         .then((result) => {
+          lastEventError = null;
           log.debug(`HA event delivered via REST: ${eventType}`);
           return result;
         })
         .catch((restError) => {
+          lastEventError = restError.message;
           log.warning(`HA REST event failed for ${eventType}; falling back to WebSocket: ${restError.message}`);
           return sendCommand({
             type: 'fire_event',
@@ -142,8 +145,12 @@ function createHaWebSocket(haConfig, log) {
     }
     if (!authenticated) {
       return fireEventRest(eventType, eventData).then((result) => {
+        lastEventError = null;
         log.debug(`HA event delivered via REST: ${eventType}`);
         return result;
+      }).catch((err) => {
+        lastEventError = err.message;
+        throw err;
       });
     }
     return sendCommand({
@@ -192,6 +199,7 @@ function createHaWebSocket(haConfig, log) {
     return {
       connected: Boolean(authenticated && ws?.readyState === WebSocket.OPEN),
       error: lastError,
+      event_error: lastEventError,
     };
   }
 

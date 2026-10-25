@@ -148,7 +148,7 @@ function createDiscoveryScanner({
   function scanAndWait(waitMs = 10000) {
     return new Promise((resolve) => {
       let settled = false;
-      let quietTimer;
+      let quietTimer = null;
       const finish = () => {
         if (settled) return;
         settled = true;
@@ -158,7 +158,6 @@ function createDiscoveryScanner({
         resolve();
       };
       const timer = setTimeout(finish, waitMs);
-      quietTimer = setTimeout(finish, 1500);
       scanQuietFinish = () => {
         clearTimeout(quietTimer);
         quietTimer = setTimeout(finish, 1500);

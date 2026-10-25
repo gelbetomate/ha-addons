@@ -128,8 +128,8 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
   };
 
   if (haClient && config.mode.ha_events) {
-    haClient.fireEvent('ulux_event', event).catch((err) =>
-      log.error('Failed to fire HA event ulux_event (state):', err.message)
+    haClient.fireEvent('ulux_state', event).catch((err) =>
+      log.error('Failed to fire HA event ulux_state (state):', err.message)
     );
   }
 
