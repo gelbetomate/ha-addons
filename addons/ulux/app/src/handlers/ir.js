@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 /** Preserve unknown IR response payloads until the V2.32 layout is confirmed. */
 function handleIR(msg, ctx, { config, haClient, mqttClient, discoveryRegistry, log }) {
   const { senderIp, switch: sw, timestamp } = ctx;
@@ -20,7 +22,7 @@ function handleIR(msg, ctx, { config, haClient, mqttClient, discoveryRegistry, l
   }
   if (mqttClient && config?.mode?.mqtt) {
     mqttClient.publish(
-      `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/ir`,
+      `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/ir`,
       JSON.stringify(payload),
     );
   }

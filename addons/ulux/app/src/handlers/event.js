@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 /**
  * Handler for ID-Event (MessageID=0x51) messages.
  *
@@ -60,7 +62,7 @@ function emitKeyAction(action, payload, { config, haClient, mqttClient, log }) {
     );
   }
   if (mqttClient && config.mode.mqtt) {
-    const topic = `${config.mqtt.base_topic}/${payload.switch_id || payload.ip}/event/key_action`;
+    const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(payload)}/event/key_action`;
     mqttClient.publish(topic, JSON.stringify(actionPayload));
   }
 }
@@ -123,6 +125,7 @@ function handleEvent(msg, ctx, { config, haClient, mqttClient, assistSession, di
   // ── Snapshot event (always) ────────────────────────────────────────────────
   const snapshotPayload = {
     switch_id:     sw.switch_id,
+    serial_number: sw.serial_number,
     switch_name:   sw.name,
     ip:            senderIp,
     actor_id:      actorId,
@@ -140,7 +143,7 @@ function handleEvent(msg, ctx, { config, haClient, mqttClient, assistSession, di
   }
 
   if (mqttClient && config.mode.mqtt) {
-    const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/event/key`;
+    const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/event/key`;
     mqttClient.publish(topic, JSON.stringify(snapshotPayload));
   }
 
@@ -162,6 +165,7 @@ function handleEvent(msg, ctx, { config, haClient, mqttClient, assistSession, di
 
     const edgePayload = {
       switch_id:         sw.switch_id,
+      serial_number:     sw.serial_number,
       switch_name:       sw.name,
       ip:                senderIp,
       actor_id:          actorId,
@@ -181,7 +185,7 @@ function handleEvent(msg, ctx, { config, haClient, mqttClient, assistSession, di
     }
 
     if (mqttClient && config.mode.mqtt) {
-      const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/event/key_edge`;
+      const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/event/key_edge`;
       mqttClient.publish(topic, JSON.stringify(edgePayload));
     }
 

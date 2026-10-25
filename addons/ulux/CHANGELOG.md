@@ -1,5 +1,14 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.99
+
+- Allow page index `0` in the bridge device setup UI.
+
+## 0.5.98
+
+- Use confirmed serial number or configured switch ID/MAC as MQTT device identity; never use IP or UMP protocol address.
+- Accept serial-based MQTT command topics in addition to legacy switch ID topics.
+
 ## 0.5.97
 
 - Separate polled `ulux_state` events from real `ID_EVENT` key events exposed as `ulux_event`.

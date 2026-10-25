@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 const { streamImageToSwitch } = require('../ump/videoStream');
 const {
   buildTelegramForDevice,
@@ -245,7 +247,9 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
 function findSwitchTarget(switchId, configuredSwitches = [], discoveryRegistry = null) {
   if (!switchId) return null;
   const store = discoveryRegistry?.getStore?.();
-  const fromStore = store?.get?.(switchId) || store?.findByIp?.(switchId);
+  const fromStore = store?.get?.(switchId)
+    || store?.findByIp?.(switchId)
+    || store?.getAll?.().find((device) => mqttDeviceKey(device) === String(switchId));
   if (fromStore) {
     return {
       switch_id: fromStore.switch_id,

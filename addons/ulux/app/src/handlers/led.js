@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 const LED_COLORS = ['off', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'];
 const LED_BLINK_MODES = [
   'permanent',
@@ -47,7 +49,7 @@ function handleLed(msg, ctx, { config, haClient, mqttClient, discoveryRegistry, 
   }
   if (mqttClient && config?.mode?.mqtt) {
     mqttClient.publish(
-      `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/led`,
+      `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/led`,
       JSON.stringify(payload),
     );
   }

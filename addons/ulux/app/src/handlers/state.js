@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 /**
  * Handler for ID-State (MessageID=0x01) messages.
  *
@@ -134,7 +136,7 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
   }
 
   if (mqttClient && config.mode.mqtt) {
-    const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/event/state`;
+    const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/event/state`;
     mqttClient.publish(topic, JSON.stringify(event));
   }
 

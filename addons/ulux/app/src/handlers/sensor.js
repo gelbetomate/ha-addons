@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 const { MessageIds } = require('../ump/messageIds');
 
 /**
@@ -145,7 +147,7 @@ function handleSensor(msg, ctx, { config, haClient, mqttClient, discoveryRegistr
 
   // Publish to MQTT
   if (mqttClient && config?.mode?.mqtt) {
-    const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/sensor/${sensorType}`;
+    const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/sensor/${sensorType}`;
     mqttClient.publish(topic, JSON.stringify(payload));
     if (value !== null && typeof value !== 'object') {
       // Also publish simple numeric state topic for direct sensor integration

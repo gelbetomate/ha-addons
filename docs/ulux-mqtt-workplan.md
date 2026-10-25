@@ -27,7 +27,10 @@ Noch nicht vollstaendig:
 
 ## Ziel-Topic-Vertrag
 
-Base Topic ist standardmaessig `ulux`.
+Base Topic ist standardmaessig `ulux`. Der Geraeteteil eines Topics verwendet
+eine bestaetigte Seriennummer (z.B. `serial_456`) oder ersatzweise die
+konfigurierte Switch-ID/MAC. IP-Adressen und UMP-Protokolladressen werden nie
+als MQTT-Geraeteidentitaet verwendet.
 
 ### Status und Ereignisse
 

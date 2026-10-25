@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 const { parseTelegram, telegramSummary } = require('../ump/decoder');
 const { MessageIds } = require('../ump/messageIds');
 const handleState = require('./state');
@@ -154,7 +156,7 @@ function emitRawEvent({ hex, senderIp, sw, timestamp, haClient, mqttClient, conf
   }
 
   if (mqttClient && config.mode.mqtt) {
-    const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/event/raw`;
+    const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/event/raw`;
     mqttClient.publish(topic, JSON.stringify(payload));
   }
 }

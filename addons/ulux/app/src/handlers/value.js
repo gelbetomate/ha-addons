@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 const { MessageIds } = require('../ump/messageIds');
 
 /**
@@ -59,7 +61,7 @@ function handleValue(msg, ctx, { config, haClient, mqttClient, log }) {
   }
 
   if (mqttClient && config?.mode?.mqtt) {
-    const base = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/actor/${actorId}`;
+    const base = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/actor/${actorId}`;
     mqttClient.publish(`${base}/value`, JSON.stringify(payload));
     if (editValue !== null) {
       mqttClient.publish(`${base}/edit_value`, String(editValue));

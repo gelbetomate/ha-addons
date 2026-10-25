@@ -1016,11 +1016,11 @@
     }
 
     async function quickSetPage(switchId) {
-      const pageStr = prompt('Enter page number (1-based index):', '1');
+      const pageStr = prompt('Enter page index (0-based):', '0');
       if (pageStr === null) return;
       const pageIndex = parseInt(pageStr, 10);
-      if (isNaN(pageIndex) || pageIndex < 1) {
-        showAlert('Invalid page index (must be >= 1)', 'error');
+      if (isNaN(pageIndex) || pageIndex < 0) {
+        showAlert('Invalid page index (must be >= 0)', 'error');
         return;
       }
       try {

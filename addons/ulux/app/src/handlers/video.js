@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 /**
  * Handler for UMP VideoState (MessageID=0xA1) messages.
  *
@@ -64,7 +66,7 @@ function handleVideoState(msg, ctx, { config, haClient, mqttClient, discoveryReg
   }
 
   if (mqttClient && config?.mode?.mqtt) {
-    const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/video_state`;
+    const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/video_state`;
     mqttClient.publish(topic, JSON.stringify(payload));
   }
 }

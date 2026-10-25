@@ -1,5 +1,7 @@
 'use strict';
 
+const { mqttDeviceKey } = require('../mqtt/topics');
+
 const { MessageIds } = require('../ump/messageIds');
 
 /**
@@ -44,7 +46,7 @@ function handlePage(msg, ctx, { config, haClient, mqttClient, discoveryRegistry,
     }
 
     if (mqttClient && config?.mode?.mqtt) {
-      const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/page`;
+      const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/page`;
       mqttClient.publish(topic, JSON.stringify(payload));
       mqttClient.publish(`${topic}/state`, String(pageIndex));
     }
@@ -73,7 +75,7 @@ function handlePage(msg, ctx, { config, haClient, mqttClient, discoveryRegistry,
     }
 
     if (mqttClient && config?.mode?.mqtt) {
-      const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/page_count`;
+      const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/page_count`;
       mqttClient.publish(topic, JSON.stringify(payload));
       mqttClient.publish(`${topic}/state`, String(pageCount));
     }
@@ -109,7 +111,7 @@ function handlePage(msg, ctx, { config, haClient, mqttClient, discoveryRegistry,
     }
 
     if (mqttClient && config?.mode?.mqtt) {
-      const topic = `${config.mqtt.base_topic}/${sw.switch_id || senderIp}/actors`;
+      const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/actors`;
       mqttClient.publish(topic, JSON.stringify(payload));
     }
   }
