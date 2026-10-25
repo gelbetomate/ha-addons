@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.106
+
+- Fixed a discovery registry startup crash caused by using the discovered MAC before initialization.
+
 ## 0.5.105
 
 - Match discovered devices by stable discovery `protocol_id` when MAC resolution is unavailable during an IP change.

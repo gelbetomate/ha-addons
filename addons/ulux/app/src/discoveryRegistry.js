@@ -43,12 +43,12 @@ function createDiscoveryRegistry(registryStore, log) {
   function upsert(ctx) {
     const observedIp = ctx.senderIp || ctx.ip || '';
     const switchId = normaliseSwitchId(ctx.switchId);
+    const discoveredMac = normaliseSwitchId(ctx.mac_address);
     const existing = (switchId ? store.get(switchId) : null)
       || (discoveredMac ? store.findByMac(discoveredMac) : null)
       || (ctx.protocol_id ? store.findByProtocolId(ctx.protocol_id) : null)
       || store.findByIp(observedIp)
       || pendingDiscovery.get(observedIp);
-    const discoveredMac = normaliseSwitchId(ctx.mac_address);
     const canonicalSwitchId = existing
       ? (discoveredMac || switchId || existing.switch_id)
       : (discoveredMac || switchId);
