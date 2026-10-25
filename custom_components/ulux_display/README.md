@@ -5,6 +5,13 @@ This Home Assistant integration renders dashboards for u::lux Switch IP devices 
 The supported u::lux feature comparison is documented in
 [ulux-feature-matrix.md](../../docs/ulux-feature-matrix.md).
 
+An example for controlling all four LEDs via a Home Assistant action and MQTT
+is available in [ulux-mqtt-workplan.md](../../docs/ulux-mqtt-workplan.md).
+
+The comparison of the tile, key, scene, standby, and sensor concepts with the
+HA implementation is documented in
+[ulux-digitalstrom-comparison.md](../../docs/ulux-digitalstrom-comparison.md).
+
 ---
 
 ## What It Does

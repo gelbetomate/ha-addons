@@ -74,6 +74,7 @@ async function streamImageToSwitch({
   log,
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
+  actorId = 23,
   linesPerPacket = DEFAULT_LINES_PER_PACKET,
   interPacketDelayMs = DEFAULT_INTER_PACKET_DELAY_MS,
   sequenceId,
@@ -92,7 +93,7 @@ async function streamImageToSwitch({
     : ((Date.now() >>> 0) & 0x7FFFFFFF);
 
   // Start stream session first so the switch can prepare its framebuffer.
-  const startTelegram = buildTelegram(buildVideoStartMessage(seqId));
+  const startTelegram = buildTelegram(buildVideoStartMessage(seqId, actorId));
   udpSend(remoteHost, remotePort, startTelegram);
 
   const rgb565 = toRgb565LE(image, width, height);
@@ -117,6 +118,8 @@ async function streamImageToSwitch({
       sequenceId: seqId,
       startLine,
       lineCount,
+      startColumn: 0,
+      columnCount: width,
       videoData: chunk,
       acknowledge: false,
     });

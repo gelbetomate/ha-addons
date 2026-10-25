@@ -3,6 +3,9 @@
 Grundlage sind die verifizierten UMP-TestCenter-Mitschnitte und die aktuell
 implementierte Bridge-/HA-Funktionalitaet.
 
+Der Abgleich mit dem Digitalstrom-Bedienkonzept steht in
+[ulux-digitalstrom-comparison.md](ulux-digitalstrom-comparison.md).
+
 ## Hardwareprofil
 
 Fuer die aktuelle Installation ist das Add-on `MD+RH+TEMP` dokumentiert. Damit

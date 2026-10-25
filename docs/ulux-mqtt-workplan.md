@@ -72,6 +72,50 @@ Beispiel LED:
 {"actor_id":1,"leds":[{"color":1,"blinkMode":0,"override":true}]}
 ```
 
+Vollstaendiges Beispiel fuer alle vier Switch-LEDs:
+
+Topic:
+
+```text
+ulux/00:50:C2:73:03:14/cmd/led
+```
+
+Payload:
+
+```json
+{
+   "actor_id": 1,
+   "leds": [
+      {"color": 1, "blinkMode": 0, "override": true},
+      {"color": 2, "blinkMode": 0, "override": true},
+      {"color": 4, "blinkMode": 0, "override": true},
+      {"color": 7, "blinkMode": 0, "override": true}
+   ]
+}
+```
+
+Das gleiche Beispiel als Home-Assistant-Aktion:
+
+```yaml
+action: ulux_display.set_led
+data:
+   device_id: DEINE_HA_DEVICE_ID
+   actor_id: 1
+   leds: >-
+      [{"color":1,"blinkMode":0,"override":true},
+       {"color":2,"blinkMode":0,"override":true},
+       {"color":4,"blinkMode":0,"override":true},
+       {"color":7,"blinkMode":0,"override":true}]
+```
+
+Die Werte bedeuten LED 1 rot, LED 2 gruen, LED 3 blau und LED 4 weiss.
+Die Nummern entsprechen der UMP-Reihenfolge; die physische Eckposition muss
+einmalig mit diesem Farbmuster zugeordnet werden.
+
+Die Bridge wandelt die vier Listeneintraege in vier einzelne `ID_LED`-
+Nachrichten mit `LEDIndex=0..3` um. Das entspricht dem nachgewiesenen
+Loxone-Befehlsschema.
+
 Beispiel Text:
 
 ```json

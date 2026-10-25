@@ -1,5 +1,14 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.91
+
+- Ported the reference video's configurable actor ID, defaulting to actor 23.
+- Added start-column and column-count fields to the 16-byte video stream metadata header.
+
+## 0.5.90
+
+- Corrected outbound `ID_LED` commands to send explicit `LEDIndex` and combined `LEDColor` values per LED, matching the existing Loxone command format.
+
 ## 0.5.89
 
 - Added runtime configuration for HA events, MQTT, MQTT Discovery, broker host/port, credentials, and base topic.

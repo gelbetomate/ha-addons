@@ -11,6 +11,7 @@ const {
   buildPageIndexMessage,
   buildActivateMessage,
   buildLedMessage,
+  buildLedColorValue,
   buildTextMessage,
   buildEditValueMessage,
   buildRealValueMessage,
@@ -450,10 +451,13 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const body = await readJsonBody(req).catch(() => ({}));
       const actorId = Number(body.actor_id ?? 1);
       const leds = Array.isArray(body.leds) ? body.leds : [];
+      const ledMessages = leds.map((led, index) =>
+        buildLedMessage(actorId, index, buildLedColorValue(led))
+      );
       const telegram = buildTelegramForDevice(
         target.ump_device_id,
         target.ump_frame_version,
-        buildLedMessage(actorId, leds)
+        ...ledMessages
       );
       udpSend(target.ip, target.port || 34988, telegram);
       log.info(`API: Sent LED command to ${target.ip}:${target.port || 34988} (actor=${actorId})`);
@@ -864,6 +868,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
           log,
           width:  payload.width  || streamCfg.width  || 240,
           height: payload.height || streamCfg.height || 240,
+          actorId: payload.actor_id || streamCfg.actor_id || 23,
           linesPerPacket:      streamCfg.lines_per_packet      || 5,
           interPacketDelayMs:  streamCfg.inter_packet_delay_ms ?? 5,
         });

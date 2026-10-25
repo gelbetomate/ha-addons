@@ -124,11 +124,11 @@ function getDateParts(date, timeZone) {
  * @param {number} sequenceId - Stream sequence identifier
  * @returns {Buffer} 12-byte message buffer
  */
-function buildVideoStartMessage(sequenceId) {
+function buildVideoStartMessage(sequenceId, actorId = 23) {
   const buf = Buffer.alloc(12, 0);
   buf.writeUInt8(0x0C, 0);                         // MessageLength
   buf.writeUInt8(MessageIds.VideoStart, 1);        // MessageID = 0xA2
-  buf.writeUInt16LE(0x0000, 2);                    // ActorID
+  buf.writeUInt16LE(actorId & 0xFFFF, 2);          // ActorID
   buf.writeUInt32LE(0, 4);                         // Reserved
   buf.writeUInt32LE(sequenceId >>> 0, 8);          // SequenceID
   return buf;
@@ -151,11 +151,11 @@ function buildVideoStopMessage(sequenceId = 1) {
 }
 
 /** Build a passive VideoState capability request (MessageID=0xA1). */
-function buildVideoStateRequest() {
+function buildVideoStateRequest(actorId = 23) {
   const buf = Buffer.alloc(4, 0);
   buf.writeUInt8(0x04, 0);
   buf.writeUInt8(MessageIds.VideoState, 1);
-  buf.writeUInt16LE(0x0016, 2);
+  buf.writeUInt16LE(actorId & 0xFFFF, 2);
   return buf;
 }
 
@@ -259,30 +259,32 @@ function buildValueMessage(actorId = 1, editValue = 0, realValues = [0]) {
   return buf;
 }
 
+/** Convert a structured LED value to the combined Loxone/UMP byte value. */
+function buildLedColorValue(led = {}) {
+  if (typeof led === 'number') return led & 0xFF;
+  if (led.raw !== undefined) return Number(led.raw) & 0xFF;
+  let value = (Number(led.color ?? 0) & 0x07) | ((Number(led.blinkMode ?? 0) & 0x07) << 4);
+  if (led.override !== false) value |= 0x80;
+  return value;
+}
+
 /**
- * Build an ID-LED message (MessageID=0x44, 8 bytes).
- * Controls up to 4 corner LEDs of an actor.
+ * Build one ID-LED message (MessageID=0x44, 8 bytes).
+ * The tested Loxone format addresses one LED explicitly with LEDIndex and
+ * sends the combined color/blink/override byte as LEDColor.
  *
  * @param {number} actorId - Target actor ID
- * @param {Array<{ color?: number, blinkMode?: number, override?: boolean }>} leds - Config for up to 4 LEDs
+ * @param {number} ledIndex - LED index (0..3)
+ * @param {number|object} led - Combined LEDColor byte or structured value
  * @returns {Buffer} 8-byte message buffer
  */
-function buildLedMessage(actorId = 1, leds = []) {
+function buildLedMessage(actorId = 1, ledIndex = 0, led = 0) {
   const buf = Buffer.alloc(8, 0);
   buf.writeUInt8(0x08, 0);                         // MessageLength = 8
   buf.writeUInt8(MessageIds.IdLed, 1);             // MessageID = 0x44
   buf.writeUInt16LE(actorId & 0xFFFF, 2);          // ActorID
-  for (let i = 0; i < 4; i++) {
-    const led = leds[i];
-    if (!led) continue;
-    let b = 0;
-    b |= (led.color ?? 0) & 0x07;                  // bits 0-2: off, red, green, yellow, blue, magenta, cyan, white
-    b |= ((led.blinkMode ?? 0) & 0x07) << 4;       // bits 4-6: 0, 16, 32, 48, 64, 80, 96, 112
-    if (led.override !== false) {
-      b |= 0x80;                                   // bit 7: Override UMP control
-    }
-    buf.writeUInt8(b, 4 + i);
-  }
+  buf.writeUInt8(Number(ledIndex) & 0x03, 4);      // LEDIndex
+  buf.writeUInt8(buildLedColorValue(led), 5);      // LEDColor
   return buf;
 }
 
@@ -575,31 +577,37 @@ function buildTelegram(...messageBuffers) {
  *     4-5:  FrameVersion (0x0201)
  *     6-7:  PacketID
  *     8-15: Project/Firmware/Switch/Design IDs (all zero)
- *   12-byte stream header:
+ *   16-byte stream header:
  *     16-19: StreamFlags (bit0 = Acknowledge)
  *     20-23: SequenceID (UInt32LE)
  *     24-25: StartLine (UInt16LE)
  *     26-27: LineCount (UInt16LE)
+ *     28-29: StartColumn (UInt16LE)
+ *     30-31: ColumnCount (UInt16LE)
  *   followed by RGB565LE video bytes.
  *
  * @param {object} opts
  * @param {number} opts.sequenceId
  * @param {number} opts.startLine
  * @param {number} opts.lineCount
+ * @param {number} [opts.startColumn=0]
+ * @param {number} [opts.columnCount=0]
  * @param {Buffer} opts.videoData
  * @param {boolean} [opts.acknowledge=false]
  * @returns {Buffer}
  */
-function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, videoData, acknowledge = false }) {
+function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColumn = 0, columnCount = 0, videoData, acknowledge = false }) {
   const data = Buffer.isBuffer(videoData) ? videoData : Buffer.from(videoData || []);
 
-  const streamHeader = Buffer.alloc(12, 0);
+  const streamHeader = Buffer.alloc(16, 0);
   if (acknowledge) {
     streamHeader.writeUInt8(0x01, 0);
   }
   streamHeader.writeUInt32LE(sequenceId >>> 0, 4);
   streamHeader.writeUInt16LE(startLine & 0xFFFF, 8);
   streamHeader.writeUInt16LE(lineCount & 0xFFFF, 10);
+  streamHeader.writeUInt16LE(startColumn & 0xFFFF, 12);
+  streamHeader.writeUInt16LE(columnCount & 0xFFFF, 14);
 
   const frameLength = 16 + streamHeader.length + data.length;
   const frameHeader = Buffer.alloc(16, 0);
@@ -627,6 +635,7 @@ module.exports = {
   buildRealValueMessage,
   buildValueMessage,
   buildLedMessage,
+  buildLedColorValue,
   buildTextMessage,
   buildAudioVolumeMessage,
   buildAudioStopMessage,

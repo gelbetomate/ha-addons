@@ -651,8 +651,10 @@ All outbound telegrams are formatted inside the 16-byte UMP header using `buildT
 - `buildAudioPlayLocalMessage(soundId, volume)`: Plays internal chime (`0x98` on V2.32).
 - `buildAudioStopMessage()`: Stops playback immediately (`0x92` on V2.32).
 - `buildAudioVolumeMessage(volume)`: Sets master volume 0..100 (`0x91` on V2.32).
-- `buildVideoStartMessage(actorId, sequenceId)`: Starts video stream session (`0xA2`).
+- `buildVideoStartMessage(sequenceId, actorId)`: Starts video stream session (`0xA2`), default actor `23`.
 - `buildVideoStopMessage()`: Stops video streaming session (`0xA4`).
+- `buildVideoStreamTelegram(...)`: Sends the 16-byte stream metadata header
+  with sequence, line range, column range, and RGB565 payload.
 - Sensor & diagnostic queries: `buildReadTemperatureMessage()`, `buildReadHumidityMessage()`, `buildReadCo2Message()`, `buildReadVocMessage()`, `buildReadIn2Message()`, `buildReadLuxMessage()`, `buildReadPageCountMessage()`, `buildReadPageIndexMessage()`.
 
 ---
@@ -675,7 +677,14 @@ from an external sensor integrated into the u::lux/Loxone setup; they are not
 assumed to be physically measured by the Switch itself. The Lux value is the
 separate ambient-light sensor message (`0x03`) from the Switch.
 
-For `ID_LED (0x44)`, each of the four LED bytes is interpreted as:
+For outbound `ID_LED (0x44)`, the tested Loxone-compatible command addresses
+one LED per message:
+
+```text
+ActorID=<actor>&LEDIndex=0..3&LEDColor=<combined byte>
+```
+
+The combined `LEDColor` byte is interpreted as:
 
 ```text
 bits 0..2  color code (0..7)

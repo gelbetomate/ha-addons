@@ -46,6 +46,7 @@ const DEFAULTS = {
   stream: {
     width: 86,
     height: 90,
+    actor_id: 23,
     lines_per_packet: 5,
     inter_packet_delay_ms: 5,
   },
