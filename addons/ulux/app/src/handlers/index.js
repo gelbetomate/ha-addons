@@ -97,6 +97,12 @@ function createDispatcher({ config, haClient, mqttClient, assistSession, discove
         switchId: resolvedSwitch.switch_id || telegram.deviceAddressHex,
         switchName: resolvedSwitch.name,
         configured: resolvedSwitch.name !== 'unknown' || Boolean(resolvedSwitch.switch_id),
+        ump_device_id: telegram.deviceId,
+        ump_frame_version: telegram.frameVersion,
+        ump_device_address: telegram.deviceAddressHex,
+        ump_packet_id: telegram.packetId,
+        ump_message_ids: telegram.messages.map((message) => message.msgId),
+        ump_last_seen: timestamp,
       });
     }
 

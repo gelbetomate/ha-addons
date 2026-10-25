@@ -75,7 +75,7 @@ const {
  * @param {object}   opts.log      - Logger
  * @returns {{ start: Function, close: Function }}
  */
-function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, discoveryScanner, haClient, mqttClient, log }) {
+function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, discoveryScanner, haClient, mqttClient, persistConfig, log }) {
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
   let discoveryScanState = { status: 'idle', started_at: null, completed_at: null };
@@ -298,10 +298,19 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       if (mqttClient?.reconfigure) {
         mqttClient.reconfigure({ ...config.mqtt, enabled: config.mode.mqtt });
       }
+      try {
+        persistConfig?.();
+      } catch (err) {
+        log.error(`Failed to persist runtime configuration: ${err.message}`);
+        return respond(res, 500, {
+          error: `Runtime configuration applied but could not be persisted: ${err.message}`,
+        });
+      }
       return respond(res, 200, {
         ok: true,
+        persisted: true,
         restart_required: !haClient && config.mode.ha_events,
-        message: 'Runtime configuration applied; persist it in the HA add-on options or standalone options.json.',
+        message: 'Configuration applied and persisted. A bridge restart may be required for HA mode changes.',
       });
     }
 

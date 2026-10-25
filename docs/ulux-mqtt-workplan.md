@@ -169,11 +169,12 @@ Die Standalone-Weboberflaeche ist der HTTP-Root-Endpunkt:
 http://<bridge-host>:8099/
 ```
 
-Umgesetzt in Bridge `0.5.89`:
+Umgesetzt in Bridge `0.5.92`:
 
 - MQTT-Verbindungsstatus und aktiver Base Topic.
 - Laufzeitumschaltung zwischen HA-Events, MQTT und Parallelbetrieb.
 - Laufzeitkonfiguration fuer Broker Host, Port, Benutzer, Passwort und Base Topic.
+- Persistenz dieser Werte in der aktiven Optionsdatei.
 - Auswahl eines konkreten Zieltopics.
 - JSON-Payload-Editor.
 - Aktionen `Publish to MQTT` und `Publish retained state`.

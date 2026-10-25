@@ -18,5 +18,5 @@ services:
     environment:
       - OPTIONS_PATH=/config/options.json
     volumes:
-      - ./options.json:/config/options.json:ro
+      - ./options.json:/config/options.json:rw
     restart: unless-stopped

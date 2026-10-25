@@ -1,6 +1,6 @@
 'use strict';
 
-const { loadConfig } = require('./src/config');
+const { loadConfig, persistRuntimeOptions } = require('./src/config');
 const { createUdpServer } = require('./src/udp');
 const { createAudioTransport } = require('./src/audio');
 const { createHaWebSocket } = require('./src/ha/websocket');
@@ -180,6 +180,7 @@ async function main() {
     discoveryScanner,
     haClient,
     mqttClient,
+    persistConfig: () => persistRuntimeOptions(config),
     log,
   });
   apiServer.start();

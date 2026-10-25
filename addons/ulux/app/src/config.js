@@ -92,6 +92,35 @@ function loadConfig() {
 }
 
 /**
+ * Persist the runtime-selectable integration settings without rewriting the
+ * rest of the user's add-on or standalone configuration.
+ */
+function persistRuntimeOptions(config) {
+  let options = {};
+  if (fs.existsSync(OPTIONS_PATH)) {
+    options = JSON.parse(fs.readFileSync(OPTIONS_PATH, 'utf8'));
+  }
+  options.mode = {
+    ...(options.mode || {}),
+    ha_events: Boolean(config.mode?.ha_events),
+    mqtt: Boolean(config.mode?.mqtt),
+    mqtt_discovery: Boolean(config.mode?.mqtt_discovery),
+  };
+  options.mqtt = {
+    ...(options.mqtt || {}),
+    host: config.mqtt?.host || '',
+    port: Number(config.mqtt?.port || 1883),
+    username: config.mqtt?.username || '',
+    password: config.mqtt?.password || '',
+    base_topic: config.mqtt?.base_topic || 'ulux',
+  };
+
+  const temporaryPath = `${OPTIONS_PATH}.tmp`;
+  fs.writeFileSync(temporaryPath, `${JSON.stringify(options, null, 2)}\n`, 'utf8');
+  fs.renameSync(temporaryPath, OPTIONS_PATH);
+}
+
+/**
  * Recursively merge source into target (plain-object only).
  * Arrays are replaced (not merged) so "switches" lists work correctly.
  */
@@ -113,4 +142,4 @@ function deepMerge(target, source) {
   return result;
 }
 
-module.exports = { loadConfig };
+module.exports = { loadConfig, persistRuntimeOptions };

@@ -1,5 +1,14 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.93
+
+- Persist learned UMP device ID and frame version during normal packet registry updates so UI, HTTP, and MQTT commands use the real device target.
+
+## 0.5.92
+
+- Persist runtime HA/MQTT mode and broker changes from the bridge UI.
+- Keep standalone `options.json` writable so UI configuration survives restarts.
+
 ## 0.5.91
 
 - Ported the reference video's configurable actor ID, defaulting to actor 23.
