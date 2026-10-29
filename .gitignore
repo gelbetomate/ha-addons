@@ -26,12 +26,7 @@ custom_components/**/node_modules/
 *.local
 .vscode/
 .idea/
-docs/
-docs/thu_may_07_2026_how_to_implement_binary_search_in.md
-docs/uLux_Switch_UMP_en (1).pdf
+docs/captures/
 docs/examples/
-docs/newudpmitschnitt.pcapng
-docs/MitschnittSynchronisierung2888.pcapng
-docs/MitschnittZuordnungsassistent.pcapng
-docs/MitschnittSynchronisierung2888_v2.pcapng
-docs/MitschnittZuordnungsassistent_.pcapng
+docs/external/
+
