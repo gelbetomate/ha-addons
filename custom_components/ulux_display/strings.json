@@ -1,0 +1,172 @@
+{
+  "entity": {
+    "number": {
+      "brightness": {
+        "name": "Brightness"
+      },
+      "refresh_interval": {
+        "name": "Refresh Interval"
+      },
+      "screen_cycle_interval": {
+        "name": "Screen Cycle Interval"
+      },
+      "cycle_interval": {
+        "name": "View Cycle Interval"
+      }
+    },
+    "button": {
+      "refresh": {
+        "name": "Refresh Display"
+      },
+      "next_screen": {
+        "name": "Next Screen"
+      },
+      "previous_screen": {
+        "name": "Previous Screen"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status"
+      },
+      "storage_used": {
+        "name": "Storage Used"
+      },
+      "storage_free": {
+        "name": "Storage Free"
+      }
+    },
+    "select": {
+      "display": {
+        "name": "Display"
+      }
+    },
+    "switch": {
+      "active": {
+        "name": "Active"
+      },
+      "view_cycling": {
+        "name": "View Cycling"
+      }
+    },
+    "text": {
+      "screen_name": {
+        "name": "Name"
+      },
+      "slot_entity": {
+        "name": "Entity"
+      },
+      "slot_label": {
+        "name": "Label"
+      }
+    }
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add u::lux Display",
+        "description": "Choose discovery or manual setup and enter the bridge URL.",
+        "data": {
+          "bridge_url": "Bridge URL",
+          "action": "Setup method"
+        }
+      },
+      "discover": {
+        "title": "Discovered u::lux Devices",
+        "description": "Select a device seen by the bridge.",
+        "data": {
+          "switch_id": "Switch ID",
+          "name": "Display name"
+        }
+      },
+      "manual": {
+        "title": "Manual u::lux Setup",
+        "description": "Enter the switch MAC address and IP address. Existing bridge registry data will be used when available.",
+        "data": {
+          "switch_id": "Switch ID (MAC address)",
+          "host": "Switch IP address",
+          "name": "Display name"
+        }
+      }
+    },
+    "error": {
+      "bridge_unreachable": "Cannot reach the u::lux bridge URL.",
+      "bridge_error": "Bridge request failed.",
+      "invalid_response": "Bridge returned an invalid discovery response.",
+      "no_devices_found": "No u::lux devices discovered yet. Trigger a key event on the switch and try again.",
+      "invalid_switch_id": "Switch ID is required.",
+      "invalid_host": "IP address is required.",
+      "timeout": "Connection timed out. The device may be offline or unreachable.",
+      "connection_refused": "Connection refused. Verify the device is powered on and the address is correct.",
+      "dns_error": "Could not resolve hostname. Check the address is correct.",
+      "unknown": "An unexpected error occurred while connecting."
+    },
+    "abort": {
+      "already_configured": "This device is already configured.",
+      "invalid_switch_id": "Invalid switch data received during auto-discovery.",
+      "imported_all": "All unconfigured registry devices were added.",
+      "bridge_unreachable": "Cannot reach the u::lux bridge registry."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Device Settings",
+        "description": "Configure this u::lux device.",
+        "data": {
+          "mqtt_discovery": "Enable MQTT Discovery"
+        }
+      },
+      "device_settings": {
+        "title": "Device Settings",
+        "description": "Configure settings for this device.",
+        "data": {
+          "refresh_interval": "Refresh interval (seconds)",
+          "screen_cycle_interval": "Screen cycle interval (0 = manual only)"
+        }
+      },
+      "manage_screens": {
+        "title": "Manage Screens",
+        "description": "Add, edit, or delete display screens.",
+        "data": {
+          "action": "Action"
+        }
+      },
+      "add_screen": {
+        "title": "Add New Screen",
+        "description": "Create a new screen.",
+        "data": {
+          "name": "Screen name",
+          "layout": "Layout",
+          "slot_0_type": "Slot 1",
+          "slot_1_type": "Slot 2",
+          "slot_2_type": "Slot 3",
+          "slot_3_type": "Slot 4",
+          "slot_4_type": "Slot 5",
+          "slot_5_type": "Slot 6"
+        }
+      },
+      "edit_screen": {
+        "title": "Edit Screen",
+        "description": "Modify screen settings.",
+        "data": {
+          "name": "Screen name",
+          "layout": "Layout",
+          "slot_0_type": "Slot 1",
+          "slot_1_type": "Slot 2",
+          "slot_2_type": "Slot 3",
+          "slot_3_type": "Slot 4",
+          "slot_4_type": "Slot 5",
+          "slot_5_type": "Slot 6"
+        }
+      },
+      "delete_screen": {
+        "title": "Delete Screen",
+        "description": "Are you sure you want to delete \"{screen_name}\"?",
+        "data": {
+          "confirm": "Yes, delete this screen"
+        }
+      }
+    }
+  }
+}

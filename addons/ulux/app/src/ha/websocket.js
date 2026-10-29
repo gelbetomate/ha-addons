@@ -1,0 +1,265 @@
+'use strict';
+
+const WebSocket = require('ws');
+
+const RECONNECT_DELAY_MS = 5000;
+
+/**
+ * Create a Home Assistant WebSocket API client.
+ *
+ * Implements the HA WebSocket authentication handshake and exposes a
+ * `fireEvent()` and config-entry deletion methods.
+ *
+ * If the connection fails the client logs the error and retries automatically
+ * so the rest of the add-on keeps running.
+ *
+ * Reference: https://developers.home-assistant.io/docs/api/websocket
+ *
+ * @param {object} haConfig  - { ws_url, token }
+ * @param {object} log       - Logger
+ * @returns {{ connect: Function, fireEvent: Function, disconnect: Function }}
+ */
+function createHaWebSocket(haConfig, log) {
+  let ws = null;
+  let authenticated = false;
+  let msgId = 1;
+  let pendingCalls = new Map(); // msgId → { resolve, reject }
+  let authenticationWaiters = [];
+  let lastError = null;
+  let reconnectTimer = null;
+  let stopped = false;
+  let authSent = false;
+  let lastEventError = null;
+
+  function connect() {
+    if (stopped) return;
+    authSent = false;
+
+    log.info(`Connecting to HA WebSocket: ${haConfig.ws_url}`);
+
+    try {
+      ws = new WebSocket(haConfig.ws_url);
+    } catch (err) {
+      log.error('Failed to create WebSocket:', err.message);
+      scheduleReconnect();
+      return;
+    }
+
+    ws.on('open', () => {
+      log.debug('HA WebSocket connection opened, waiting for auth_required');
+    });
+
+    ws.on('message', (data) => {
+      let msg;
+      try {
+        msg = JSON.parse(data.toString());
+      } catch {
+        log.warning('Received non-JSON message from HA WS');
+        return;
+      }
+      handleMessage(msg);
+    });
+
+    ws.on('close', (code) => {
+      authenticated = false;
+      authSent = false;
+      lastError = `WebSocket closed (code ${code})`;
+      log.warning(`HA WebSocket closed (code ${code})`);
+      scheduleReconnect();
+    });
+
+    ws.on('error', (err) => {
+      lastError = err.message;
+      log.error('HA WebSocket error:', err.message);
+      // 'close' event will follow; reconnect handled there
+    });
+  }
+
+  function handleMessage(msg) {
+    switch (msg.type) {
+      case 'auth_required':
+        log.debug('HA WS: auth_required — sending token');
+        sendAuth();
+        break;
+
+      case 'auth_ok':
+        log.info('HA WebSocket authenticated successfully');
+        authenticated = true;
+        lastError = null;
+        for (const waiter of authenticationWaiters.splice(0)) waiter.resolve();
+        break;
+
+      case 'auth_invalid':
+        lastError = 'Home Assistant authentication failed';
+        log.error('HA WebSocket authentication failed — check your token');
+        ws.close();
+        break;
+
+      case 'result':
+        if (pendingCalls.has(msg.id)) {
+          const { resolve, reject } = pendingCalls.get(msg.id);
+          pendingCalls.delete(msg.id);
+          if (msg.success) {
+            resolve(msg.result);
+          } else {
+            reject(new Error(msg.error?.message || 'Unknown HA WS error'));
+          }
+        }
+        break;
+
+      default:
+        log.debug(`HA WS message type "${msg.type}" (ignored)`);
+    }
+  }
+
+  function sendAuth() {
+    if (authSent || !haConfig.token) return;
+    authSent = true;
+    send({ type: 'auth', access_token: haConfig.token });
+  }
+
+  /**
+   * Fire a Home Assistant event.
+   * @param {string} eventType
+   * @param {object} eventData
+   * @returns {Promise<object>} Resolves with the HA result
+   */
+  function fireEvent(eventType, eventData) {
+    const supervisorProxy = /^wss?:\/\/supervisor(?:\/|:)/i.test(String(haConfig.ws_url || ''));
+    if (supervisorProxy) {
+      return fireEventRest(eventType, eventData)
+        .then((result) => {
+          lastEventError = null;
+          log.debug(`HA event delivered via REST: ${eventType}`);
+          return result;
+        })
+        .catch((restError) => {
+          lastEventError = restError.message;
+          log.warning(`HA REST event failed for ${eventType}; falling back to WebSocket: ${restError.message}`);
+          return sendCommand({
+            type: 'fire_event',
+            event_type: eventType,
+            event_data: eventData,
+          });
+        });
+    }
+    if (!authenticated) {
+      return fireEventRest(eventType, eventData).then((result) => {
+        lastEventError = null;
+        log.debug(`HA event delivered via REST: ${eventType}`);
+        return result;
+      }).catch((err) => {
+        lastEventError = err.message;
+        throw err;
+      });
+    }
+    return sendCommand({
+      type: 'fire_event',
+      event_type: eventType,
+      event_data: eventData,
+    }).then((result) => {
+      log.debug(`HA event delivered via WebSocket: ${eventType}`);
+      return result;
+    });
+  }
+
+  async function fireEventRest(eventType, eventData) {
+    if (!haConfig.token) {
+      throw new Error('No Home Assistant token available for REST event fallback');
+    }
+    const response = await fetch(
+      `http://supervisor/core/api/events/${encodeURIComponent(eventType)}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${haConfig.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`HA REST event failed: HTTP ${response.status}`);
+    }
+    return { success: true, transport: 'rest' };
+  }
+
+  function deleteConfigEntry(entryId) {
+    return sendCommand({
+      type: 'config_entries/delete',
+      entry_id: entryId,
+    });
+  }
+
+  function getConfigEntries() {
+    return sendCommand({ type: 'config_entries/get' });
+  }
+
+  function getStatus() {
+    return {
+      connected: Boolean(authenticated && ws?.readyState === WebSocket.OPEN),
+      error: lastError,
+      event_error: lastEventError,
+    };
+  }
+
+  /**
+   * Send a command and wait for its result.
+   * @param {object} payload
+   * @returns {Promise<object>}
+   */
+  function sendCommand(payload) {
+    return new Promise((resolve, reject) => {
+      if (!authenticated || !ws || ws.readyState !== WebSocket.OPEN) {
+        const timer = setTimeout(() => {
+          const index = authenticationWaiters.indexOf(waiter);
+          if (index >= 0) authenticationWaiters.splice(index, 1);
+          reject(new Error(lastError || 'HA WebSocket not connected / authenticated'));
+        }, 10000);
+        const waiter = {
+          resolve: () => {
+            clearTimeout(timer);
+            sendCommand(payload).then(resolve, reject);
+          },
+        };
+        authenticationWaiters.push(waiter);
+        return;
+      }
+      const id = msgId++;
+      pendingCalls.set(id, { resolve, reject });
+      send({ ...payload, id });
+    });
+  }
+
+  function send(payload) {
+    try {
+      ws.send(JSON.stringify(payload));
+    } catch (err) {
+      log.error('Failed to send to HA WS:', err.message);
+    }
+  }
+
+  function scheduleReconnect() {
+    if (stopped || reconnectTimer) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connect();
+    }, RECONNECT_DELAY_MS);
+  }
+
+  function disconnect() {
+    stopped = true;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (ws) {
+      ws.close();
+      ws = null;
+    }
+  }
+
+  return { connect, fireEvent, deleteConfigEntry, getConfigEntries, getStatus, disconnect };
+}
+
+module.exports = { createHaWebSocket };

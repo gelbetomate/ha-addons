@@ -1,0 +1,122 @@
+{
+  "name": "u::Lux UMP Bridge",
+  "version": "0.5.112",
+  "slug": "ulux",
+  "description": "UDP bridge for u::Lux Switch IP devices. Receives UMP packets and publishes events to Home Assistant and/or MQTT.",
+  "url": "https://github.com/gelbetomate/ha-addons/tree/main/addons/ulux",
+  "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],
+  "init": false,
+  "startup": "application",
+  "boot": "auto",
+  "host_network": true,
+  "hassio_api": true,
+  "homeassistant_api": true,
+  "options": {
+    "switches": [],
+    "listen_host": "0.0.0.0",
+    "listen_port": 34988,
+    "audio_host": "0.0.0.0",
+    "audio_port": 35000,
+    "audio_control_port": 35004,
+    "audio_target_ip": "",
+    "audio_jitter_depth": 3,
+    "sensor_poll_interval_ms": 60000,
+    "assist_ptt_key": 1,
+    "assist_mic_gain": 80,
+    "assist_speaker_volume": 70,
+    "wyoming_port": 10700,
+    "wyoming_switch_id": "",
+    "wyoming_name": "u::lux Assist Satellite",
+    "discovery_port": 34984,
+    "discovery_interval_ms": 0,
+    "control_flags": 3204976671,
+    "timezone": "Europe/Berlin",
+    "mode": {
+      "ha_events": true,
+      "ha_device_management": true,
+      "mqtt": false,
+      "mqtt_discovery": false
+    },
+    "ha": {
+      "ws_url": "ws://supervisor/core/websocket",
+      "token": ""
+    },
+    "mqtt": {
+      "host": "core-mosquitto",
+      "port": 1883,
+      "username": "",
+      "password": "",
+      "base_topic": "ulux"
+    },
+    "stream": {
+      "width": 86,
+      "height": 90,
+      "actor_id": 23,
+      "lines_per_packet": 5,
+      "inter_packet_delay_ms": 5
+    },
+    "api_port": 8099,
+    "log_level": "info"
+  },
+  "schema": {
+    "switches": [
+      {
+        "name": "str",
+        "serial_number": "int?",
+        "switch_id": "str",
+        "ip": "str",
+        "port": "port?"
+      }
+    ],
+    "listen_port": "port?",
+    "audio_host": "str?",
+    "audio_port": "port?",
+    "audio_control_port": "port?",
+    "audio_target_ip": "str?",
+    "audio_jitter_depth": "int?",
+    "sensor_poll_interval_ms": "int?",
+    "assist_ptt_key": "int?",
+    "assist_mic_gain": "int?",
+    "assist_speaker_volume": "int?",
+    "wyoming_port": "port?",
+    "wyoming_switch_id": "str?",
+    "wyoming_name": "str?",
+    "discovery_port": "port?",
+    "discovery_interval_ms": "int?",
+    "control_flags": "int?",
+    "timezone": "str?",
+    "mode": {
+      "ha_events": "bool?",
+      "ha_device_management": "bool?",
+      "mqtt": "bool?",
+      "mqtt_discovery": "bool?"
+    },
+    "ha": {
+      "ws_url": "str?",
+      "token": "str?"
+    },
+    "mqtt": {
+      "host": "str?",
+      "port": "port?",
+      "username": "str?",
+      "password": "str?",
+      "base_topic": "str?"
+    },
+    "stream": {
+      "width": "int?",
+      "height": "int?",
+      "actor_id": "int?",
+      "lines_per_packet": "int?",
+      "inter_packet_delay_ms": "int?"
+    },
+    "api_port": "port?",
+    "log_level": "list(debug|info|warning|error|fatal)?"
+  },
+  "panel_icon": "mdi:light-switch",
+  "ingress": true,
+  "ingress_port": 8099,
+  "ports": {
+    "8099/tcp": 8099,
+    "10700/tcp": 10700
+  }
+}

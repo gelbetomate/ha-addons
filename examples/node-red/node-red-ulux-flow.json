@@ -1,0 +1,289 @@
+[
+  {
+    "id": "tab1",
+    "type": "tab",
+    "label": "u::lux UMP Bridge Flow",
+    "disabled": false,
+    "info": "Bidirektionale Steuerung und Sensor-Erfassung fuer den u::LuxSwitch über die UMP Bridge"
+  },
+  {
+    "id": "broker1",
+    "type": "mqtt-broker",
+    "name": "Mosquitto MQTT Broker",
+    "broker": "192.168.178.63",
+    "port": "1883",
+    "clientid": "node-red-ulux",
+    "usetls": false,
+    "verifyssl": false,
+    "keepalive": "60",
+    "cleansession": true
+  },
+  {
+    "id": "sub_events",
+    "type": "mqtt in",
+    "z": "tab1",
+    "name": "u::lux Events Empfangen",
+    "topic": "ulux/+/event",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "broker1",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 100,
+    "wires": [
+      [
+        "debug_events",
+        "filter_key1"
+      ]
+    ]
+  },
+  {
+    "id": "sub_sensors",
+    "type": "mqtt in",
+    "z": "tab1",
+    "name": "u::lux Temp Sensor",
+    "topic": "ulux/+/sensor/temperature",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "broker1",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 200,
+    "wires": [
+      [
+        "debug_sensors"
+      ]
+    ]
+  },
+  {
+    "id": "debug_events",
+    "type": "debug",
+    "z": "tab1",
+    "name": "Event Log",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 410,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "debug_sensors",
+    "type": "debug",
+    "z": "tab1",
+    "name": "Temperatur Log",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 420,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "filter_key1",
+    "type": "function",
+    "z": "tab1",
+    "name": "Key 1 Hit Filter",
+    "func": "if (msg.payload && msg.payload.key === 1 && msg.payload.action === \"hit\") {\n    return { payload: { page: 2 } };\n}\nreturn null;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 420,
+    "y": 150,
+    "wires": [
+      [
+        "pub_page"
+      ]
+    ]
+  },
+  {
+    "id": "inj_page2",
+    "type": "inject",
+    "z": "tab1",
+    "name": "Seite 2 aktivieren",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"page\": 2}",
+    "payloadType": "json",
+    "x": 160,
+    "y": 320,
+    "wires": [
+      [
+        "pub_page"
+      ]
+    ]
+  },
+  {
+    "id": "inj_chime",
+    "type": "inject",
+    "z": "tab1",
+    "name": "Gong / Audio abspielen",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"sound_id\": 1, \"volume\": 80}",
+    "payloadType": "json",
+    "x": 170,
+    "y": 380,
+    "wires": [
+      [
+        "pub_audio"
+      ]
+    ]
+  },
+  {
+    "id": "inj_led_red",
+    "type": "inject",
+    "z": "tab1",
+    "name": "LED 1 Rot Blink",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"led\": 1, \"color\": \"red\", \"mode\": 0}",
+    "payloadType": "json",
+    "x": 150,
+    "y": 440,
+    "wires": [
+      [
+        "pub_led"
+      ]
+    ]
+  },
+  {
+    "id": "inj_text",
+    "type": "inject",
+    "z": "tab1",
+    "name": "Text-Overlay (Post ist da!)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"field\": 1, \"text\": \"Post ist da!\"}",
+    "payloadType": "json",
+    "x": 180,
+    "y": 500,
+    "wires": [
+      [
+        "pub_text"
+      ]
+    ]
+  },
+  {
+    "id": "pub_page",
+    "type": "mqtt out",
+    "z": "tab1",
+    "name": "cmd/page",
+    "topic": "ulux/serial_788/cmd/page",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker1",
+    "x": 450,
+    "y": 320,
+    "wires": []
+  },
+  {
+    "id": "pub_audio",
+    "type": "mqtt out",
+    "z": "tab1",
+    "name": "cmd/audio/play",
+    "topic": "ulux/serial_788/cmd/audio/play",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker1",
+    "x": 470,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "pub_led",
+    "type": "mqtt out",
+    "z": "tab1",
+    "name": "cmd/led",
+    "topic": "ulux/serial_788/cmd/led",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker1",
+    "x": 450,
+    "y": 440,
+    "wires": []
+  },
+  {
+    "id": "pub_text",
+    "type": "mqtt out",
+    "z": "tab1",
+    "name": "cmd/text",
+    "topic": "ulux/serial_788/cmd/text",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker1",
+    "x": 450,
+    "y": 500,
+    "wires": []
+  }
+]
