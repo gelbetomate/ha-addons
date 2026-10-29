@@ -1,5 +1,0 @@
-#!/command/with-contenv ash
-set -e
-
-cd /app
-exec node index.js
