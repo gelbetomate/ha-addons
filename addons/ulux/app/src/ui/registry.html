@@ -407,6 +407,33 @@
       background: rgba(3, 169, 244, 0.18);
     }
 
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .badge-inferred {
+      background: rgba(3, 169, 244, 0.18);
+      color: #0288d1;
+      border: 1px solid rgba(3, 169, 244, 0.4);
+    }
+    .badge-primary {
+      background: rgba(76, 175, 80, 0.18);
+      color: #388e3c;
+      border: 1px solid rgba(76, 175, 80, 0.4);
+    }
+    .badge-warning {
+      background: rgba(255, 152, 0, 0.18);
+      color: #f57c00;
+      border: 1px solid rgba(255, 152, 0, 0.4);
+    }
+
     .discovery-actions {
       display: flex;
       gap: 10px;
@@ -1308,6 +1335,9 @@
         if (!data.devices || data.devices.length === 0) {
           list.innerHTML = '';
           empty.style.display = 'block';
+          empty.innerHTML = UI_STATE.discoveryScanInProgress
+            ? '<p>&#8987; Scanning network for u::lux switches...</p>'
+            : '<p>No devices discovered yet.</p><p>Click "Scan now" or ensure devices are active on the network.</p>';
           actions.style.display = 'none';
           return;
         }
@@ -1318,12 +1348,18 @@
         list.innerHTML = data.devices.map((dev) => {
           const selectableId = dev.mac_address || (/^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/i.test(String(dev.switch_id || '')) ? dev.switch_id : '');
           const displayId = selectableId || `Protocol ID: ${dev.protocol_id || 'unknown'}`;
+          const serialBadge = dev.serial_number
+            ? `<span class="badge ${dev.serial_number_source === 'configured' ? 'badge-primary' : 'badge-inferred'}">${dev.serial_number_source === 'configured' ? 'configured' : 'MAC inferred'}</span>`
+            : (dev.serial_number_candidate ? `<span class="badge badge-warning">candidate</span>` : '');
+          const serialDisplay = dev.serial_number
+            ? `${escapeHtml(dev.serial_number)} ${serialBadge}`
+            : (dev.serial_number_candidate ? `${escapeHtml(dev.serial_number_candidate)} ${serialBadge}` : '<span class="mac-unavailable">not decoded</span>');
+          const switchName = dev.name || (dev.serial_number ? `u::lux Switch (${dev.serial_number})` : `u::lux device (${dev.ip || 'unknown IP'})`);
           return `
           <div class="discovery-card${selectableId ? '' : ' pending'}" data-switch-id="${selectableId}">
-            <div class="device-name">${escapeHtml(dev.name || `u::lux device (${dev.ip || 'unknown IP'})`)}</div>
+            <div class="device-name">${escapeHtml(switchName)}</div>
             <div class="device-id">${escapeHtml(displayId)}</div>
-              <div class="device-info"><strong>Serial number:</strong> ${dev.serial_number || '<span class="mac-unavailable">not decoded</span>'}</div>
-              ${!dev.serial_number && dev.serial_number_candidate ? `<div class="device-info"><strong>MAC candidate:</strong> ${dev.serial_number_candidate} <span class="mac-unavailable">(not confirmed)</span></div>` : ''}
+            <div class="device-info"><strong>Serial number:</strong> ${serialDisplay}</div>
             <div class="device-info" style="margin-top: 10px;">
               <strong>IP:</strong> ${dev.ip || 'Unknown'}
             </div>
@@ -1372,11 +1408,16 @@
       try {
         UI_STATE.discoveryScanInProgress = true;
         scanButton.disabled = true;
-        scanButton.textContent = 'Scanning...';
+        scanButton.innerHTML = '&#8987; Scanning...';
+        
+        // Immediately load discovery to update view without any delay
+        loadDiscovery();
         await fetchJson(`${API_BASE}/discovery/scan`, { method: 'POST' });
+        loadDiscovery();
+
         let scan;
-        for (let attempt = 0; attempt < 40; attempt += 1) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
+        for (let attempt = 0; attempt < 35; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 350));
           await loadDiscovery();
           scan = (await fetchJson(`${API_BASE}/discovery/scan`)).scan;
           if (scan.status === 'complete' || scan.status === 'error') break;

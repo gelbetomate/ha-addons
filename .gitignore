@@ -29,4 +29,5 @@ custom_components/**/node_modules/
 docs/captures/
 docs/examples/
 docs/external/
+docs/Gemini Notebook/
 

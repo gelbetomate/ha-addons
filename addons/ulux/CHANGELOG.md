@@ -1,5 +1,11 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.113
+
+- Promoted MAC-inferred serial numbers to confirmed serial_number with an inline status badge (MAC inferred), resolving the "Serial number: not decoded" and "(not confirmed)" display.
+- Generated intuitive switch names (u::lux Switch (<serial_number>)) for newly discovered switches.
+- Added immediate UI refresh and scanning feedback on "Scan now" click without a 500ms initial delay, with 350ms active polling.
+
 ## 0.5.112
 
 - Prevent stale concurrent Discovery responses from replacing completed scan results.
