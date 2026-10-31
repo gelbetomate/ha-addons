@@ -290,6 +290,42 @@ function buildLedMessage(actorId = 1, ledIndex = 0, led = 0) {
 }
 
 /**
+ * Send an array of LED configurations sequentially with pacing delay
+ * to avoid UDP packet collapsing and microcontroller buffer overwrite.
+ *
+ * @param {object} opts
+ * @param {string} opts.ip - Destination IP
+ * @param {number} opts.port - Destination Port
+ * @param {number} opts.deviceId - Target UMP device ID
+ * @param {number} opts.frameVersion - Target UMP frame version
+ * @param {number} [opts.actorId=1] - Target actor ID
+ * @param {Array} [opts.leds=[]] - Array of LED configurations
+ * @param {function} opts.udpSend - UDP send function (ip, port, buffer)
+ * @param {number} [opts.delayMs=8] - Pacing delay in milliseconds
+ */
+async function sendLedMessagesPaced({
+  ip,
+  port,
+  deviceId,
+  frameVersion,
+  actorId = 1,
+  leds = [],
+  udpSend,
+  delayMs = 8,
+}) {
+  if (!Array.isArray(leds) || leds.length === 0) return;
+  for (let index = 0; index < leds.length; index += 1) {
+    const led = leds[index];
+    const msg = buildLedMessage(actorId, index, buildLedColorValue(led));
+    const telegram = buildTelegramForDevice(deviceId, frameVersion, msg);
+    udpSend(ip, port, telegram);
+    if (index < leds.length - 1 && delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
+/**
  * Build an ID-Text message (MessageID=0x45, variable length).
  * Sets or removes custom text for an actor.
  *
@@ -637,6 +673,7 @@ module.exports = {
   buildValueMessage,
   buildLedMessage,
   buildLedColorValue,
+  sendLedMessagesPaced,
   buildTextMessage,
   buildAudioVolumeMessage,
   buildAudioStopMessage,

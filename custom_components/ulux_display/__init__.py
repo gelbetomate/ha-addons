@@ -163,11 +163,39 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data[DOMAIN]["key_snapshot_event_unsub"] = hass.bus.async_listen(
         "ulux_event", async_handle_state_event
     )
+    async def _async_release_key_after_delay(coordinator: UluxDisplayCoordinator, key: int, delay_s: float) -> None:
+        import asyncio
+        await asyncio.sleep(delay_s)
+        coordinator.handle_key_event(key, "released")
+
+    async def async_handle_value_event(event) -> None:
+        """Apply an inbound u::lux actor value event (dual-triggering for key press)."""
+        data = event.data
+        switch_id = str(data.get("switch_id", "")).upper()
+        actor_id = data.get("actor_id")
+        if not switch_id or actor_id is None:
+            return
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if not event_matches_entry(entry, data):
+                continue
+            coordinator = hass.data[DOMAIN].get(entry.entry_id)
+            if isinstance(coordinator, UluxDisplayCoordinator):
+                try:
+                    aid = int(actor_id)
+                    key = ((aid - 1) % 4) + 1 if aid > 0 else 1
+                    coordinator.handle_key_event(key, "pressed")
+                    hass.async_create_task(_async_release_key_after_delay(coordinator, key, 0.2))
+                except Exception as err:
+                    _LOGGER.debug("Error mapping ulux_value to key event: %s", err)
+
     hass.data[DOMAIN]["key_event_unsub"] = hass.bus.async_listen(
         "ulux_key", async_handle_key_event
     )
     hass.data[DOMAIN]["led_event_unsub"] = hass.bus.async_listen(
         "ulux_led", async_handle_led_event
+    )
+    hass.data[DOMAIN]["value_event_unsub"] = hass.bus.async_listen(
+        "ulux_value", async_handle_value_event
     )
 
     async def async_handle_notify(call):

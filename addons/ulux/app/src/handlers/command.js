@@ -9,6 +9,7 @@ const {
   buildActivateMessage,
   buildLedMessage,
   buildLedColorValue,
+  sendLedMessagesPaced,
   buildTextMessage,
   buildEditValueMessage,
   buildRealValueMessage,
@@ -112,12 +113,16 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
       const payload = normalisePayload(cmd.payload);
       const actorId = Number(payload.actor_id ?? 1);
       const leds = Array.isArray(payload.leds) ? payload.leds : [];
-      const ledMessages = leds.map((led, index) =>
-        buildLedMessage(actorId, index, buildLedColorValue(led))
-      );
-      const telegram = buildTelegramForDevice(deviceId, frameVersion, ...ledMessages);
-      udpSend(sw.ip, remotePort, telegram);
-      log.info(`MQTT: Sent LED command to ${sw.ip}:${remotePort} for actor ${actorId}`);
+      await sendLedMessagesPaced({
+        ip: sw.ip,
+        port: remotePort,
+        deviceId,
+        frameVersion,
+        actorId,
+        leds,
+        udpSend,
+      });
+      log.info(`MQTT: Sent ${leds.length} paced LED commands to ${sw.ip}:${remotePort} for actor ${actorId}`);
       break;
     }
 

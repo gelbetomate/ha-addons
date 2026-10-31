@@ -12,6 +12,7 @@ const {
   buildActivateMessage,
   buildLedMessage,
   buildLedColorValue,
+  sendLedMessagesPaced,
   buildTextMessage,
   buildEditValueMessage,
   buildRealValueMessage,
@@ -493,17 +494,17 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const body = await readJsonBody(req).catch(() => ({}));
       const actorId = Number(body.actor_id ?? 1);
       const leds = Array.isArray(body.leds) ? body.leds : [];
-      const ledMessages = leds.map((led, index) =>
-        buildLedMessage(actorId, index, buildLedColorValue(led))
-      );
-      const telegram = buildTelegramForDevice(
-        target.ump_device_id,
-        target.ump_frame_version,
-        ...ledMessages
-      );
-      udpSend(target.ip, target.port || 34988, telegram);
-      log.info(`API: Sent LED command to ${target.ip}:${target.port || 34988} (actor=${actorId})`);
-      return respond(res, 200, { ok: true, switch_id: switchId, actor_id: actorId });
+      await sendLedMessagesPaced({
+        ip: target.ip,
+        port: target.port || 34988,
+        deviceId: target.ump_device_id,
+        frameVersion: target.ump_frame_version,
+        actorId,
+        leds,
+        udpSend,
+      });
+      log.info(`API: Sent ${leds.length} paced LED commands to ${target.ip}:${target.port || 34988} (actor=${actorId})`);
+      return respond(res, 200, { ok: true, switch_id: switchId, actor_id: actorId, count: leds.length });
     }
 
     // --- POST /api/switch/:switchId/text ---
@@ -911,8 +912,8 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
           remotePort,
           udpSend,
           log,
-          width:  payload.width  || streamCfg.width  || 240,
-          height: payload.height || streamCfg.height || 240,
+          width:  payload.width  || streamCfg.width  || 86,
+          height: payload.height || streamCfg.height || 90,
           actorId: payload.actor_id || streamCfg.actor_id || 23,
           linesPerPacket:      streamCfg.lines_per_packet      || 5,
           interPacketDelayMs:  streamCfg.inter_packet_delay_ms ?? 5,

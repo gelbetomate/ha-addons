@@ -5,6 +5,8 @@
 - Promoted MAC-inferred serial numbers to confirmed serial_number with an inline status badge (MAC inferred), resolving the "Serial number: not decoded" and "(not confirmed)" display.
 - Generated intuitive switch names (u::lux Switch (<serial_number>)) for newly discovered switches.
 - Added immediate UI refresh and scanning feedback on "Scan now" click without a 500ms initial delay, with 350ms active polling.
+- Fixed UDP packet bursting for 4-channel LED commands by pacing individual ID_LED datagrams with 8ms delay (`sendLedMessagesPaced`), ensuring all 4 LEDs are processed by the microcontroller without buffer drops.
+- Updated default `ID_CONTROL` flags fallback from 0 to `0xBF08001F`, enabling event and change reporting (motion, proximity, light, page changes, sensors) upon switch initialization.
 
 ## 0.5.112
 
