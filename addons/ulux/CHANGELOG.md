@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.133
+
+- Added the explicit MQTT `cmd/video` command for the UMP video stream; kept `cmd/display/image` as a compatibility alias.
+
 ## 0.5.132
 
 - Match legacy video chunks with state flag 1 and four lines per packet at 176px width.

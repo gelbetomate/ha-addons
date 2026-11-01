@@ -51,7 +51,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
   const frameVersion = sw.ump_frame_version || 0x0232;
 
   switch (cmd.command) {
-    case DISPLAY_IMAGE_COMMAND: {
+    case DISPLAY_IMAGE_COMMAND:
+    case 'video': {
       const payload = normalisePayload(cmd.payload);
       const source = pickImageSource(payload);
       if (!source) {

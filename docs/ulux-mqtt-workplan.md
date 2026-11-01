@@ -123,6 +123,10 @@ beobachteten Wireformat.
 
 Bildstream-Test mit vorbereiteter HA-Stream-Seite:
 
+Verwende fuer den aktuellen UMP-Video-Test das Topic
+`ulux/456/cmd/video`. `cmd/display/image` bleibt als Rueckwaertskompatibilitaet
+erhalten, ist aber technisch ebenfalls der VideoStream-Pfad.
+
 ```json
 {
    "page_index": 1,
