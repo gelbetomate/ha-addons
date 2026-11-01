@@ -74,7 +74,7 @@ async function streamImageToSwitch({
   log,
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
-  actorId = 23,
+  actorId = 1,
   linesPerPacket = DEFAULT_LINES_PER_PACKET,
   interPacketDelayMs = DEFAULT_INTER_PACKET_DELAY_MS,
   sequenceId,

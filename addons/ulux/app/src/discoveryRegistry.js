@@ -133,10 +133,17 @@ function createDiscoveryRegistry(registryStore, log) {
       const current = unique.get(key);
       if (!current) {
         unique.set(key, record);
-      } else if (record.mac_address && !current.mac_address) {
-        unique.set(key, { ...record, sync_detail: record.sync_detail || current.sync_detail });
-      } else if (record.sync_detail && !current.sync_detail) {
-        unique.set(key, { ...current, sync_detail: record.sync_detail });
+      } else {
+        unique.set(key, {
+          ...current,
+          ...record,
+          mac_address: record.mac_address || current.mac_address || null,
+          serial_number: record.serial_number || current.serial_number || null,
+          serial_number_candidate: record.serial_number_candidate || current.serial_number_candidate || null,
+          serial_number_source: record.serial_number_source || current.serial_number_source || null,
+          name: record.name && record.name !== 'unknown' ? record.name : current.name,
+          sync_detail: record.sync_detail || current.sync_detail || null,
+        });
       }
     }
 

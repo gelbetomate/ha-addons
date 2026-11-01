@@ -797,9 +797,26 @@
       '--warning-color': '--ha-parent-warning-color',
     };
 
+    function loadDiscoverySerialDrafts() {
+      try {
+        const stored = JSON.parse(localStorage.getItem('ulux.discovery.serials') || '{}');
+        return new Map(Object.entries(stored));
+      } catch (err) {
+        return new Map();
+      }
+    }
+
+    function saveDiscoverySerialDrafts(drafts) {
+      try {
+        localStorage.setItem('ulux.discovery.serials', JSON.stringify(Object.fromEntries(drafts)));
+      } catch (err) {
+        // Browser storage may be unavailable in private or restricted contexts.
+      }
+    }
+
     const UI_STATE = {
       selectedDiscoveryDevices: new Set(),
-      discoverySerialDrafts: new Map(),
+      discoverySerialDrafts: loadDiscoverySerialDrafts(),
       currentEditingDevice: null,
       discoveryScanInProgress: false,
       discoveryRequestSequence: 0,
@@ -1362,13 +1379,14 @@
 
         list.innerHTML = data.devices.map((dev) => {
           const selectableId = dev.mac_address || (/^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/i.test(String(dev.switch_id || '')) ? dev.switch_id : '');
+          const discoveryKey = selectableId || dev.ip || dev.protocol_id || '';
           const displayId = selectableId || `Protocol ID: ${dev.protocol_id || 'unknown'}`;
           const serialBadge = dev.serial_number
             ? `<span class="badge ${dev.serial_number_source === 'configured' ? 'badge-primary' : 'badge-inferred'}">${dev.serial_number_source === 'configured' ? 'configured' : 'MAC inferred'}</span>`
             : (dev.serial_number_candidate ? `<span class="badge badge-warning">candidate</span>` : '');
           const serialDisplay = dev.serial_number
             ? `${escapeHtml(dev.serial_number)} ${serialBadge}`
-            : `<input class="discovery-serial" type="number" min="1" max="65535" value="${escapeHtml(UI_STATE.discoverySerialDrafts.get(selectableId) || '')}" placeholder="Required before import" aria-label="Confirmed serial number">`;
+            : `<input class="discovery-serial" type="number" min="1" max="65535" value="${escapeHtml(UI_STATE.discoverySerialDrafts.get(discoveryKey) || '')}" placeholder="Required before import" aria-label="Confirmed serial number">`;
           const macName = dev.mac_address || (selectableId && /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/i.test(String(selectableId)) ? selectableId : null);
           const fallbackName = dev.serial_number
             ? `u::lux Switch (${dev.serial_number})`
@@ -1377,7 +1395,7 @@
             ? dev.name
             : fallbackName;
           return `
-          <div class="discovery-card${selectableId ? '' : ' pending'}" data-switch-id="${selectableId}">
+          <div class="discovery-card${selectableId ? '' : ' pending'}" data-switch-id="${selectableId}" data-draft-key="${escapeHtml(discoveryKey)}">
             <div class="device-name">${escapeHtml(switchName)}</div>
             <div class="device-id">${escapeHtml(displayId)}</div>
             <div class="device-info"><strong>Serial number:</strong> ${serialDisplay}</div>
@@ -1406,8 +1424,11 @@
           const serialInput = card.querySelector('.discovery-serial');
           serialInput?.addEventListener('click', (event) => event.stopPropagation());
           serialInput?.addEventListener('input', (event) => {
-            const switchId = card.dataset.switchId;
-            if (switchId) UI_STATE.discoverySerialDrafts.set(switchId, event.target.value);
+            const draftKey = card.dataset.draftKey;
+            if (draftKey) {
+              UI_STATE.discoverySerialDrafts.set(draftKey, event.target.value);
+              saveDiscoverySerialDrafts(UI_STATE.discoverySerialDrafts);
+            }
           });
           card.addEventListener('click', () => {
             const switchId = card.dataset.switchId;

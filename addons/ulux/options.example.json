@@ -13,9 +13,9 @@
   "control_flags": 0,
   "api_port": 8099,
   "stream": {
-    "width": 240,
-    "height": 240,
-    "actor_id": 23,
+    "width": 176,
+    "height": 184,
+    "actor_id": 1,
     "lines_per_packet": 5,
     "inter_packet_delay_ms": 5
   },

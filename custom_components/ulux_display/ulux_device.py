@@ -59,8 +59,8 @@ class UluxDevice:
         # Use configured IP when available, fall back to switch_id (MAC) for log messages.
         self.host = host or switch_id
         self._session = session
-        self._display_width: int = 86
-        self._display_height: int = 90
+        self._display_width: int = 176
+        self._display_height: int = 184
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ class UluxDevice:
         """
         import aiohttp  # noqa: PLC0415 — imported lazily; provided by HA
 
-        # Ensure image matches target stream dimensions (86x90 for u::lux Aktor 23)
+        # Ensure image matches the 176x184 HA Stream frame.
         if img.width != self._display_width or img.height != self._display_height:
             from PIL import Image as PIL_Image  # noqa: PLC0415
             img = img.resize((self._display_width, self._display_height), PIL_Image.Resampling.LANCZOS)

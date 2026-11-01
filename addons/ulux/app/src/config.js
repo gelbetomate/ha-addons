@@ -44,9 +44,9 @@ const DEFAULTS = {
     base_topic: 'ulux',
   },
   stream: {
-    width: 86,
-    height: 90,
-    actor_id: 23,
+    width: 176,
+    height: 184,
+    actor_id: 1,
     lines_per_packet: 5,
     inter_packet_delay_ms: 5,
   },
@@ -74,6 +74,17 @@ function loadConfig() {
   }
 
   const config = deepMerge(DEFAULTS, options);
+
+  // Migrate the former placeholder stream defaults to the HA Stream layout.
+  if (
+    config.stream.width === 86 &&
+    config.stream.height === 90 &&
+    config.stream.actor_id === 23
+  ) {
+    config.stream.width = 176;
+    config.stream.height = 184;
+    config.stream.actor_id = 1;
+  }
 
   // Supervisor provides SUPERVISOR_TOKEN for Supervisor APIs and the
   // Home Assistant Core proxy when homeassistant_api is enabled.

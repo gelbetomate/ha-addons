@@ -144,9 +144,10 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
   if (!hasFlags) return; // no flags → nothing to respond to
 
   if (initRequest) {
-    const controlFlags = typeof config.control_flags === 'number'
+    const configuredControlFlags = typeof config.control_flags === 'number'
       ? config.control_flags
       : 0xBF08001F;
+    const controlFlags = configuredControlFlags | 0x80;
     const telegram = buildTelegramForDevice(
       ctx.telegram?.deviceId ?? 0x5D,
       ctx.telegram?.frameVersion ?? 0x0232,

@@ -1,5 +1,17 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.126
+
+- Align the HA Stream with page 2's shared actor 1 and 176x184 video frame; migrate the former 86x90/actor-23 defaults.
+
+## 0.5.125
+
+- Set the `PageChangeRequest` control flag (`0x80`) during the UMP initialization handshake.
+
+## 0.5.124
+
+- Remember Discovery serial-number drafts per device and preserve confirmed serials during IP-based pending merges.
+
 ## 0.5.123
 
 - Persist HA events, MQTT bridge, MQTT Discovery, and broker settings through the Home Assistant Supervisor options API.

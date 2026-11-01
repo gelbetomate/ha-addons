@@ -124,7 +124,7 @@ function getDateParts(date, timeZone) {
  * @param {number} sequenceId - Stream sequence identifier
  * @returns {Buffer} 12-byte message buffer
  */
-function buildVideoStartMessage(sequenceId, actorId = 23) {
+function buildVideoStartMessage(sequenceId, actorId = 1) {
   const buf = Buffer.alloc(12, 0);
   buf.writeUInt8(0x0C, 0);                         // MessageLength
   buf.writeUInt8(MessageIds.VideoStart, 1);        // MessageID = 0xA2
@@ -151,7 +151,7 @@ function buildVideoStopMessage(sequenceId = 1) {
 }
 
 /** Build a passive VideoState capability request (MessageID=0xA1). */
-function buildVideoStateRequest(actorId = 23) {
+function buildVideoStateRequest(actorId = 1) {
   const buf = Buffer.alloc(4, 0);
   buf.writeUInt8(0x04, 0);
   buf.writeUInt8(MessageIds.VideoState, 1);
