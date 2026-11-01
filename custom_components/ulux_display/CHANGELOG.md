@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.32
+
+- Preserve `assigned_views` when updating config-entry options instead of falling back to the legacy clock view.
+
 ## 0.2.31
 
 - Keep the `Display Preview` image entity synchronized with periodic stream snapshots.

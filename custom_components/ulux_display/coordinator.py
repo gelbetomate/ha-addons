@@ -275,7 +275,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         Returns:
             Migrated options with screens structure
         """
-        if CONF_SCREENS in options:
+        if CONF_SCREENS in options or CONF_ASSIGNED_VIEWS in options:
             return options  # Already in new format
 
         # Convert old format to new format
