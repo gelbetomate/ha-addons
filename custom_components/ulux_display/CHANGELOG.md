@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.31
+
+- Keep the `Display Preview` image entity synchronized with periodic stream snapshots.
+
 ## 0.2.30
 
 - Keep the HACS renderer active on Stream Page instead of falling back to the device built-in clock/theme.

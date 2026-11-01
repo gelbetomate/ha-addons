@@ -995,13 +995,14 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             # (Pillow image operations are CPU-intensive)
             img = await self.hass.async_add_executor_job(self._render_display)
 
-            # Only update preview image on config changes or manual refresh
-            # (prevents HA UI from refreshing during periodic updates)
+            # Keep the HA preview aligned with the active snapshot stream.
+            # Outside streaming, avoid refreshing the image entity on every poll.
             self._preview_just_updated = self._update_preview
-            if self._update_preview:
+            if self._update_preview or (stream_page and self._stream_page_active):
                 # Convert to PNG for preview storage (in executor to avoid blocking)
                 png_data = await self.hass.async_add_executor_job(self.renderer.to_png, img)
                 self._last_image = png_data
+                self._preview_just_updated = True
                 self._update_preview = False
 
             _LOGGER.debug("Rendered image: %dx%d px", img.width, img.height)
