@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.135
+
+- Consume special video ACK frames before normal UMP parsing to suppress raw-event noise.
+
 ## 0.5.134
 
 - Added a decoder-free `solid_color` video test source for reliable UMP stream diagnostics.

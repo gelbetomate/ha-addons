@@ -26,16 +26,17 @@ function createUdpServer({ host, port, switches, onPacket, log }) {
     const hex = msg.toString('hex');
     log.debug(`UDP packet from ${rinfo.address}:${rinfo.port} (${msg.length} bytes): ${hex}`);
 
-    // The legacy video sender receives non-UMP replies as per-chunk ACKs.
-    if (msg[0] !== 0x01) {
+    // Video replies use the special 0x03 0x86 frame and are not normal UMP
+    // telegrams. Consume them here so they do not become raw parse errors.
+    if (msg[0] === 0x03 && msg[1] === 0x86) {
       const waiters = videoAckWaiters.get(rinfo.address);
       if (waiters?.length) {
         const waiter = waiters.shift();
         clearTimeout(waiter.timer);
         if (!waiters.length) videoAckWaiters.delete(rinfo.address);
         waiter.resolve(msg);
-        return;
       }
+      return;
     }
 
     // Identify which configured switch sent this packet

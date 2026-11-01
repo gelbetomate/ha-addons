@@ -69,6 +69,91 @@ Konfigurationsweg im u::lux-Design, bestaetigtes UMP-Telegramm und getestete
 HA-/MQTT-Oberflaeche. Ein Use Case darf erst als erledigt markiert werden,
 wenn alle drei Ebenen funktionieren.
 
+## Medienanforderungen und Betriebsarten
+
+Die Medienanforderungen werden in drei technisch getrennte Pfade aufgeteilt:
+
+| Medienpfad | Ziel | Betriebsart | Prioritaet | Stand |
+|---|---|---|---|---|
+| **HA Snapshot/Image** | Von `ulux_display` gerenderte Bilder mit Sensorwerten auf einer festen u::lux-Seite anzeigen | Einzelbild alle paar Sekunden, kein Live-Video | P1 | RGB565-Video-Transport funktioniert als Fallback; echtes ImageFrame-Wireformat noch zu klaeren |
+| **Video + Audio** | Beliebige Videoquelle, z. B. Tuerstation, mit Ton auf dem u::lux darstellen | Kontinuierlicher Stream mit synchronisiertem Video- und Audiopfad | P1 | Video-Chunk-Transport nach Legacy-Vorbild funktioniert; kontinuierlicher Lifecycle und Audio-Synchronisierung offen |
+| **Audio/Radio** | Webradio oder HA-Media-Player mit Wiedergabe, Lautstaerke, Play/Stop/Next und Metadaten | Dauerhafter Audio-Stream; Display zeigt Titel/Senderdaten | P2 | Lokale Sounds funktionieren; Remote-Audio, Metadaten und Steuerung offen |
+
+### Abgrenzung der Bild- und Videoanforderung
+
+- **Snapshot/Image:** Ein HA- oder HACS-Renderbild wird periodisch erzeugt und
+  auf eine konfigurierte feste Seite geschrieben. Eine Rate von etwa 0.2 bis
+  2 Bildern pro Sekunde reicht fuer Sensorwerte; ein dauerhaftes Video-ACK-
+  Streaming ist dafuer nicht zwingend erforderlich.
+- **Video:** Eine externe URL oder Kameraquelle wird kontinuierlich dekodiert,
+  auf den u::lux-VideoFrame skaliert und mit `VideoState`, `VideoStart`,
+  VideoChunks, ACKs und `VideoStop` uebertragen.
+- **Audio:** Der Audiopfad laeuft getrennt ueber UDP 35000/35004. Video und
+  Audio muessen bei der Tuerstation ueber eine gemeinsame Session gestartet,
+  beendet und soweit moeglich zeitlich synchronisiert werden.
+
+### Geplanter Medien-Lifecycle
+
+1. **Snapshot-Session:** Zielseite setzen, Display aktivieren, Bild erzeugen,
+   uebertragen, einige Sekunden warten und das naechste Bild senden.
+2. **Video-Session:** Zielseite setzen, Display aktivieren, VideoState lesen,
+   VideoStart senden, Chunks per ACK uebertragen, Audio starten und bei Stop,
+   Seitenwechsel oder Standby beide Pfade beenden.
+3. **Radio-Session:** Audioquelle starten, Lautstaerke und Play/Stop steuern,
+   Sender-/Titelmetadaten ueber `ID_TEXT` anzeigen und die Session bei Stop
+   sauber schliessen.
+
+Die MQTT-/HA-Schnittstellen sollen diese Trennung sichtbar machen:
+
+- `cmd/image`: periodischer Snapshot/ImageFrame, sobald das Wireformat bestaetigt ist
+- `cmd/video`: kontinuierlicher VideoFrame-Stream mit optionalem Audio
+- `cmd/audio/*` und `media_player`: Radio-/Audio-Stream und Steuerung
+
+Der bisher erfolgreiche rote Test validiert den **VideoFrame-Pfad**. Er ist
+damit ein technischer Unterbau fuer Video und fuer Snapshot-Fallbacks, ersetzt
+aber noch nicht den separaten ImageFrame-Nachweis.
+
+### Audio- und Kommunikationsanforderungen
+
+| Audiofunktion | Ziel | Protokoll/Pfad | Prioritaet |
+|---|---|---|---|
+| **Assist-Spracheingabe** | Der u::lux nimmt Sprachbefehle von Home Assistant entgegen, insbesondere Push-to-Talk ueber eine Taste | Wyoming TCP 10700 fuer Assist, Mikrofon-/PCM-Transport ueber UDP 35000 | P1 |
+| **Media Assistant** | Home Assistant steuert den u::lux als Audio-Ausgabegeraet fuer Radio, TTS, Chimes und Medien | HA `media_player`, Remote-Audio UDP 35000/35004, `ID_TEXT` fuer Metadaten | P1 |
+| **Türkommunikation** | Gegensprechen mit Video, Ton, Klingelereignis und Tueroeffner | SIP/RTP als externer Tuerstationspfad, Bridge-Kopplung zu u::lux Video und Audio | P2 |
+
+#### Assist-Spracheingabe
+
+- Taste oder konfigurierter PTT-Trigger startet eine Wyoming-Assist-Session.
+- `make` beginnt die Aufnahme, `break` beendet sie; alternativ muss ein
+  konfigurierbarer `EditValue`-Actor verwendet werden koennen.
+- Home Assistant verarbeitet STT, Intent und Antwort; die Bridge vermittelt
+  Mikrofon und Lautsprecher, statt selbst Sprachverarbeitung zu duplizieren.
+- Session-Abbruch, Timeout, Standby und parallele Medienwiedergabe muessen
+  definiert behandelt werden.
+
+#### Media Assistant
+
+- Der u::lux wird als echtes HA-Media-Player-Ziel behandelt, nicht nur als
+  lokaler Chime-Ausgang.
+- Unterstuetzt werden Start, Stop, Pause, Lautstaerke, Quellenwechsel und
+  Metadaten; lokale Sounds bleiben als separater Pfad erhalten.
+- Radio-/TTS-Wiedergabe und Display-Metadaten muessen gemeinsam gestartet und
+  beendet werden.
+- Der bestehende lokale Soundpfad ist der erste Referenztest; Remote-Audio,
+  Codec, Jitterpuffer und Rueckmeldung sind noch zu validieren.
+
+#### SIP-Tuerkommunikation
+
+- SIP/RTP wird als wahrscheinlicher Integrationspfad fuer Tuerstationen
+  vorgesehen; SIP-Signalisierung und RTP-Medien werden nicht mit UMP vermischt.
+- Die Bridge benoetigt dafuer einen SIP-Adapter oder eine vorhandene
+  SIP-/RTP-Komponente und koppelt nur die Medien-/Ereignissebene an u::lux.
+- Klingeln startet optional eine Video-/Audio-Session, die Antwort wird ueber
+  den u::lux-Lautsprecher ausgegeben, und ein Tueroeffner-Actor loest den
+  SIP-/Relaisbefehl aus.
+- Abnahme: Klingelereignis, Audio in beide Richtungen, Video auf der
+  Tuerseite, Tueroeffner und sauberes Auflegen.
+
 Das Gesamtsystem gliedert sich in zwei primäre Komponenten:
 
 ```mermaid
@@ -156,28 +241,57 @@ flowchart TD
   - Coordinator überwacht das aktive Seiten-Event `ulux_page`.
   - Wenn die aktuelle Schalterseite mit der in den Optionen konfigurierten `stream_page` (z. B. Seite 8 / Aktor 23) übereinstimmt, Rendering-Loop starten.
   - Verlässt der Anwender die Seite, Rendering stoppen (Bandbreiten- und CPU-Schonung).
+- [ ] **3.4 Periodische HA-Snapshots auf fester Seite (Use Case 1)**:
+  - Von `ulux_display` gerenderte Sensor-/Statusbilder alle paar Sekunden an
+    die konfigurierte u::lux-Seite senden.
+  - Snapshot-Rate und Zielseite konfigurierbar machen; kein permanenter
+    Video-Lifecycle fuer reine Sensorwerte.
+  - `cmd/image` als eigener API-Pfad vorbereiten; bis zur Wireformat-
+    Bestaetigung den validierten VideoFrame-Transport nur als Fallback nutzen.
 
 ---
 
 ### 🔵 Phase 4: Audio, Radio & Intercom (P3)
 - [ ] **4.1 Radio- & Medien-Steuerung (Use Case 2)**:
-  - Text-Aktoren via `ID_TEXT` (`0x61`) mit Sendernamen, Interpret und Titel beschicken (Platzhalter `<TEXT.0>` .. `<TEXT.9>`).
-  - Vollständige Tastensteuerung in HA (Taste 1: Play/Pause, Taste 2: Next, Taste 3/4: Volume Up/Down).
+  - Webradio-/HA-Media-Player-Stream ueber den Remote-Audiopfad abspielen.
+  - Play, Stop, Next, Lautstaerke und Quellenwahl in HA bereitstellen.
+  - Sendername, Interpret und Titel ueber `ID_TEXT` anzeigen; Metadaten und
+    Audio-Session muessen gemeinsam beendet werden.
 - [ ] **4.2 u::lux-zu-u::lux Intercom Cross-Connect (Use Case 6)**:
   - Implementierung eines Audio-Bridge-Moduls in Node.js (UDP Port 35000 / 35004).
   - Bei Auslösung eines Rufs (z. B. „Küche ruft Werkstatt“) Gong auf Zielgerät abspielen, Bidirektionalen PCM/G.711 Stream zwischen Schalter A und B vermitteln.
+- [ ] **4.2b Media Assistant als HA-Audioziel**:
+  - Remote-Audio fuer Radio, TTS und Medien ueber die HA-`media_player`-
+    Entitaet ausgeben.
+  - Play/Stop/Pause/Lautstaerke, Quellenwechsel, Metadaten und Jitterpuffer
+    validieren; lokale Sounds bleiben separat.
 - [ ] **4.3 Türklingel-Integration (Use Case 4)**:
   - Bei Klingel-Event Gong auf u::lux abspielen, Schalter auf Video-Tür-Seite umschalten.
   - Türöffner-Taste auf Aktor-Befehl legen.
+- [ ] **4.3b SIP-Tuerstationsadapter**:
+  - SIP/RTP-Signalisierung einer Tuerstation annehmen oder an eine externe
+    SIP-Komponente delegieren.
+  - Klingeln, Zweiweg-Audio, Video-Session, Tueroeffner und Auflegen als
+    gemeinsame Session abbilden.
 
 ---
 
 ### 🟣 Phase 5: Video-Streaming & Wyoming Voice Assist (P4)
 - [ ] **5.1 Kamera- / CCTV-Streaming auf Display (Use Case 5)**:
-  - HA-Kamerabild (RTSP / MJPEG) abgreifen, auf 86x90 px RGB565 skalieren und als UMP `VideoStream` (0xA3) Frames senden (max. 5 Zeilen/Paket).
+  - Beliebige Videoquelle (RTSP, MJPEG oder HTTP-URL) abgreifen, auf die
+    dynamischen `VideoState`-Grenzen skalieren und als UMP `VideoStream`
+    uebertragen.
+  - `VideoStart`, ACK-basierte Chunks, definierte FPS und `VideoStop`
+    implementieren.
+- [ ] **5.1b Video + Audio Tuerstation (Use Case 4)**:
+  - Video- und Audiostream gemeinsam auf einer konfigurierten Seite starten.
+  - Audio UDP 35000/35004 mit dem Video-Lifecycle koppeln und bei Stop,
+    Seitenwechsel oder Standby sauber beenden.
 - [ ] **5.2 Wyoming Voice Assist Satellit (Use Case 7)**:
   - Bridge-Modul für Wyoming-Protokoll auf TCP Port 10700.
   - Push-To-Talk (PTT): Taste gedrückt halten (`make`) startet Mikrofon-Streaming (UDP 35000), Loslassen (`break`) beendet Aufnahme und HA Voice antwortet über Schalterlautsprecher.
+  - Assist-Sprachbefehle muessen auch bei aktiver Display-/Medienseite
+    gestartet, abgebrochen und sauber beendet werden koennen.
 
 ---
 
