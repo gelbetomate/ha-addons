@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.36
+
+- Use the Home Assistant coordinator scheduler for reliable periodic snapshots.
+
 ## 0.2.35
 
 - Start the configured snapshot stream automatically when the integration loads.
