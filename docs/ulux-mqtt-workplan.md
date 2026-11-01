@@ -121,6 +121,25 @@ Die Bridge wandelt die vier Listeneintraege in ein `ID_LED`-Telegramm mit
 vier Farbbytes fuer die LED-Slots 0..3 um. Das entspricht dem am Switch
 beobachteten Wireformat.
 
+Bildstream-Test mit vorbereiteter HA-Stream-Seite:
+
+```json
+{
+   "page_index": 1,
+   "activate": true,
+   "page_settle_ms": 700,
+   "activate_settle_ms": 700,
+   "actor_id": 1,
+   "width": 176,
+   "height": 184,
+   "base64": "<valid PNG base64>"
+}
+```
+
+Der Video-Datenpfad verwendet dabei das im Legacy-Streamer nachgewiesene
+`0x03 0x86`-Frameformat und wartet zwischen den Chunks auf die Videoantwort
+des Switches.
+
 Beispiel Text:
 
 ```json

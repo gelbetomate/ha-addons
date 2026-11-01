@@ -1,5 +1,13 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.130
+
+- Align video data frames with the legacy `0x03 0x86` UMP format and wait for per-chunk video replies.
+
+## 0.5.129
+
+- Added optional page selection and display activation before an image stream.
+
 ## 0.5.128
 
 - Normalize stored generated device names with confirmed serial numbers, replacing `unknown` with `u::lux Switch (<serial>)`.

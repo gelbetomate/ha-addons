@@ -7,6 +7,7 @@ const {
   buildVideoStartMessage,
   buildVideoStopMessage,
   buildTelegram,
+  buildTelegramForDevice,
   buildVideoStreamTelegram,
 } = require('./builder');
 
@@ -15,7 +16,7 @@ const DEFAULT_HEIGHT = 90;
 const DEFAULT_LINES_PER_PACKET = 5;
 const DEFAULT_INTER_PACKET_DELAY_MS = 5;
 
-function createStreamManager({ udpSend, log }) {
+function createStreamManager({ udpSend, waitForVideoAck, log }) {
   const active = new Map();
   const chains = new Map();
   const generations = new Map();
@@ -70,6 +71,8 @@ async function streamImageToSwitch({
   source,
   remoteHost,
   remotePort,
+  deviceId = 0x5d,
+  frameVersion = 0x0232,
   udpSend,
   log,
   width = DEFAULT_WIDTH,
@@ -77,6 +80,7 @@ async function streamImageToSwitch({
   actorId = 1,
   linesPerPacket = DEFAULT_LINES_PER_PACKET,
   interPacketDelayMs = DEFAULT_INTER_PACKET_DELAY_MS,
+  videoAckTimeoutMs = 1500,
   sequenceId,
   shouldStop = () => false,
 }) {
@@ -93,7 +97,7 @@ async function streamImageToSwitch({
     : ((Date.now() >>> 0) & 0x7FFFFFFF);
 
   // Start stream session first so the switch can prepare its framebuffer.
-  const startTelegram = buildTelegram(buildVideoStartMessage(seqId, actorId));
+  const startTelegram = buildTelegramForDevice(deviceId, frameVersion, buildVideoStartMessage(seqId, actorId));
   udpSend(remoteHost, remotePort, startTelegram);
 
   const rgb565 = toRgb565LE(image, width, height);
@@ -122,9 +126,23 @@ async function streamImageToSwitch({
       columnCount: width,
       videoData: chunk,
       acknowledge: false,
+      deviceId,
+      frameVersion,
     });
 
+    const ackPromise = typeof waitForVideoAck === 'function'
+      ? waitForVideoAck(remoteHost, videoAckTimeoutMs)
+      : null;
     udpSend(remoteHost, remotePort, streamTelegram);
+
+    if (ackPromise) {
+      try {
+        await ackPromise;
+        log.debug(`Video ACK received from ${remoteHost} after line ${startLine}`);
+      } catch (err) {
+        log.warning(`${err.message}; continuing video stream`);
+      }
+    }
 
     if (interPacketDelayMs > 0) {
       // The switch display pipeline is slow; pace packets to avoid drops.

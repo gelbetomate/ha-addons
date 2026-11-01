@@ -58,10 +58,37 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
         return;
       }
       const streamConfig = config.stream || {};
+      const targetPage = coerceNonNegativeInt(payload.page_index ?? payload.page);
+      const prepareDisplay = targetPage !== null || payload.activate === true;
+
+      if (targetPage !== null) {
+        const pageTelegram = buildTelegramForDevice(
+          deviceId,
+          frameVersion,
+          buildPageIndexMessage(targetPage),
+        );
+        udpSend(sw.ip, remotePort, pageTelegram);
+        log.info(`Preparing image stream on page ${targetPage} for ${sw.ip}:${remotePort}`);
+        await sleep(coerceNonNegativeInt(payload.page_settle_ms) ?? 500);
+      }
+
+      if (prepareDisplay && payload.activate !== false) {
+        const activateTelegram = buildTelegramForDevice(
+          deviceId,
+          frameVersion,
+          buildActivateMessage({ activate: true, deactivate: false }),
+        );
+        udpSend(sw.ip, remotePort, activateTelegram);
+        log.info(`Activating display before image stream on ${sw.ip}:${remotePort}`);
+        await sleep(coerceNonNegativeInt(payload.activate_settle_ms) ?? 500);
+      }
+
       await streamImageToSwitch({
         source,
         remoteHost: sw.ip,
         remotePort,
+        deviceId,
+        frameVersion,
         udpSend,
         log,
         width: coercePositiveInt(payload.width) || coercePositiveInt(streamConfig.width) || 86,
@@ -345,6 +372,10 @@ function coerceNonNegativeInt(value) {
   const n = Number(value);
   if (!Number.isInteger(n) || n < 0) return null;
   return n;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 module.exports = { handleCommandMessage, DISPLAY_IMAGE_COMMAND, findSwitchTarget };

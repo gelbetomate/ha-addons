@@ -79,13 +79,13 @@ const {
  * @param {object}   opts.log      - Logger
  * @returns {{ start: Function, close: Function }}
  */
-function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, discoveryScanner, haClient, mqttClient, persistConfig, log }) {
+function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, discoveryRegistry, discoveryScanner, haClient, mqttClient, persistConfig, log }) {
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
   let discoveryScanState = { status: 'idle', started_at: null, completed_at: null };
   const autoProbeInFlight = new Set();
   const autoProbeLastAttempt = new Map();
-  const streamManager = createStreamManager({ udpSend, log });
+  const streamManager = createStreamManager({ udpSend, waitForVideoAck, log });
   const audioWebSocket = new WebSocket.Server({ noServer: true });
 
   audioWebSocket.on('connection', (ws, request, context) => {
@@ -923,6 +923,8 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
           source: { base64: payload.base64 },
           remoteHost: sw.ip,
           remotePort,
+          deviceId: sw.ump_device_id || 0x5d,
+          frameVersion: sw.ump_frame_version || 0x0232,
           udpSend,
           log,
           width:  payload.width  || streamCfg.width  || 86,

@@ -598,11 +598,12 @@ function buildTelegram(...messageBuffers) {
 }
 
 /**
- * Build a UMP video stream telegram (FrameID=0x8602).
+ * Build a legacy-compatible UMP video stream telegram.
  *
  * Frame layout (little-endian):
  *   16-byte frame header:
- *     0-1:  FrameID (0x8602)
+ *     0:    Frame type (0x03 for video data)
+ *     1:    UMP marker (0x86)
  *     2-3:  FrameLength (header + stream payload)
  *     4-5:  FrameVersion (0x0201)
  *     6-7:  PacketID
@@ -624,9 +625,11 @@ function buildTelegram(...messageBuffers) {
  * @param {number} [opts.columnCount=0]
  * @param {Buffer} opts.videoData
  * @param {boolean} [opts.acknowledge=false]
+ * @param {number} [opts.deviceId=0x5d]
+ * @param {number} [opts.frameVersion=0x0232]
  * @returns {Buffer}
  */
-function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColumn = 0, columnCount = 0, videoData, acknowledge = false }) {
+function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColumn = 0, columnCount = 0, videoData, acknowledge = false, deviceId = 0x5d, frameVersion = 0x0232 }) {
   const data = Buffer.isBuffer(videoData) ? videoData : Buffer.from(videoData || []);
 
   const streamHeader = Buffer.alloc(16, 0);
@@ -640,11 +643,12 @@ function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColum
   streamHeader.writeUInt16LE(columnCount & 0xFFFF, 14);
 
   const frameLength = 16 + streamHeader.length + data.length;
-  const frameHeader = Buffer.alloc(16, 0);
-  frameHeader.writeUInt16LE(FRAME_ID_VIDEO, 0);
+  const frameHeader = Buffer.from('01861000320225000000000001000100', 'hex');
+  frameHeader[0] = 0x03;
   frameHeader.writeUInt16LE(frameLength, 2);
-  frameHeader.writeUInt16LE(FRAME_VERSION, 4);
+  frameHeader.writeUInt16LE(frameVersion & 0xFFFF, 4);
   frameHeader.writeUInt16LE(nextPacketId(), 6);
+  frameHeader.writeUInt16LE(deviceId & 0xFFFF, 12);
 
   return Buffer.concat([frameHeader, streamHeader, data]);
 }

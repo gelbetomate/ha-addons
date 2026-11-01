@@ -107,6 +107,7 @@ async function main() {
   const assistSession = createAssistSessionManager({
     config,
     udpSend: udpServer.send,
+    waitForVideoAck: udpServer.waitForVideoAck,
     haClient,
     log,
   });
