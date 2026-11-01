@@ -132,8 +132,15 @@ class UluxDisplayStreamPageNumber(UluxDisplayEntity, NumberEntity):
         return float(self.coordinator.options.get("stream_page", 0))
 
     async def async_set_native_value(self, value: float) -> None:
-        options = {**self.coordinator.entry.options, "stream_page": int(value)}
+        page_number = int(value)
+        options = {**self.coordinator.entry.options, "stream_page": page_number}
         self.hass.config_entries.async_update_entry(self.coordinator.entry, options=options)
+        if page_number > 0:
+            await self.coordinator.device.set_page(page_number - 1)
+            await self.coordinator.device.set_active(True)
+            await self.coordinator.async_handle_device_page(page_number)
+        else:
+            await self.coordinator.async_handle_device_page(0)
 
 
 class UluxDisplayStreamRefreshRateNumber(UluxDisplayEntity, NumberEntity):

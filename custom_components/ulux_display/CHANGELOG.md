@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.27
+
+- Setting `Stream Page` now selects the physical page immediately and starts or stops periodic snapshot streaming.
+
 ## 0.2.26
 
 - Added Home Assistant services for local sound, volume, page, active state, LEDs, and text overlays.

@@ -248,6 +248,11 @@ flowchart TD
     Video-Lifecycle fuer reine Sensorwerte.
   - `cmd/image` als eigener API-Pfad vorbereiten; bis zur Wireformat-
     Bestaetigung den validierten VideoFrame-Transport nur als Fallback nutzen.
+  - HACS verwendet fuer `stream_page` die sichtbare Seitennummer (Seite 2 =
+    `stream_page: 2`); die Bridge verwendet im UMP-Payload den nullbasierten
+    `page_index: 1`.
+  - HACS-Renderloop, Rate-Limit und Stop bei Seitenwechsel sind implementiert;
+    der Hardware-Abnahmetest steht noch aus.
 
 ---
 
