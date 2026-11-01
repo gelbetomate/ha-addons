@@ -1328,6 +1328,10 @@
       try {
         const data = await fetchJson(`${API_BASE}/discovery/devices`);
         if (requestSequence !== UI_STATE.discoveryRequestSequence) return;
+        const activeElement = document.activeElement;
+        const editingDiscovery = activeElement?.classList?.contains('discovery-serial');
+        const hasSelection = UI_STATE.selectedDiscoveryDevices.size > 0;
+        if (editingDiscovery || hasSelection) return;
         const list = document.getElementById('discoveryList');
         const empty = document.getElementById('discoveryEmpty');
         const actions = document.getElementById('discoveryActions');

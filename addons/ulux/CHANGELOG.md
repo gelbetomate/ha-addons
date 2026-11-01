@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.120
+
+- Preserve Discovery card selection and serial input focus during background refreshes.
+
 ## 0.5.119
 
 - Removed the obsolete MQTT `cmd/led` alias; use `cmd/set_led` exclusively.
