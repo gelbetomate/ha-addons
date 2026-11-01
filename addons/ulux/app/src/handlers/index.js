@@ -87,22 +87,25 @@ function createDispatcher({ config, haClient, mqttClient, assistSession, discove
 
       // Prefer the persistent registry record for this sender IP. The UMP header
       // address is a protocol context ID, not necessarily the Ethernet MAC.
-      const registrySwitch = discoveryRegistry?.getStore?.()?.findByIp?.(senderIp);
-      const resolvedSwitch = registrySwitch
+        const registrySwitch = discoveryRegistry?.getStore?.()?.findByIp?.(senderIp);
+        const resolvedSwitch = registrySwitch
         || resolveByDeviceAddress(telegram.deviceAddressHex, config.switches)
         || sw;
+      const displaySwitch = resolvedSwitch.serial_number
+        ? { ...resolvedSwitch, name: `u::lux ${resolvedSwitch.serial_number}` }
+        : resolvedSwitch;
 
     if (discoveryRegistry) {
-      const resolvedSwitchId = resolvedSwitch.switch_id && resolvedSwitch.name !== 'unknown'
-        ? resolvedSwitch.switch_id
+        const resolvedSwitchId = displaySwitch.switch_id && displaySwitch.name !== 'unknown'
+          ? displaySwitch.switch_id
         : null;
       discoveryRegistry.upsert({
         senderIp,
         senderPort,
         switchId: resolvedSwitchId,
         protocol_id: discoveryRegistry.getStore?.()?.findByIp?.(senderIp)?.protocol_id || null,
-        switchName: resolvedSwitch.name,
-        configured: resolvedSwitch.name !== 'unknown' || Boolean(resolvedSwitch.switch_id),
+          switchName: displaySwitch.name,
+          configured: displaySwitch.name !== 'unknown' || Boolean(displaySwitch.switch_id),
         ump_device_id: telegram.deviceId,
         ump_frame_version: telegram.frameVersion,
         ump_device_address: telegram.deviceAddressHex,
@@ -112,7 +115,7 @@ function createDispatcher({ config, haClient, mqttClient, assistSession, discove
       });
     }
 
-    const enrichedCtx = { ...ctx, switch: resolvedSwitch, telegram };
+    const enrichedCtx = { ...ctx, switch: displaySwitch, telegram };
 
     // Dispatch each message in the telegram
     for (const msg of telegram.messages) {

@@ -732,6 +732,11 @@
         </div>
 
         <div class="form-group">
+          <label for="deviceSerialNumber">Serial number</label>
+          <input type="number" id="deviceSerialNumber" placeholder="e.g., 456" min="1" step="1">
+        </div>
+
+        <div class="form-group">
           <label for="deviceIp">IP Address *</label>
           <input type="text" id="deviceIp" placeholder="192.168.1.100" required>
         </div>
@@ -794,6 +799,7 @@
 
     const UI_STATE = {
       selectedDiscoveryDevices: new Set(),
+      discoverySerialDrafts: new Map(),
       currentEditingDevice: null,
       discoveryScanInProgress: false,
       discoveryRequestSequence: 0,
@@ -986,12 +992,13 @@
           const currentPage = dev.current_page ?? dev.ump_page_index;
           const pageCount = dev.page_count ?? dev.ump_page_count;
           const isDisplayActive = Boolean(dev.state_flags && dev.state_flags.display_active);
+          const displayName = dev.serial_number ? `u::lux ${dev.serial_number}` : dev.name;
 
           return `
           <div class="device-card">
             <div class="device-header">
               <div>
-                <div class="device-name">${escapeHtml(dev.name)}</div>
+                <div class="device-name">${escapeHtml(displayName)}</div>
                 <div class="device-id">${dev.switch_id}</div>
               </div>
               <span class="status-badge status-${dev.online_status || 'unknown'}">${(dev.online_status || 'unknown').toUpperCase()}</span>
@@ -999,6 +1006,7 @@
             <div class="device-info">
               <strong>IP:</strong> ${dev.ip || 'Not set'}
             </div>
+            ${dev.serial_number ? `<div class="device-info"><strong>Serial number:</strong> ${escapeHtml(dev.serial_number)}${dev.serial_number_source === 'configured' ? ' <span class="badge badge-primary">configured</span>' : ''}</div>` : ''}
             <div class="device-info">
               <strong>UMP port:</strong> ${dev.port || '34988'}
             </div>
@@ -1117,6 +1125,7 @@
         document.getElementById('switchId').value = data.device.switch_id;
         document.getElementById('switchId').disabled = true;
         document.getElementById('deviceName').value = data.device.name || '';
+        document.getElementById('deviceSerialNumber').value = data.device.serial_number ?? '';
         document.getElementById('deviceIp').value = data.device.ip || '';
         document.getElementById('devicePort').value = data.device.port || 50000;
         document.getElementById('deviceFrameVersion').value = formatFrameVersion(data.device.ump_frame_version);
@@ -1288,15 +1297,17 @@
 
       const switchId = document.getElementById('switchId').value.trim().toUpperCase();
       const deviceName = document.getElementById('deviceName').value.trim();
+      const serialInput = document.getElementById('deviceSerialNumber').value.trim();
       const deviceIp = document.getElementById('deviceIp').value.trim();
       const devicePort = parseInt(document.getElementById('devicePort').value) || 50000;
       const frameVersion = parseFrameVersion(document.getElementById('deviceFrameVersion').value);
+      const serialNumber = serialInput === '' ? null : Number(serialInput);
 
       const umpDeviceId = document.getElementById('deviceUmpId').value === ''
         ? null
         : parseInt(document.getElementById('deviceUmpId').value);
 
-      if (!switchId || !deviceName || !deviceIp) {
+      if (!switchId || !deviceName || !deviceIp || (serialNumber !== null && (!Number.isInteger(serialNumber) || serialNumber < 1))) {
         showAlert('Please fill in all required fields', 'error', 'deviceAlert');
         return;
       }
@@ -1305,13 +1316,13 @@
         if (UI_STATE.currentEditingDevice) {
           await fetchJson(`${API_BASE}/registry/devices/${encodeURIComponent(switchId)}`, {
             method: 'PUT',
-            body: JSON.stringify({ name: deviceName, ip: deviceIp, port: devicePort, ump_frame_version: frameVersion, ump_device_id: umpDeviceId }),
+            body: JSON.stringify({ name: deviceName, ip: deviceIp, port: devicePort, ump_frame_version: frameVersion, ump_device_id: umpDeviceId, serial_number: serialNumber, serial_number_source: serialNumber === null ? null : 'configured' }),
           });
           showAlert('Device updated', 'success');
         } else {
           await fetchJson(`${API_BASE}/registry/devices`, {
             method: 'POST',
-            body: JSON.stringify({ switch_id: switchId, name: deviceName, ip: deviceIp, port: devicePort, ump_frame_version: frameVersion, ump_device_id: umpDeviceId }),
+            body: JSON.stringify({ switch_id: switchId, name: deviceName, ip: deviceIp, port: devicePort, ump_frame_version: frameVersion, ump_device_id: umpDeviceId, serial_number: serialNumber, serial_number_source: serialNumber === null ? null : 'configured' }),
           });
           showAlert('Device added', 'success');
         }
@@ -1357,7 +1368,7 @@
             : (dev.serial_number_candidate ? `<span class="badge badge-warning">candidate</span>` : '');
           const serialDisplay = dev.serial_number
             ? `${escapeHtml(dev.serial_number)} ${serialBadge}`
-            : `<input class="discovery-serial" type="number" min="1" max="65535" placeholder="Required before import" aria-label="Confirmed serial number">`;
+            : `<input class="discovery-serial" type="number" min="1" max="65535" value="${escapeHtml(UI_STATE.discoverySerialDrafts.get(selectableId) || '')}" placeholder="Required before import" aria-label="Confirmed serial number">`;
           const switchName = dev.name || (dev.serial_number ? `u::lux Switch (${dev.serial_number})` : `u::lux device (${dev.ip || 'unknown IP'})`);
           return `
           <div class="discovery-card${selectableId ? '' : ' pending'}" data-switch-id="${selectableId}">
@@ -1386,7 +1397,12 @@
 
         // Add click handlers for selection
         document.querySelectorAll('.discovery-card').forEach((card) => {
-          card.querySelector('.discovery-serial')?.addEventListener('click', (event) => event.stopPropagation());
+          const serialInput = card.querySelector('.discovery-serial');
+          serialInput?.addEventListener('click', (event) => event.stopPropagation());
+          serialInput?.addEventListener('input', (event) => {
+            const switchId = card.dataset.switchId;
+            if (switchId) UI_STATE.discoverySerialDrafts.set(switchId, event.target.value);
+          });
           card.addEventListener('click', () => {
             const switchId = card.dataset.switchId;
             if (!switchId) {
@@ -1460,7 +1476,7 @@
             try {
               const card = Array.from(document.querySelectorAll('.discovery-card'))
                 .find((item) => item.dataset.switchId === switchId);
-              const serial = String(dev.serial_number || card?.querySelector('.discovery-serial')?.value || '').trim();
+              const serial = String(dev.serial_number || UI_STATE.discoverySerialDrafts.get(switchId) || card?.querySelector('.discovery-serial')?.value || '').trim();
               if (!/^\d+$/.test(serial) || Number(serial) < 1) {
                 throw new Error(`Confirmed serial number is required for ${dev.ip || switchId}`);
               }
@@ -1480,6 +1496,7 @@
                   sync_detail: dev.sync_detail,
                 }),
               });
+              UI_STATE.discoverySerialDrafts.delete(switchId);
               count++;
             } catch (err) {
               failures.push(`${dev.ip || switchId}: ${err.message}`);

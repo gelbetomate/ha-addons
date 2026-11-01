@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.121
+
+- Corrected `ID_LED` encoding to send one four-channel telegram with four LED color bytes.
+
 ## 0.5.120
 
 - Preserve Discovery card selection and serial input focus during background refreshes.

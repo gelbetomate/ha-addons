@@ -270,28 +270,27 @@ function buildLedColorValue(led = {}) {
 
 /**
  * Build one ID-LED message (MessageID=0x44, 8 bytes).
- * The tested Loxone format addresses one LED explicitly with LEDIndex and
- * sends the combined color/blink/override byte as LEDColor.
+ * The u::lux switch expects one combined message containing one color byte
+ * for each of the four LED slots.
  *
  * @param {number} actorId - Target actor ID
- * @param {number} ledIndex - LED index (0..3)
- * @param {number|object} led - Combined LEDColor byte or structured value
+ * @param {Array} leds - LED configurations for indices 0..3
  * @returns {Buffer} 8-byte message buffer
  */
-function buildLedMessage(actorId = 1, ledIndex = 0, led = 0) {
+function buildLedMessage(actorId = 1, leds = []) {
   const buf = Buffer.alloc(8, 0);
   buf.writeUInt8(0x08, 0);                         // MessageLength = 8
   buf.writeUInt8(MessageIds.IdLed, 1);             // MessageID = 0x44
   buf.writeUInt16LE(actorId & 0xFFFF, 2);          // ActorID
-  buf.writeUInt8(Number(ledIndex) & 0x03, 4);      // LEDIndex
-  buf.writeUInt8(0, 5);                             // Reserved
-  buf.writeUInt16LE(buildLedColorValue(led), 6);   // LEDColor (UInt16LE)
+  for (let index = 0; index < 4; index += 1) {
+    buf.writeUInt8(buildLedColorValue(leds[index] || 0), 4 + index);
+  }
   return buf;
 }
 
 /**
- * Send an array of LED configurations sequentially with pacing delay
- * to avoid UDP packet collapsing and microcontroller buffer overwrite.
+ * Send one four-channel LED message. The array is kept in the command API
+ * shape so MQTT and HA callers do not need to change.
  *
  * @param {object} opts
  * @param {string} opts.ip - Destination IP
@@ -314,15 +313,9 @@ async function sendLedMessagesPaced({
   delayMs = 8,
 }) {
   if (!Array.isArray(leds) || leds.length === 0) return;
-  for (let index = 0; index < leds.length; index += 1) {
-    const led = leds[index];
-    const msg = buildLedMessage(actorId, index, buildLedColorValue(led));
-    const telegram = buildTelegramForDevice(deviceId, frameVersion, msg);
-    udpSend(ip, port, telegram);
-    if (index < leds.length - 1 && delayMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
+  const msg = buildLedMessage(actorId, leds);
+  const telegram = buildTelegramForDevice(deviceId, frameVersion, msg);
+  udpSend(ip, port, telegram);
 }
 
 /**

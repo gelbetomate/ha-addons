@@ -13,12 +13,12 @@ Mitschnitte geprueft:
   UMP-Adressen wie `00:00:26:...` sind keine Geraeteidentitaet.
 - `ID_EDITVALUE (0x42)` ist bei Wert-/Langdruck-Konfigurationen der reale
   Bedienkanal; `ID_EVENT (0x51)` ist nicht der einzige Tasterpfad.
-- LED-Pacing ist im Bridge-Code bereits vorhanden; MQTT-Aliase wurden in
-  `0.5.113` ergaenzt.
+- Das `ID_LED`-Wireformat wurde auf ein Telegramm mit vier Farbbytes fuer
+  die LED-Slots 0..3 korrigiert; MQTT-Aliase wurden in `0.5.113` ergaenzt.
 - State-/Sensor-Polling ist kein Tastenevent. Echte Bedienereignisse sind
   `ulux_value`, `ulux_key` oder `ulux_key_action`.
-- Discovery-Scan und Pending-Merge bleiben die naechste Stabilitaetsaufgabe;
-  ein erster Scan muss alle Sync-Daten ohne zweiten Klick anzeigen.
+- First-Scan-Refresh und Pending-Merge bleiben bewusst als spaete
+  Stabilitaetsaufgabe zurueckgestellt.
 
 ### Abgleich der zusaetzlichen Zusammenfassung
 
@@ -32,10 +32,9 @@ Protokolldetails autoritativ:
   Switch ist die bestaetigte Seriennummer `456`, waehrend `0314` den falschen
   Kandidaten `788` ergibt.
 - **Korrigiert:** `ID_TEXT` ist im getesteten Pfad `0x45`, nicht `0x61`.
-- **Korrigiert:** Das LED-Wireformat folgt dem nachgewiesenen
-  `ActorID/LEDIndex/LEDColor`-Schema; die vier Eintraege werden einzeln und mit
-  Pacing gesendet. Ein pauschales 48-Byte-Sammeltelegramm ist nicht die
-  verbindliche Implementierungsgrundlage.
+- **Korrigiert:** Das LED-Wireformat ist ein `ID_LED`-Telegramm mit
+  `ActorID` und vier Farbbytes fuer die LED-Slots 0..3. Ein pauschales
+  48-Byte-Sammeltelegramm ist nicht die verbindliche Implementierungsgrundlage.
 - **Zu pruefen:** `PageChangeRequest`-Bit, exakte Videoabmessungen je Design,
   Add-on-RGB-LED, IR, Remote-Audio und die vollstaendige Discovery-
   Seriennummerndekodierung.
@@ -108,7 +107,7 @@ flowchart TD
 
 | Bereich | Aktueller Stand | Identifizierte Lücke / Notwendige Anpassung |
 | :--- | :--- | :--- |
-| **UMP v2.43 Core** | ✅ Vollständig implementiert in v0.5.49 (28 Message IDs, Builders, State Decoder, Sensor Handler) | ⚠️ **UDP Bursting bei `ID_LED` (`0x44`)**: 4-LED-Frames müssen in Einzelframes mit 5–10ms Delay gesplittet werden, da der u::lux-Puffer sonst LEDs 0–2 verwirft. |
+| **UMP v2.43 Core** | ✅ Vollständig implementiert in v0.5.49 (28 Message IDs, Builders, State Decoder, Sensor Handler) | ✅ **`ID_LED` (`0x44`)**: Ein Telegramm enthält vier Farbbytes fuer die LED-Slots 0..3. |
 | **Device Discovery** | ✅ UDP 34984 Scan empfängt Pakete, ARP findet MAC-Adressen | ❌ **UI-Bug**: Seriennummer steht auf „not decoded / not confirmed“, da `serial_number_candidate` nicht automatisch übernommen wird.<br/>❌ **Scan-Refresh**: Ansicht aktualisiert sich beim Klick auf „Scan now“ nicht sofort. |
 | **MQTT Gateway** | ✅ Telemetrie, Sensor-, Value- und Command-Topics (`cmd/#`) vorhanden | ✅ **Befehls-Nomenklatur**: LED wird ausschließlich über `cmd/set_led` angesprochen; `cmd/led` ist kein unterstützter Pfad. |
 | **Display Rendering (`ulux_display`)** | ✅ Pillow-Engine, 2x Supersampling, 86x90 px Fenster, Widgets für Clock, DateTime, Weather, Climate, Media | 🔄 **GeekMagic v1.0.0 Backport (Option B)**: Pillow-Architektur behalten, Widgets & Helfer (`_cardfit.py`, `_textfit.py`, Jinja/HTML-Template-Ansatz) modernisieren. |
@@ -129,11 +128,6 @@ flowchart TD
   - Statusanzeige bereinigt: Wenn `serial_number` vorhanden, sauberes Badge anzeigen („MAC abgeleitet“ bzw. „Konfiguriert“).
   - Zeile „MAC candidate: ... (not confirmed)“ ausgeblendet, sobald die Seriennummer feststeht.
   - Automatischer Schaltername `u::lux Switch (<serial_number>)` statt generischem `u::lux device (<IP>)`.
-- [ ] **1.3 Sofort-Refresh bei „Scan now“**:
-  - In `registry.html`: Direkt beim Klick auf „Scan now“ sofort `loadDiscovery()` ausführen (ohne 500ms Vorverzögerung).
-  - Visuellen Ladeindikator (Spinner/Scanning-Status) auf dem Button und im Leeren Zustand eingebunden.
-  - Reaktives 350ms Polling-Intervall während des aktiven Scans.
-
 ---
 
 ### 🟡 Phase 2: UMP-Bridge Hardware-Fixes & MQTT-Aliase (P1)
@@ -184,6 +178,13 @@ flowchart TD
 ---
 
 ### ⚪ Phase 6: Bereinigung & Dokumentation (P5)
+- [ ] **6.1 First-Scan-Refresh und Pending-Merge stabilisieren**:
+  - Der erste Discovery-Scan soll alle empfangenen Sync-Daten ohne zweiten
+    Klick oder manuellen Seiten-Refresh anzeigen.
+  - Auswahl und Eingabefokus muessen waehrend eines laufenden Scans erhalten
+    bleiben.
+  - Pending-Eintraege und neue Discovery-Antworten muessen in einem Durchlauf
+    korrekt zusammengefuehrt werden.
 - [ ] Nicht benötigte Markdown-Dateien bereinigen (z. B. `docs/external/thu_may_07_2026_how_to_implement_binary_search_in.md`).
 - [ ] `.gitignore` Schreibweise für `docs/Gemini Notebook/` anpassen.
 - [ ] Versions-Bump und Dokumentation in `CHANGELOG.md` für Bridge und HACS-Komponente.

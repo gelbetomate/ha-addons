@@ -117,9 +117,9 @@ Die Werte bedeuten LED 1 rot, LED 2 gruen, LED 3 blau und LED 4 weiss.
 Die Nummern entsprechen der UMP-Reihenfolge; die physische Eckposition muss
 einmalig mit diesem Farbmuster zugeordnet werden.
 
-Die Bridge wandelt die vier Listeneintraege in vier einzelne `ID_LED`-
-Nachrichten mit `LEDIndex=0..3` um. Das entspricht dem nachgewiesenen
-Loxone-Befehlsschema.
+Die Bridge wandelt die vier Listeneintraege in ein `ID_LED`-Telegramm mit
+vier Farbbytes fuer die LED-Slots 0..3 um. Das entspricht dem am Switch
+beobachteten Wireformat.
 
 Beispiel Text:
 

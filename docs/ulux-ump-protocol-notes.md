@@ -675,16 +675,15 @@ from an external sensor integrated into the u::lux/Loxone setup; they are not
 assumed to be physically measured by the Switch itself. The Lux value is the
 separate ambient-light sensor message (`0x03`) from the Switch.
 
-For outbound `ID_LED (0x44)`, the tested Loxone-compatible command addresses
-one LED per message:
+For outbound `ID_LED (0x44)`, the u::lux switch accepts one four-channel
+message containing one color byte per LED slot:
 
 ```text
-ActorID=<actor>&LEDIndex=0..3&LEDColor=<combined byte>
+ActorID=<actor>&LEDColor[0..3]=<combined byte>
 ```
 
-On the wire the message stores `LEDIndex` at byte 4, one reserved byte at
-byte 5, and `LEDColor` as a little-endian 16-bit value at bytes 6-7. The
-combined color value is interpreted as:
+On the wire the message stores the four combined color bytes at offsets 4-7.
+Each combined color value is interpreted as:
 
 ```text
 bits 0..2  color code (0..7)
