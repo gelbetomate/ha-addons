@@ -930,7 +930,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
           width:  payload.width  || streamCfg.width  || 86,
           height: payload.height || streamCfg.height || 90,
           actorId: payload.actor_id || streamCfg.actor_id || 1,
-          linesPerPacket:      streamCfg.lines_per_packet      || 5,
+          linesPerPacket:      streamCfg.lines_per_packet      || 4,
           interPacketDelayMs:  streamCfg.inter_packet_delay_ms ?? 5,
         });
 

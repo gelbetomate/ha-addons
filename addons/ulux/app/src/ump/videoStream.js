@@ -13,7 +13,7 @@ const {
 
 const DEFAULT_WIDTH = 86;
 const DEFAULT_HEIGHT = 90;
-const DEFAULT_LINES_PER_PACKET = 5;
+const DEFAULT_LINES_PER_PACKET = 4;
 const DEFAULT_INTER_PACKET_DELAY_MS = 5;
 
 function createStreamManager({ udpSend, waitForVideoAck, log }) {

@@ -47,7 +47,7 @@ const DEFAULTS = {
     width: 176,
     height: 184,
     actor_id: 1,
-    lines_per_packet: 5,
+    lines_per_packet: 4,
     inter_packet_delay_ms: 5,
   },
   api_port: 8099,
@@ -84,6 +84,9 @@ function loadConfig() {
     config.stream.width = 176;
     config.stream.height = 184;
     config.stream.actor_id = 1;
+  }
+  if (config.stream.width === 176 && config.stream.height === 184 && config.stream.lines_per_packet === 5) {
+    config.stream.lines_per_packet = 4;
   }
 
   // Supervisor provides SUPERVISOR_TOKEN for Supervisor APIs and the

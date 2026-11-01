@@ -109,7 +109,7 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
         width: coercePositiveInt(payload.width) || coercePositiveInt(streamConfig.width) || 86,
         height: coercePositiveInt(payload.height) || coercePositiveInt(streamConfig.height) || 90,
         actorId: streamActorId,
-        linesPerPacket: coercePositiveInt(payload.lines_per_packet) || coercePositiveInt(streamConfig.lines_per_packet) || 5,
+        linesPerPacket: coercePositiveInt(payload.lines_per_packet) || coercePositiveInt(streamConfig.lines_per_packet) || 4,
         interPacketDelayMs: coerceNonNegativeInt(payload.inter_packet_delay_ms)
           ?? coerceNonNegativeInt(streamConfig.inter_packet_delay_ms)
           ?? 5,

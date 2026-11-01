@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.132
+
+- Match legacy video chunks with state flag 1 and four lines per packet at 176px width.
+
 ## 0.5.131
 
 - Request `VideoState` for the stream actor before starting an image/video stream.

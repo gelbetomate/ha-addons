@@ -633,9 +633,8 @@ function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColum
   const data = Buffer.isBuffer(videoData) ? videoData : Buffer.from(videoData || []);
 
   const streamHeader = Buffer.alloc(16, 0);
-  if (acknowledge) {
-    streamHeader.writeUInt8(0x01, 0);
-  }
+  // The legacy implementation marks every video chunk with state flag 1.
+  streamHeader.writeUInt32LE(0x01, 0);
   streamHeader.writeUInt32LE(sequenceId >>> 0, 4);
   streamHeader.writeUInt16LE(startLine & 0xFFFF, 8);
   streamHeader.writeUInt16LE(lineCount & 0xFFFF, 10);

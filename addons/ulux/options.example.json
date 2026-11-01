@@ -16,7 +16,7 @@
     "width": 176,
     "height": 184,
     "actor_id": 1,
-    "lines_per_packet": 5,
+    "lines_per_packet": 4,
     "inter_packet_delay_ms": 5
   },
 

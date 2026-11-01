@@ -296,7 +296,7 @@ Use this if you manage devices via the bridge UI and Home Assistant integration,
   "stream": {
     "width": 86,
     "height": 90,
-    "lines_per_packet": 5,
+    "lines_per_packet": 4,
     "inter_packet_delay_ms": 5
   },
   "api_port": 8099,
@@ -343,7 +343,7 @@ Use this when you also want MQTT topics for commands and registry management.
   "stream": {
     "width": 86,
     "height": 90,
-    "lines_per_packet": 5,
+    "lines_per_packet": 4,
     "inter_packet_delay_ms": 5
   },
   "api_port": 8099,
