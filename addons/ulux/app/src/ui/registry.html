@@ -1353,7 +1353,7 @@
             : (dev.serial_number_candidate ? `<span class="badge badge-warning">candidate</span>` : '');
           const serialDisplay = dev.serial_number
             ? `${escapeHtml(dev.serial_number)} ${serialBadge}`
-            : (dev.serial_number_candidate ? `${escapeHtml(dev.serial_number_candidate)} ${serialBadge}` : '<span class="mac-unavailable">not decoded</span>');
+            : `<input class="discovery-serial" type="number" min="1" max="65535" placeholder="Required before import" aria-label="Confirmed serial number">`;
           const switchName = dev.name || (dev.serial_number ? `u::lux Switch (${dev.serial_number})` : `u::lux device (${dev.ip || 'unknown IP'})`);
           return `
           <div class="discovery-card${selectableId ? '' : ' pending'}" data-switch-id="${selectableId}">
@@ -1382,6 +1382,7 @@
 
         // Add click handlers for selection
         document.querySelectorAll('.discovery-card').forEach((card) => {
+          card.querySelector('.discovery-serial')?.addEventListener('click', (event) => event.stopPropagation());
           card.addEventListener('click', () => {
             const switchId = card.dataset.switchId;
             if (!switchId) {
@@ -1450,9 +1451,15 @@
         const failures = [];
 
         for (const switchId of selected) {
-          const dev = allData.devices.find((d) => d.switch_id === switchId);
+          const dev = allData.devices.find((d) => (d.mac_address || d.switch_id) === switchId);
           if (dev) {
             try {
+              const card = Array.from(document.querySelectorAll('.discovery-card'))
+                .find((item) => item.dataset.switchId === switchId);
+              const serial = String(dev.serial_number || card?.querySelector('.discovery-serial')?.value || '').trim();
+              if (!/^\d+$/.test(serial) || Number(serial) < 1) {
+                throw new Error(`Confirmed serial number is required for ${dev.ip || switchId}`);
+              }
               await fetchJson(`${API_BASE}/registry/devices`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -1464,8 +1471,8 @@
                   port: dev.port,
                   mac_address: dev.mac_address,
                   protocol_id: dev.protocol_id,
-                  serial_number: dev.serial_number,
-                  serial_number_source: dev.serial_number_source,
+                  serial_number: Number(serial),
+                  serial_number_source: dev.serial_number_source || 'configured',
                   sync_detail: dev.sync_detail,
                 }),
               });
@@ -1493,7 +1500,7 @@
     document.getElementById('importAllBtn').addEventListener('click', async () => {
       try {
         const allData = await fetchJson(`${API_BASE}/discovery/devices`);
-        const devices = allData.devices.filter((dev) => dev.switch_id).map((dev) => ({
+        const devices = allData.devices.filter((dev) => dev.mac_address || dev.switch_id).map((dev) => ({
           switch_id: dev.mac_address || dev.switch_id,
           name: dev.serial_number
             ? `u::lux Switch (${dev.serial_number})`
@@ -1506,6 +1513,9 @@
           serial_number_source: dev.serial_number_source,
           sync_detail: dev.sync_detail,
         }));
+        if (devices.some((device) => !Number.isInteger(device.serial_number) || device.serial_number < 1)) {
+          throw new Error('Every device needs a confirmed serial number before Import All.');
+        }
         const imported = await fetchJson(`${API_BASE}/registry/import`, {
           method: 'POST',
           body: JSON.stringify({ devices }),

@@ -742,7 +742,7 @@ When MQTT mode is enabled (`mode.mqtt: true`), the bridge publishes telemetry an
 #### Command Topics (wildcard subscription `${base_topic}/+/cmd/#`)
 - `<base_topic>/<switch_id>/cmd/page`: Payload `{"page": 2}` or plain string `"2"`
 - `<base_topic>/<switch_id>/cmd/activate`: Payload `{"active": true}`
-- `<base_topic>/<switch_id>/cmd/led`: Payload `{"led": 1, "color": "red", "mode": 0}`
+- `<base_topic>/<serial>/cmd/set_led`: Payload mit `actor_id` und `leds`-Liste
 - `<base_topic>/<switch_id>/cmd/text`: Payload `{"field": 1, "text": "Hello"}`
 - `<base_topic>/<switch_id>/cmd/value`: Payload `{"actor_id": 5, "value": 42}`
 - `<base_topic>/<switch_id>/cmd/audio/play`: Payload `{"sound_id": 1, "volume": 80}`

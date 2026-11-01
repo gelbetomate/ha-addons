@@ -28,7 +28,7 @@ Noch nicht vollstaendig:
 ## Ziel-Topic-Vertrag
 
 Base Topic ist standardmaessig `ulux`. Der Geraeteteil eines Topics verwendet
-ausschliesslich eine Seriennummer, zum Beispiel `serial_456`. Wenn nur eine
+ausschliesslich eine Seriennummer, zum Beispiel `456`. Wenn nur eine
 unbestaetigte `serial_number_candidate` vorliegt, wird auch diese verwendet.
 Wenn keine Seriennummer bekannt ist, lautet der Schluessel `unresolved`; MAC-
 Adressen, IP-Adressen und UMP-Protokolladressen werden nie als MQTT-
@@ -56,7 +56,7 @@ als `.../state`-Untertopic fuer einfache MQTT-Clients publiziert werden.
 ```text
 ulux/<switch_id>/cmd/page
 ulux/<switch_id>/cmd/activate
-ulux/<switch_id>/cmd/led
+ulux/<switch_id>/cmd/set_led
 ulux/<switch_id>/cmd/text
 ulux/<switch_id>/cmd/value
 ulux/<switch_id>/cmd/audio/play
@@ -82,7 +82,7 @@ Vollstaendiges Beispiel fuer alle vier Switch-LEDs:
 Topic:
 
 ```text
-ulux/00:50:C2:73:03:14/cmd/led
+ulux/456/cmd/set_led
 ```
 
 Payload:

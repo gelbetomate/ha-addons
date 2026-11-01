@@ -28,7 +28,7 @@ const DISPLAY_IMAGE_COMMAND = 'display/image';
  *   <base_topic>/<switch_id>/cmd/display/image
  *   <base_topic>/<switch_id>/cmd/page
  *   <base_topic>/<switch_id>/cmd/activate
- *   <base_topic>/<switch_id>/cmd/led
+ *   <base_topic>/<switch_id>/cmd/set_led
  *   <base_topic>/<switch_id>/cmd/text
  *   <base_topic>/<switch_id>/cmd/value
  *   <base_topic>/<switch_id>/cmd/audio/play
@@ -76,7 +76,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
       break;
     }
 
-    case 'page': {
+    case 'page':
+    case 'set_page': {
       const pageIndex = typeof cmd.payload === 'object' && cmd.payload !== null
         ? Number(cmd.payload.page ?? cmd.payload.page_index ?? 0)
         : Number(cmd.payload ?? 0);
@@ -90,7 +91,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
       break;
     }
 
-    case 'activate': {
+    case 'activate':
+    case 'set_active': {
       let active = true;
       if (typeof cmd.payload === 'object' && cmd.payload !== null) {
         active = cmd.payload.active !== false && cmd.payload.activate !== false;
@@ -109,7 +111,7 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
       break;
     }
 
-    case 'led': {
+    case 'set_led': {
       const payload = normalisePayload(cmd.payload);
       const actorId = Number(payload.actor_id ?? 1);
       const leds = Array.isArray(payload.leds) ? payload.leds : [];
@@ -126,7 +128,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
       break;
     }
 
-    case 'text': {
+    case 'text':
+    case 'set_text': {
       const payload = normalisePayload(cmd.payload);
       const actorId = Number(payload.actor_id ?? 1);
       const textId = Number(payload.text_id ?? 0);
@@ -182,7 +185,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
       break;
     }
 
-    case 'audio/play': {
+    case 'audio/play':
+    case 'play_sound': {
       const payload = normalisePayload(cmd.payload);
       const telegram = buildTelegramForDevice(
         deviceId,
@@ -202,7 +206,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
       break;
     }
 
-    case 'audio/stop': {
+    case 'audio/stop':
+    case 'stop_audio': {
       const payload = normalisePayload(cmd.payload);
       const telegram = buildTelegramForDevice(
         deviceId,
@@ -217,7 +222,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
       break;
     }
 
-    case 'audio/volume': {
+    case 'audio/volume':
+    case 'set_volume': {
       const volume = typeof cmd.payload === 'object' && cmd.payload !== null
         ? Number(cmd.payload.volume ?? 50)
         : Number(cmd.payload ?? 50);

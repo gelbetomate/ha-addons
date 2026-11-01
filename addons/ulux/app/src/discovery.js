@@ -287,9 +287,9 @@ function createDiscoveryScanner({
       (item) => String(item.ip || '') === discovered.ip
     );
     const inferredSerial = inferSerialNumber(macAddress);
-    const serialNumber = configured?.serial_number || inferredSerial || null;
+    const serialNumber = configured?.serial_number || null;
     const serialNumberCandidate = configured?.serial_number ? null : inferredSerial;
-    const serialNumberSource = configured?.serial_number ? 'configured' : (inferredSerial ? 'mac_inferred' : null);
+    const serialNumberSource = configured?.serial_number ? 'configured' : null;
     const switchId = configured?.switch_id || macAddress || null;
     const name = configured?.name || (serialNumber ? `u::lux Switch (${serialNumber})` : null);
 
@@ -310,7 +310,7 @@ function createDiscoveryScanner({
       serial_number: serialNumber,
       serial_number_candidate: serialNumberCandidate,
       serial_number_source: serialNumberSource,
-      ump_device_id: inferUmpDeviceId(serialNumber),
+      ump_device_id: configured?.serial_number ? inferUmpDeviceId(configured.serial_number) : null,
       senderIp: discovered.ip,
       senderPort: port,
       umpPort: UMP_PORT,

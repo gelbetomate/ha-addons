@@ -7,7 +7,10 @@ const path = require('path');
 const { createStreamManager } = require('./ump/videoStream');
 const {
   buildTelegramForDevice,
-  buildInitializationRequest,
+  buildRequestMessage,
+  buildPageCountRequest,
+  buildPageIndexRequest,
+  buildIdListRequest,
   buildPageIndexMessage,
   buildActivateMessage,
   buildLedMessage,
@@ -81,6 +84,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
   const streamCfg = config.stream || {};
   let discoveryScanState = { status: 'idle', started_at: null, completed_at: null };
   const autoProbeInFlight = new Set();
+  const autoProbeLastAttempt = new Map();
   const streamManager = createStreamManager({ udpSend, log });
   const audioWebSocket = new WebSocket.Server({ noServer: true });
 
@@ -195,7 +199,10 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
   function autoProbeDevice(device) {
     if (!device?.switch_id || !device.ip || device.ump_device_id != null) return;
     if (autoProbeInFlight.has(device.switch_id)) return;
+    const lastAttempt = autoProbeLastAttempt.get(device.switch_id) || 0;
+    if (Date.now() - lastAttempt < 30000) return;
     autoProbeInFlight.add(device.switch_id);
+    autoProbeLastAttempt.set(device.switch_id, Date.now());
     const deviceIds = [1, 92, 93];
     const requestedAt = new Date().toISOString();
     discoveryRegistry.updateDiagnosticsBySwitchId(device.switch_id, {
@@ -207,7 +214,10 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const telegram = buildTelegramForDevice(
         deviceId,
         device.ump_frame_version || 0x0232,
-        buildInitializationRequest(),
+        buildRequestMessage(0x01),
+        buildPageCountRequest(),
+        buildPageIndexRequest(),
+        buildIdListRequest(),
       );
       setTimeout(() => udpSend(device.ip, device.port || config.listen_port || 34988, telegram), index * 100);
     });
@@ -416,7 +426,10 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
       const probes = deviceIds.map((deviceId) => buildTelegramForDevice(
         deviceId,
         target.ump_frame_version,
-        buildInitializationRequest(),
+        buildRequestMessage(0x01),
+        buildPageCountRequest(),
+        buildPageIndexRequest(),
+        buildIdListRequest(),
       ));
       const probe = probes[0];
       const requestedAt = new Date().toISOString();

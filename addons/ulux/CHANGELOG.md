@@ -1,5 +1,32 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.119
+
+- Removed the obsolete MQTT `cmd/led` alias; use `cmd/set_led` exclusively.
+
+## 0.5.118
+
+- Align MQTT Home Assistant Discovery state topics and device identifiers with confirmed serial numbers.
+
+## 0.5.117
+
+- Use the plain serial number as the MQTT device topic key, for example `ulux/456/...`.
+
+## 0.5.116
+
+- Require a confirmed serial number in Discovery before import.
+- Block MQTT publication for unresolved device identities.
+
+## 0.5.115
+
+- Replace the initialization-only recovery probe with responsive State/Page/Actor discovery queries.
+- Add a cooldown so an unresolved device cannot trigger repeated automatic probe loops.
+
+## 0.5.114
+
+- Keep MAC-derived serial values as candidates only; require configured/confirmed serials for runtime identity and UMP-ID inference.
+- Accept MQTT command aliases matching the HA services (`set_led`, `set_page`, `set_text`, `set_active`, `play_sound`, `stop_audio`, `set_volume`).
+
 ## 0.5.113
 
 - Promoted MAC-inferred serial numbers to confirmed serial_number with an inline status badge (MAC inferred), resolving the "Serial number: not decoded" and "(not confirmed)" display.
