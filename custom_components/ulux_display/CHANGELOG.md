@@ -1,5 +1,13 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.29
+
+- Render HACS views at the actual 176x184 HA Stream frame size instead of 240x240.
+
+## 0.2.28
+
+- Start a real periodic snapshot refresh loop while the configured Stream Page is active.
+
 ## 0.2.27
 
 - Setting `Stream Page` now selects the physical page immediately and starts or stops periodic snapshot streaming.

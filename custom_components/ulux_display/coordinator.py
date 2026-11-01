@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
@@ -211,6 +212,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._live_leds: list[dict[str, Any]] = []
         self._stream_page_active = False
         self._last_stream_sent: float = 0
+        self._stream_refresh_task: asyncio.Task[None] | None = None
 
         # Device state (updated on refresh)
         self._device_state: DeviceState | None = None
@@ -1370,9 +1372,34 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._stream_page_active = active
         if active:
             self._last_stream_sent = 0
+            self._start_stream_refresh_loop()
             await self.async_request_refresh()
         else:
+            if self._stream_refresh_task is not None:
+                self._stream_refresh_task.cancel()
+                self._stream_refresh_task = None
             await self.device.stop_stream()
+
+    def _start_stream_refresh_loop(self) -> None:
+        """Start periodic snapshot requests while the stream page is active."""
+        if self._stream_refresh_task is None or self._stream_refresh_task.done():
+            self._stream_refresh_task = self.hass.async_create_task(
+                self._stream_refresh_loop()
+            )
+
+    async def _stream_refresh_loop(self) -> None:
+        """Request rendered snapshots at the configured stream rate."""
+        try:
+            while self._stream_page_active:
+                rate = max(
+                    0.1,
+                    float(self.options.get(CONF_STREAM_REFRESH_RATE, DEFAULT_STREAM_REFRESH_RATE)),
+                )
+                await asyncio.sleep(1 / rate)
+                if self._stream_page_active:
+                    await self.async_request_refresh()
+        except asyncio.CancelledError:
+            raise
 
     async def async_reload_views(self) -> None:
         """Reload views from store and refresh display.

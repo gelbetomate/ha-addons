@@ -24,6 +24,8 @@ from .const import (
     CONF_REFRESH_INTERVAL,
     CONF_SCREEN_CYCLE_INTERVAL,
     CONF_SWITCH_ID,
+    DISPLAY_HEIGHT,
+    DISPLAY_WIDTH,
     DEFAULT_REFRESH_INTERVAL,
     DEFAULT_SCREEN_CYCLE_INTERVAL,
     DOMAIN,
@@ -735,8 +737,8 @@ async def ws_preview_render(
             {
                 "image": base64.b64encode(png_data).decode("utf-8"),
                 "content_type": "image/png",
-                "width": 240,
-                "height": 240,
+                "width": DISPLAY_WIDTH,
+                "height": DISPLAY_HEIGHT,
             },
         )
     except Exception as err:

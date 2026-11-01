@@ -2,9 +2,9 @@
 
 DOMAIN = "ulux_display"
 
-# Display dimensions
-DISPLAY_WIDTH = 240
-DISPLAY_HEIGHT = 240
+# Display dimensions for the u::lux HA Stream frame
+DISPLAY_WIDTH = 176
+DISPLAY_HEIGHT = 184
 
 # Default settings
 DEFAULT_REFRESH_INTERVAL = 10  # seconds
