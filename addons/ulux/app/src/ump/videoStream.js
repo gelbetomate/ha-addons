@@ -88,8 +88,9 @@ async function streamImageToSwitch({
     throw new Error('streamImageToSwitch requires remoteHost and udpSend');
   }
 
-  const imageData = await resolveImageBuffer(source);
-  const image = await Jimp.read(imageData);
+  const image = source.solidColor
+    ? await createSolidImage(width, height, source.solidColor)
+    : await Jimp.read(await resolveImageBuffer(source));
   image.resize(width, height, Jimp.RESIZE_BILINEAR);
 
   const seqId = Number.isInteger(sequenceId)
@@ -214,6 +215,20 @@ function toRgb565LE(image, width, height) {
   }
 
   return out;
+}
+
+function createSolidImage(width, height, color = {}) {
+  const red = Number(color.r ?? 0) & 0xFF;
+  const green = Number(color.g ?? 0) & 0xFF;
+  const blue = Number(color.b ?? 0) & 0xFF;
+  const rgba = (((red << 24) | (green << 16) | (blue << 8) | 0xFF) >>> 0);
+
+  return new Promise((resolve, reject) => {
+    new Jimp(width, height, rgba, (error, image) => {
+      if (error) reject(error);
+      else resolve(image);
+    });
+  });
 }
 
 function rgb888To565(r, g, b) {

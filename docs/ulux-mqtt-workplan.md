@@ -144,6 +144,12 @@ Der Video-Datenpfad verwendet dabei das im Legacy-Streamer nachgewiesene
 `0x03 0x86`-Frameformat und wartet zwischen den Chunks auf die Videoantwort
 des Switches.
 
+Fuer einen decoderfreien Transporttest kann statt `base64` verwendet werden:
+
+```json
+"solid_color": {"r": 255, "g": 0, "b": 0}
+```
+
 Beispiel Text:
 
 ```json

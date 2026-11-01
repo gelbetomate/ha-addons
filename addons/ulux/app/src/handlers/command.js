@@ -369,6 +369,10 @@ function pickImageSource(payload) {
     return { path: payload.path.trim() };
   }
 
+  if (payload.solid_color && typeof payload.solid_color === 'object') {
+    return { solidColor: payload.solid_color };
+  }
+
   return null;
 }
 

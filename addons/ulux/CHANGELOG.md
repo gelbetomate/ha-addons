@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.134
+
+- Added a decoder-free `solid_color` video test source for reliable UMP stream diagnostics.
+
 ## 0.5.133
 
 - Added the explicit MQTT `cmd/video` command for the UMP video stream; kept `cmd/display/image` as a compatibility alias.
