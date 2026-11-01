@@ -1390,6 +1390,20 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
                 self._stream_refresh_task = None
             await self.device.stop_stream()
 
+    async def async_start_configured_stream(self) -> None:
+        """Start the configured snapshot stream after integration startup."""
+        stream_page = int(self.options.get(CONF_STREAM_PAGE, 0) or 0)
+        if not stream_page:
+            return
+        self._display_mode = "custom"
+        self._stream_page_active = True
+        self._last_stream_sent = 0
+        await self.device.set_theme_custom()
+        await self.device.set_page(stream_page - 1)
+        await self.device.set_active(True)
+        self._start_stream_refresh_loop()
+        await self.async_request_refresh()
+
     def _start_stream_refresh_loop(self) -> None:
         """Start periodic snapshot requests while the stream page is active."""
         if self._stream_refresh_task is None or self._stream_refresh_task.done():

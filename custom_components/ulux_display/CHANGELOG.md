@@ -1,5 +1,13 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.35
+
+- Start the configured snapshot stream automatically when the integration loads.
+
+## 0.2.34
+
+- Remove the modulo-based actor-to-key heuristic that incorrectly mapped actor 10 to Key 2.
+
 ## 0.2.33
 
 - Include the configured physical stream page and display activation with every HACS snapshot upload.

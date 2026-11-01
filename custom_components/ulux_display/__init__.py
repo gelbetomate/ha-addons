@@ -182,7 +182,18 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             if isinstance(coordinator, UluxDisplayCoordinator):
                 try:
                     aid = int(actor_id)
-                    key = ((aid - 1) % 4) + 1 if aid > 0 else 1
+                    actor_key_map = entry.options.get("actor_key_map", {})
+                    key = actor_key_map.get(str(aid), actor_key_map.get(aid))
+                    if key is None:
+                        _LOGGER.debug(
+                            "Ignoring ulux_value actor %s for key mapping; no explicit actor_key_map entry",
+                            aid,
+                        )
+                        continue
+                    key = int(key)
+                    if key < 1 or key > 4:
+                        _LOGGER.warning("Ignoring invalid actor_key_map target %s for actor %s", key, aid)
+                        continue
                     coordinator.handle_key_event(key, "pressed")
                     hass.async_create_task(_async_release_key_after_delay(coordinator, key, 0.2))
                 except Exception as err:
@@ -374,6 +385,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.debug("Performing first refresh for switch %s", switch_id)
     await coordinator.async_config_entry_first_refresh()
+    await coordinator.async_start_configured_stream()
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
