@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.131
+
+- Request `VideoState` for the stream actor before starting an image/video stream.
+
 ## 0.5.130
 
 - Align video data frames with the legacy `0x03 0x86` UMP format and wait for per-chunk video replies.

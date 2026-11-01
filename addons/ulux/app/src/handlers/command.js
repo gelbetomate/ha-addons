@@ -7,6 +7,7 @@ const {
   buildTelegramForDevice,
   buildPageIndexMessage,
   buildActivateMessage,
+  buildVideoStateRequest,
   buildLedMessage,
   buildLedColorValue,
   sendLedMessagesPaced,
@@ -58,6 +59,9 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
         return;
       }
       const streamConfig = config.stream || {};
+      const streamActorId = coercePositiveInt(payload.actor_id)
+        || coercePositiveInt(streamConfig.actor_id)
+        || 1;
       const targetPage = coerceNonNegativeInt(payload.page_index ?? payload.page);
       const prepareDisplay = targetPage !== null || payload.activate === true;
 
@@ -83,6 +87,17 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
         await sleep(coerceNonNegativeInt(payload.activate_settle_ms) ?? 500);
       }
 
+      if (payload.request_video_state !== false) {
+        const videoStateTelegram = buildTelegramForDevice(
+          deviceId,
+          frameVersion,
+          buildVideoStateRequest(streamActorId),
+        );
+        udpSend(sw.ip, remotePort, videoStateTelegram);
+        log.info(`Requesting VideoState for actor ${streamActorId} before image stream`);
+        await sleep(coerceNonNegativeInt(payload.video_state_settle_ms) ?? 500);
+      }
+
       await streamImageToSwitch({
         source,
         remoteHost: sw.ip,
@@ -93,7 +108,7 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
         log,
         width: coercePositiveInt(payload.width) || coercePositiveInt(streamConfig.width) || 86,
         height: coercePositiveInt(payload.height) || coercePositiveInt(streamConfig.height) || 90,
-        actorId: coercePositiveInt(payload.actor_id) || coercePositiveInt(streamConfig.actor_id) || 1,
+        actorId: streamActorId,
         linesPerPacket: coercePositiveInt(payload.lines_per_packet) || coercePositiveInt(streamConfig.lines_per_packet) || 5,
         interPacketDelayMs: coerceNonNegativeInt(payload.inter_packet_delay_ms)
           ?? coerceNonNegativeInt(streamConfig.inter_packet_delay_ms)
