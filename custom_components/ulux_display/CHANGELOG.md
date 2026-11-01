@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.33
+
+- Include the configured physical stream page and display activation with every HACS snapshot upload.
+
 ## 0.2.32
 
 - Preserve `assigned_views` when updating config-entry options instead of falling back to the legacy clock view.

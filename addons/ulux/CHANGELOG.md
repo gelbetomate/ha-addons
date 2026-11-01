@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.136
+
+- Let HACS image uploads select and activate the target u::lux page before each snapshot.
+
 ## 0.5.135
 
 - Consume special video ACK frames before normal UMP parsing to suppress raw-event noise.

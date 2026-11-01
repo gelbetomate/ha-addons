@@ -919,22 +919,51 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
       const remotePort = sw.port || config.listen_port || 34988;
 
       try {
+        const deviceId = sw.ump_device_id || 0x5d;
+        const frameVersion = sw.ump_frame_version || 0x0232;
+        const pageIndex = payload.page_index === undefined
+          ? null
+          : Number(payload.page_index);
+        if (Number.isInteger(pageIndex) && pageIndex >= 0) {
+          udpSend(
+            sw.ip,
+            remotePort,
+            buildTelegramForDevice(deviceId, frameVersion, buildPageIndexMessage(pageIndex)),
+          );
+          await sleep(Number(payload.page_settle_ms) || 500);
+        }
+        if (payload.activate === true) {
+          udpSend(
+            sw.ip,
+            remotePort,
+            buildTelegramForDevice(
+              deviceId,
+              frameVersion,
+              buildActivateMessage({ activate: true, deactivate: false }),
+            ),
+          );
+          await sleep(Number(payload.activate_settle_ms) || 500);
+        }
         await streamManager.streamImageToSwitch(switchId, {
           source: { base64: payload.base64 },
           remoteHost: sw.ip,
           remotePort,
-          deviceId: sw.ump_device_id || 0x5d,
-          frameVersion: sw.ump_frame_version || 0x0232,
+          deviceId,
+          frameVersion,
           udpSend,
           log,
-          width:  payload.width  || streamCfg.width  || 86,
-          height: payload.height || streamCfg.height || 90,
+          width:  payload.width  || streamCfg.width  || 176,
+          height: payload.height || streamCfg.height || 184,
           actorId: payload.actor_id || streamCfg.actor_id || 1,
           linesPerPacket:      streamCfg.lines_per_packet      || 4,
           interPacketDelayMs:  streamCfg.inter_packet_delay_ms ?? 5,
         });
 
         log.info(`HTTP API: streamed image to switch "${switchId}" (${sw.ip}:${remotePort})`);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
         return respond(res, 200, { ok: true });
       } catch (err) {
         log.error(`HTTP API: image stream failed for switch "${switchId}": ${err.message}`);

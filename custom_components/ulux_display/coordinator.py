@@ -1008,7 +1008,11 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Rendered image: %dx%d px", img.width, img.height)
 
             # Pass PIL Image directly; device does RGB565 conversion internally
-            await self.device.send_image(img)
+            await self.device.send_image(
+                img,
+                page_index=(stream_page - 1) if stream_page else None,
+                activate=bool(stream_page and self._stream_page_active),
+            )
             self._last_stream_sent = time.monotonic()
 
             # Track success status

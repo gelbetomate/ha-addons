@@ -64,7 +64,12 @@ class UluxDevice:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    async def send_image(self, img: "PILImage.Image") -> None:
+    async def send_image(
+        self,
+        img: "PILImage.Image",
+        page_index: int | None = None,
+        activate: bool = False,
+    ) -> None:
         """Encode *img* as PNG and POST to the bridge for UMP streaming.
 
         Args:
@@ -87,6 +92,10 @@ class UluxDevice:
             "width": self._display_width,
             "height": self._display_height,
         }
+        if page_index is not None:
+            payload["page_index"] = int(page_index)
+        if activate:
+            payload["activate"] = True
 
         session = self._session
         own_session = session is None
