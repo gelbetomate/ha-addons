@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.30
+
+- Keep the HACS renderer active on Stream Page instead of falling back to the device built-in clock/theme.
+
 ## 0.2.29
 
 - Render HACS views at the actual 176x184 HA Stream frame size instead of 240x240.

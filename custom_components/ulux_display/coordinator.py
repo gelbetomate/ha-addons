@@ -955,9 +955,13 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             except Exception as e:
                 _LOGGER.debug("Failed to fetch device state: %s", e)
 
-            # Skip rendering when in built-in mode
-            # The device handles display in built-in modes (Clock, Weather, System Info)
-            if self._display_mode == "builtin":
+            stream_page = int(self.options.get(CONF_STREAM_PAGE, 0) or 0)
+
+            # A configured stream page must always use the HACS renderer, even
+            # if the device reports that its built-in clock/theme is active.
+            if self._display_mode == "builtin" and not (
+                stream_page and self._stream_page_active
+            ):
                 _LOGGER.debug(
                     "Skipping render - device in built-in mode (theme=%d)",
                     self._builtin_theme,
@@ -968,7 +972,6 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
                     "theme": self._builtin_theme,
                 }
 
-            stream_page = int(self.options.get(CONF_STREAM_PAGE, 0) or 0)
             if stream_page and not self._stream_page_active:
                 return {"success": True, "stream_inactive": True}
             if stream_page:
@@ -1371,6 +1374,8 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             return
         self._stream_page_active = active
         if active:
+            self._display_mode = "custom"
+            await self.device.set_theme_custom()
             self._last_stream_sent = 0
             self._start_stream_refresh_loop()
             await self.async_request_refresh()
