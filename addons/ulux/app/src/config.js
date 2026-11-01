@@ -92,10 +92,10 @@ function loadConfig() {
 }
 
 /**
- * Persist the runtime-selectable integration settings without rewriting the
- * rest of the user's add-on or standalone configuration.
+ * Persist the runtime-selectable integration settings in the local options
+ * file and, in an add-on, in the Supervisor-managed options store.
  */
-function persistRuntimeOptions(config) {
+async function persistRuntimeOptions(config) {
   let options = {};
   if (fs.existsSync(OPTIONS_PATH)) {
     options = JSON.parse(fs.readFileSync(OPTIONS_PATH, 'utf8'));
@@ -118,6 +118,23 @@ function persistRuntimeOptions(config) {
   const temporaryPath = `${OPTIONS_PATH}.tmp`;
   fs.writeFileSync(temporaryPath, `${JSON.stringify(options, null, 2)}\n`, 'utf8');
   fs.renameSync(temporaryPath, OPTIONS_PATH);
+
+  const supervisorToken = process.env.SUPERVISOR_TOKEN;
+  if (!supervisorToken || typeof fetch !== 'function') return;
+
+  const supervisorUrl = process.env.SUPERVISOR_API || 'http://supervisor';
+  const response = await fetch(`${supervisorUrl}/addons/self/options`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${supervisorToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ options }),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Supervisor options update failed (${response.status})${detail ? `: ${detail}` : ''}`);
+  }
 }
 
 /**

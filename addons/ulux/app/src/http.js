@@ -343,7 +343,7 @@ function createApiServer({ config, udpSend, audioTransport, discoveryRegistry, d
         mqttClient.reconfigure({ ...config.mqtt, enabled: config.mode.mqtt });
       }
       try {
-        persistConfig?.();
+        await persistConfig?.();
       } catch (err) {
         log.error(`Failed to persist runtime configuration: ${err.message}`);
         return respond(res, 500, {

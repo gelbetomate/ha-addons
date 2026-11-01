@@ -179,7 +179,7 @@
     "once": false,
     "onceDelay": 0.1,
     "topic": "",
-    "payload": "{\"led\": 1, \"color\": \"red\", \"mode\": 0}",
+    "payload": "{\"actor_id\":10,\"leds\":[{\"color\":1,\"blinkMode\":0,\"override\":true},{\"color\":2,\"blinkMode\":0,\"override\":true},{\"color\":4,\"blinkMode\":0,\"override\":true},{\"color\":7,\"blinkMode\":0,\"override\":true}]}",
     "payloadType": "json",
     "x": 150,
     "y": 440,

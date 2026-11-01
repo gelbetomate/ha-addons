@@ -685,9 +685,9 @@
           <label><input type="checkbox" id="modeMqttDiscovery"> MQTT Discovery</label>
         </div>
         <div class="form-actions">
-          <button type="button" class="btn-primary" id="mqttApplyBtn">Apply runtime configuration</button>
+          <button type="button" class="btn-primary" id="mqttApplyBtn">Apply and save configuration</button>
         </div>
-        <small>Runtime changes are lost on restart. Persist the same values in the HA add-on configuration or standalone options.json.</small>
+        <small>Changes are applied immediately and saved in the Home Assistant add-on options or standalone options.json.</small>
         <div class="form-group" style="margin-top: 20px;">
           <label for="mqttTopic">Publish topic</label>
           <input type="text" id="mqttTopic" value="ulux/test">
@@ -1369,7 +1369,13 @@
           const serialDisplay = dev.serial_number
             ? `${escapeHtml(dev.serial_number)} ${serialBadge}`
             : `<input class="discovery-serial" type="number" min="1" max="65535" value="${escapeHtml(UI_STATE.discoverySerialDrafts.get(selectableId) || '')}" placeholder="Required before import" aria-label="Confirmed serial number">`;
-          const switchName = dev.name || (dev.serial_number ? `u::lux Switch (${dev.serial_number})` : `u::lux device (${dev.ip || 'unknown IP'})`);
+          const macName = dev.mac_address || (selectableId && /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/i.test(String(selectableId)) ? selectableId : null);
+          const fallbackName = dev.serial_number
+            ? `u::lux Switch (${dev.serial_number})`
+            : (macName ? `u::lux ${macName}` : `u::lux device (${dev.ip || 'unknown IP'})`);
+          const switchName = dev.name && String(dev.name).toLowerCase() !== 'unknown'
+            ? dev.name
+            : fallbackName;
           return `
           <div class="discovery-card${selectableId ? '' : ' pending'}" data-switch-id="${selectableId}">
             <div class="device-name">${escapeHtml(switchName)}</div>

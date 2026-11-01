@@ -15,6 +15,9 @@ Mitschnitte geprueft:
   Bedienkanal; `ID_EVENT (0x51)` ist nicht der einzige Tasterpfad.
 - Das `ID_LED`-Wireformat wurde auf ein Telegramm mit vier Farbbytes fuer
   die LED-Slots 0..3 korrigiert; MQTT-Aliase wurden in `0.5.113` ergaenzt.
+- Hardwaretest bestaetigt: Actor `10` steuert alle vier Taster-LEDs; die
+  Zuordnung ist oben links gruen, oben rechts rot, unten rechts blau und
+  unten links weiss. Die LEDs reagieren nur bei aktiviertem Display.
 - State-/Sensor-Polling ist kein Tastenevent. Echte Bedienereignisse sind
   `ulux_value`, `ulux_key` oder `ulux_key_action`.
 - First-Scan-Refresh und Pending-Merge bleiben bewusst als spaete
@@ -131,9 +134,10 @@ flowchart TD
 ---
 
 ### 🟡 Phase 2: UMP-Bridge Hardware-Fixes & MQTT-Aliase (P1)
-- [x] **2.1 UDP Frame Pacing / LED-Bursting Fix (`ID_LED` `0x44`)**:
-  - Bei 4-Kanal-LED-Befehlen nicht mehr ein einzelnes 48-Byte-Datagramm senden.
-  - Aufteilung in 4 separate UDP-Telegramme für die LED-Indizes 0, 1, 2, 3 mit 5–10 ms Verzögerung (`inter_packet_delay_ms`), damit der u::lux-Puffer alle 4 LEDs schaltet.
+- [x] **2.1 Vier-Kanal-LED-Wireformat (`ID_LED` `0x44`)**:
+  - Actor `10` und vier Farbbytes in einem Telegramm steuern alle vier
+    Taster-LEDs korrekt.
+  - Hardwarezuordnung und Voraussetzung `displayActive=true` validiert.
 - [x] **2.2 MQTT Command Normalisierung (`set_led` / `led`)**:
   - In `addons/ulux/app/src/handlers/command.js` die Befehlsauswertung so gestalten, dass sowohl `set_led` als auch `led`, `set_page` als auch `page`, `set_text` als auch `text` gleichermaßen akzeptiert werden.
 - [ ] **2.3 ControlFlag `PageChangeRequest` Handshake**:

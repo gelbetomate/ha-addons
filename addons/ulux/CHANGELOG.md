@@ -1,5 +1,13 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.123
+
+- Persist HA events, MQTT bridge, MQTT Discovery, and broker settings through the Home Assistant Supervisor options API.
+
+## 0.5.122
+
+- Use the detected MAC as the Discovery display name instead of showing `unknown`.
+
 ## 0.5.121
 
 - Corrected `ID_LED` encoding to send one four-channel telegram with four LED color bytes.

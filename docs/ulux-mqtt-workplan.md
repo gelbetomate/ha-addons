@@ -74,7 +74,7 @@ bauen zu muessen.
 Beispiel LED:
 
 ```json
-{"actor_id":1,"leds":[{"color":1,"blinkMode":0,"override":true}]}
+{"actor_id":10,"leds":[{"color":1,"blinkMode":0,"override":true}]}
 ```
 
 Vollstaendiges Beispiel fuer alle vier Switch-LEDs:
@@ -89,7 +89,7 @@ Payload:
 
 ```json
 {
-   "actor_id": 1,
+   "actor_id": 10,
    "leds": [
       {"color": 1, "blinkMode": 0, "override": true},
       {"color": 2, "blinkMode": 0, "override": true},
@@ -105,7 +105,7 @@ Das gleiche Beispiel als Home-Assistant-Aktion:
 action: ulux_display.set_led
 data:
    device_id: DEINE_HA_DEVICE_ID
-   actor_id: 1
+   actor_id: 10
    leds: >-
       [{"color":1,"blinkMode":0,"override":true},
        {"color":2,"blinkMode":0,"override":true},

@@ -291,7 +291,9 @@ function createDiscoveryScanner({
     const serialNumberCandidate = configured?.serial_number ? null : inferredSerial;
     const serialNumberSource = configured?.serial_number ? 'configured' : null;
     const switchId = configured?.switch_id || macAddress || null;
-    const name = configured?.name || (serialNumber ? `u::lux Switch (${serialNumber})` : null);
+    const name = configured?.name || (serialNumber
+      ? `u::lux Switch (${serialNumber})`
+      : (macAddress ? `u::lux ${macAddress}` : null));
 
     const sync = syncSessions.get(discovered.ip) || { next: discovered.sequence };
     sync.discovery_response = message;
