@@ -61,6 +61,9 @@ class RegistryStore {
         }
 
         this.devices.set(migrated.switch_id, migrated);
+        if (JSON.stringify(migrated) !== JSON.stringify(deviceData)) {
+          this.dirty = true;
+        }
       }
 
       this.version = REGISTRY_VERSION;

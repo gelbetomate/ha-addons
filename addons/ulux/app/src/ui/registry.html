@@ -743,7 +743,7 @@
 
         <div class="form-group">
           <label for="devicePort">UDP Port</label>
-          <input type="number" id="devicePort" placeholder="50000" min="1" max="65535" value="50000">
+          <input type="number" id="devicePort" placeholder="34988" min="1" max="65535" value="34988">
         </div>
         <div class="form-group">
           <label for="deviceFrameVersion">UMP Frame Version</label>
@@ -1144,7 +1144,7 @@
         document.getElementById('deviceName').value = data.device.name || '';
         document.getElementById('deviceSerialNumber').value = data.device.serial_number ?? '';
         document.getElementById('deviceIp').value = data.device.ip || '';
-        document.getElementById('devicePort').value = data.device.port || 50000;
+        document.getElementById('devicePort').value = data.device.port || 34988;
         document.getElementById('deviceFrameVersion').value = formatFrameVersion(data.device.ump_frame_version);
         document.getElementById('deviceUmpId').value = data.device.ump_device_id ?? '';
         openDeviceModal(true);
@@ -1316,7 +1316,7 @@
       const deviceName = document.getElementById('deviceName').value.trim();
       const serialInput = document.getElementById('deviceSerialNumber').value.trim();
       const deviceIp = document.getElementById('deviceIp').value.trim();
-      const devicePort = parseInt(document.getElementById('devicePort').value) || 50000;
+      const devicePort = parseInt(document.getElementById('devicePort').value) || 34988;
       const frameVersion = parseFrameVersion(document.getElementById('deviceFrameVersion').value);
       const serialNumber = serialInput === '' ? null : Number(serialInput);
 
@@ -1412,7 +1412,7 @@
             ${dev.sync_detail?.device_info_response_83_hex ? `<div class="timestamp">Sync 0x83/01: ${escapeHtml(formatHex(dev.sync_detail.device_info_response_83_hex))}</div>` : ''}
             ${dev.sync_detail?.device_info_response_83 ? `<div class="timestamp">Decoded 0x83/01: ${escapeHtml(formatSyncPacket(dev.sync_detail.device_info_response_83))}</div>` : ''}
             <div class="device-info">
-              <strong>Port:</strong> ${dev.port || '50000'}
+              <strong>Port:</strong> ${dev.port || '34988'}
             </div>
             <div class="timestamp">Last seen: ${new Date(dev.last_seen).toLocaleString()}</div>
           </div>

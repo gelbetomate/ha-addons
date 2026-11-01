@@ -1,5 +1,13 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.128
+
+- Normalize stored generated device names with confirmed serial numbers, replacing `unknown` with `u::lux Switch (<serial>)`.
+
+## 0.5.127
+
+- Corrected Discovery and manual device UMP port fallbacks from `50000` to `34988`.
+
 ## 0.5.126
 
 - Align the HA Stream with page 2's shared actor 1 and 176x184 video frame; migrate the former 86x90/actor-23 defaults.

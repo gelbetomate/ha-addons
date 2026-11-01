@@ -106,9 +106,20 @@ function validateDeviceRecord(record) {
  * @returns {object} Migrated record
  */
 function migrateDeviceRecord(record, fromVersion) {
-  // For v1 → vN migrations, add handlers here
-  // For now, just return as-is since we're on v1
-  return record;
+  const migrated = { ...record };
+  const name = String(migrated.name || '').trim();
+  const lowerName = name.toLowerCase();
+  const generatedMacName = /^u::lux [0-9a-f]{2}(:[0-9a-f]{2}){5}$/i.test(name);
+  const generatedName = !name
+    || lowerName === 'unknown'
+    || lowerName.startsWith('u::lux device (')
+    || lowerName.startsWith('u::lux switch (')
+    || generatedMacName;
+
+  if (migrated.serial_number && generatedName) {
+    migrated.name = `u::lux Switch (${migrated.serial_number})`;
+  }
+  return migrated;
 }
 
 module.exports = {
