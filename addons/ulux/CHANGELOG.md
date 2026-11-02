@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.137
+
+- Reset the previous video session before each new snapshot so sequential frames are accepted by the switch.
+
 ## 0.5.136
 
 - Let HACS image uploads select and activate the target u::lux page before each snapshot.

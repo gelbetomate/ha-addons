@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.37
+
+- Use Home Assistant's scheduled interval helper for reliable periodic snapshot refreshes.
+
 ## 0.2.36
 
 - Use the Home Assistant coordinator scheduler for reliable periodic snapshots.

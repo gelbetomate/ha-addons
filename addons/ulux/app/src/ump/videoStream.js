@@ -97,7 +97,18 @@ async function streamImageToSwitch({
     ? sequenceId >>> 0
     : ((Date.now() >>> 0) & 0x7FFFFFFF);
 
-  // Start stream session first so the switch can prepare its framebuffer.
+  // Reset a previous session before starting the next snapshot. The switch
+  // keeps the last video session open and may ignore a new VideoStart until
+  // the previous session has been stopped.
+  const stopTelegram = buildTelegramForDevice(
+    deviceId,
+    frameVersion,
+    buildVideoStopMessage(seqId),
+  );
+  udpSend(remoteHost, remotePort, stopTelegram);
+  await sleep(50);
+
+  // Start stream session so the switch can prepare its framebuffer.
   const startTelegram = buildTelegramForDevice(deviceId, frameVersion, buildVideoStartMessage(seqId, actorId));
   udpSend(remoteHost, remotePort, startTelegram);
 

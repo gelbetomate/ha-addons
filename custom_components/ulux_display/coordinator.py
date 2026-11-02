@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from homeassistant.const import __version__ as ha_version
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -211,6 +212,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._live_leds: list[dict[str, Any]] = []
         self._stream_page_active = False
         self._last_stream_sent: float = 0
+        self._stream_refresh_unsub = None
 
         # Device state (updated on refresh)
         self._device_state: DeviceState | None = None
@@ -583,7 +585,8 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._base_update_interval = interval
         self.update_interval = timedelta(seconds=interval)
         if self._stream_page_active:
-            self._apply_stream_update_interval()
+            self._stop_stream_refresh_loop()
+            self._start_stream_refresh_loop()
 
         # Rebuild all screens
         self._setup_screens()
@@ -1385,8 +1388,14 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             self._start_stream_refresh_loop()
             await self.async_request_refresh()
         else:
-            self.update_interval = timedelta(seconds=self._base_update_interval)
+            self._stop_stream_refresh_loop()
             await self.device.stop_stream()
+
+    def _stop_stream_refresh_loop(self) -> None:
+        """Stop the scheduled snapshot refresh."""
+        if self._stream_refresh_unsub is not None:
+            self._stream_refresh_unsub()
+            self._stream_refresh_unsub = None
 
     async def async_start_configured_stream(self) -> None:
         """Start the configured snapshot stream after integration startup."""
@@ -1403,16 +1412,23 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         await self.async_request_refresh()
 
     def _start_stream_refresh_loop(self) -> None:
-        """Use the HA coordinator scheduler for periodic snapshot requests."""
-        self._apply_stream_update_interval()
-
-    def _apply_stream_update_interval(self) -> None:
-        """Set the coordinator interval to the configured snapshot rate."""
+        """Start a Home Assistant scheduled snapshot refresh."""
+        if self._stream_refresh_unsub is not None:
+            return
         rate = max(
             0.1,
             float(self.options.get(CONF_STREAM_REFRESH_RATE, DEFAULT_STREAM_REFRESH_RATE)),
         )
-        self.update_interval = timedelta(seconds=1 / rate)
+        self._stream_refresh_unsub = async_track_time_interval(
+            self.hass,
+            self._async_stream_refresh_tick,
+            timedelta(seconds=1 / rate),
+        )
+
+    async def _async_stream_refresh_tick(self, _now) -> None:
+        """Request a new HACS snapshot while the stream page is active."""
+        if self._stream_page_active:
+            await self.async_request_refresh()
 
     async def async_reload_views(self) -> None:
         """Reload views from store and refresh display.
