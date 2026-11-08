@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.138
+
+- Added the optional `page_change_request_flag` ControlFlags hook for
+  hardware-tested local page-change event reporting.
+
 ## 0.5.137
 
 - Reset the previous video session before each new snapshot so sequential frames are accepted by the switch.

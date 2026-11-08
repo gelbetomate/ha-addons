@@ -1,10 +1,12 @@
 # u::lux Integration Repository
 
-The HACS integration is located at `custom_components/ulux_display`. The
-repository default branch remains visible for HACS development installs; the
+The Marketplace integration (formerly HACS) is located at
+`custom_components/ulux_display`. The repository default branch remains visible
+for custom-repository installs and development; the
 Supervisor add-on is maintained separately under `addons/ulux`.
 
-This repository provides the **u::lux Display** HACS integration and the **u::Lux UMP Bridge** Supervisor add-on for Home Assistant.
+This repository provides the **u::lux Display** Marketplace integration and the
+**u::Lux UMP Bridge** Supervisor add-on for Home Assistant.
 
 ***This project is work in progress and built for real-world personal use first. Please test carefully in your own environment.***
 
@@ -142,6 +144,7 @@ Use this when filling the bridge add-on configuration form in Home Assistant.
 | `listen_host` | `0.0.0.0` | Keep default unless you intentionally restrict bind address. |
 | `listen_port` | `34988` | Default UMP UDP port. |
 | `control_flags` | `0` | Advanced protocol flag; keep default. |
+| `page_change_request_flag` | `0` | Optional additional UMP control bit for local page-change events; leave at `0` until hardware-tested. |
 | `mode.ha_events` | `false` | Enable only if you need HA event bus events (`ulux_event`, `ulux_raw`). |
 | `mode.mqtt` | `false` | Enable only if you actively use MQTT. |
 | `ha.ws_url` | default | Ignored unless `mode.ha_events` is true. |
@@ -175,11 +178,14 @@ If you want bridge events on the Home Assistant event bus (`ulux_event`, `ulux_r
 | `ha.ws_url` | your Home Assistant WebSocket URL (usually `ws://homeassistant.local:8123/api/websocket` or use the default) |
 | `ha.token` | your long-lived access token (optional in Supervisor; usually auto-resolved) |
 
-### 2. Install HACS Integration
+### 2. Install the u::lux Display integration
 
-[![Add HACS Repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=gelbetomate&repository=ha-addons&category=integration)
+[![Open this repository in the Home Assistant Marketplace or HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=gelbetomate&repository=ha-addons&category=integration)
 
-1. Open HACS → **Custom repositories**
+On Home Assistant 2026.11 and newer, open **Settings → Marketplace**. On older
+versions, open **HACS** instead.
+
+1. Use the badge above, or open **Marketplace/HACS → Custom repositories**
 2. Add `https://github.com/gelbetomate/ha-addons` (type: Integration)
 3. Install **u::lux Display**
 4. **Restart Home Assistant**

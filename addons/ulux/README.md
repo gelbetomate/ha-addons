@@ -46,6 +46,9 @@ audio_port: 35000
 audio_control_port: 35004
 sensor_poll_interval_ms: 60000
 control_flags: 3204976671
+# Optional additional ControlFlags bit for local page-change events.
+# Keep 0 until the target hardware has been tested.
+page_change_request_flag: 0
 timezone: Europe/Berlin
 mode:
   ha_events: true

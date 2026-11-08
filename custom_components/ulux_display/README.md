@@ -76,9 +76,12 @@ See the [integration changelog](CHANGELOG.md) for version history.
 
 **Prerequisites**: u::Lux UMP Bridge add-on must be installed and running first.
 
-### Step 1: Install via HACS
+### Step 1: Install via Marketplace (formerly HACS)
 
-1. Open **HACS → Custom repositories**
+On Home Assistant 2026.11 and newer, open **Settings → Marketplace**. On older
+versions, open **HACS** instead.
+
+1. Open **Marketplace/HACS → Custom repositories**
 2. Add `https://github.com/gelbetomate/ha-addons` (type: Integration)
 3. Find **u::lux Display** and install it
 4. **Restart Home Assistant**

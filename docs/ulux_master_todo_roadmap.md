@@ -225,8 +225,12 @@ flowchart TD
   - Hardwarezuordnung und Voraussetzung `displayActive=true` validiert.
 - [x] **2.2 MQTT Command Normalisierung (`set_led` / `led`)**:
   - In `addons/ulux/app/src/handlers/command.js` die Befehlsauswertung so gestalten, dass sowohl `set_led` als auch `led`, `set_page` als auch `page`, `set_text` als auch `text` gleichermaßen akzeptiert werden.
-- [ ] **2.3 ControlFlag `PageChangeRequest` Handshake**:
-  - Workaround 2 für lokale Navigation: Beim Startup in den UMP ControlFlags `PageChangeRequest` setzen, damit der Taster auch bei lokaler Menünavigation Seitenänderungen an die Bridge meldet.
+- [x] **2.3 ControlFlag `PageChangeRequest` Handshake (konfigurierbarer Hook)**:
+  - Beim Startup kann mit `page_change_request_flag` ein zusätzlicher UMP-
+    ControlFlag gesetzt werden, damit lokale Seitenwechsel an die Bridge
+    gemeldet werden können.
+  - Der Standardwert bleibt `0`, weil das konkrete Bit hardwareabhängig noch
+    bestätigt werden muss; der Hardware-Abnahmetest bleibt offen.
 
 ---
 
@@ -241,6 +245,13 @@ flowchart TD
   - Coordinator überwacht das aktive Seiten-Event `ulux_page`.
   - Wenn die aktuelle Schalterseite mit der in den Optionen konfigurierten `stream_page` (z. B. Seite 8 / Aktor 23) übereinstimmt, Rendering-Loop starten.
   - Verlässt der Anwender die Seite, Rendering stoppen (Bandbreiten- und CPU-Schonung).
+- [ ] **3.5 Physische Taster-Events eindeutig zuordnen**:
+  - In u::luxConfig die vier Tasten testweise auf den echten `ID_EVENT`-/
+    Automatisch-Pfad konfigurieren.
+  - Pro Taste `make`/`break` beziehungsweise `ulux_key` mit `key=1..4`
+    nachweisen.
+  - `EditValue(actor=10)` nicht mehr per Modulo als einzelne Taste
+    interpretieren; diesen Pfad nur als Actor-Wert behandeln.
 - [ ] **3.4 Periodische HA-Snapshots auf fester Seite (Use Case 1)**:
   - Von `ulux_display` gerenderte Sensor-/Statusbilder alle paar Sekunden an
     die konfigurierte u::lux-Seite senden.

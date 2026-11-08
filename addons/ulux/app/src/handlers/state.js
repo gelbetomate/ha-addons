@@ -147,13 +147,20 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
     const configuredControlFlags = typeof config.control_flags === 'number'
       ? config.control_flags
       : 0xBF08001F;
-    const controlFlags = configuredControlFlags | 0x80;
+    const pageChangeRequestFlag = typeof config.page_change_request_flag === 'number'
+      ? config.page_change_request_flag
+      : 0;
+    const controlFlags = configuredControlFlags | 0x80 | pageChangeRequestFlag;
     const telegram = buildTelegramForDevice(
       ctx.telegram?.deviceId ?? 0x5D,
       ctx.telegram?.frameVersion ?? 0x0232,
       buildIdControlMessage(controlFlags),
     );
-    log.info(`Sending ID-Control (flags=0x${controlFlags.toString(16)}) to ${senderIp}:${senderPort}`);
+    log.info(
+      `Sending ID-Control (flags=0x${controlFlags.toString(16)}, ` +
+      `page_change_request_flag=0x${pageChangeRequestFlag.toString(16)}) ` +
+      `to ${senderIp}:${senderPort}`,
+    );
     udpSend(senderIp, senderPort, telegram);
   }
 

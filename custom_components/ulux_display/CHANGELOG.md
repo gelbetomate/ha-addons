@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.38
+
+- Updated Marketplace installation documentation for Home Assistant 2026.11.
+- Documented the configurable bridge hook for page-change event testing.
+
 ## 0.2.37
 
 - Use Home Assistant's scheduled interval helper for reliable periodic snapshot refreshes.
