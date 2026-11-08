@@ -358,12 +358,22 @@ class UluxDisplayOptionsFlow(OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(
+                title="",
+                data={**self.config_entry.options, **user_input},
+            )
 
+        options = self.config_entry.options
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
-                vol.Optional(CONF_MQTT_DISCOVERY, default=False): bool,
-                vol.Optional("stream_video_test", default=False): bool,
+                vol.Optional(
+                    CONF_MQTT_DISCOVERY,
+                    default=options.get(CONF_MQTT_DISCOVERY, False),
+                ): bool,
+                vol.Optional(
+                    "stream_video_test",
+                    default=options.get("stream_video_test", False),
+                ): bool,
             }),
         )

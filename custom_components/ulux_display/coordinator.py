@@ -585,7 +585,9 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         interval = int(self.options.get(CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL))
         self._base_update_interval = interval
         self.update_interval = timedelta(seconds=interval)
-        if self._stream_page_active:
+        if self._stream_page_active and self.options.get("stream_video_test", False):
+            self._stop_stream_refresh_loop()
+        elif self._stream_page_active:
             self._stop_stream_refresh_loop()
             self._start_stream_refresh_loop()
 

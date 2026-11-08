@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.43
+
+- Preserve existing integration options when saving the options form.
+- Apply the video-test setting immediately to an active stream.
+
 ## 0.2.42
 
 - Added an animated video test pattern with a frame-changing color-bar pattern.

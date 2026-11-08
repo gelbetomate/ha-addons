@@ -432,8 +432,25 @@ async def async_options_update_listener(hass: HomeAssistant, entry: ConfigEntry)
     switch_id = entry.data.get(CONF_SWITCH_ID, "unknown")
     _LOGGER.debug("Options updated for u::lux Display device %s", switch_id)
     coordinator: UluxDisplayCoordinator = hass.data[DOMAIN][entry.entry_id]
+    previous_video_test = bool(coordinator.options.get("stream_video_test", False))
+    video_test = bool(entry.options.get("stream_video_test", False))
     coordinator.update_options(dict(entry.options))
-    await coordinator.async_request_refresh()
+
+    stream_page = int(coordinator.options.get("stream_page", 0) or 0)
+    if stream_page and coordinator._stream_page_active:
+        if video_test and not previous_video_test:
+            await coordinator.device.start_test_video(
+                page_index=stream_page - 1,
+                fps=float(coordinator.options.get("stream_refresh_rate", 2)),
+            )
+        elif previous_video_test and not video_test:
+            await coordinator.device.stop_stream()
+            coordinator._start_stream_refresh_loop()
+            await coordinator.async_request_refresh()
+        elif not video_test:
+            await coordinator.async_request_refresh()
+    else:
+        await coordinator.async_request_refresh()
 
     bridge_url = entry.data.get(CONF_BRIDGE_URL, DEFAULT_BRIDGE_URL).rstrip("/")
     switch_id = entry.data.get(CONF_SWITCH_ID, "")
