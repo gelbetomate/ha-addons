@@ -50,6 +50,7 @@ const DEFAULTS = {
     actor_id: 1,
     lines_per_packet: 4,
     inter_packet_delay_ms: 5,
+    video_ack_timeout_ms: 150,
   },
   api_port: 8099,
   log_level: 'info',

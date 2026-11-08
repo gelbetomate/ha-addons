@@ -80,7 +80,7 @@ async function streamImageToSwitch({
   actorId = 1,
   linesPerPacket = DEFAULT_LINES_PER_PACKET,
   interPacketDelayMs = DEFAULT_INTER_PACKET_DELAY_MS,
-  videoAckTimeoutMs = 1500,
+  videoAckTimeoutMs = 150,
   sequenceId,
   shouldStop = () => false,
 }) {

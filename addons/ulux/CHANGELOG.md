@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.139
+
+- Shortened the default per-chunk video ACK timeout so a missing ACK cannot
+  block subsequent display snapshots for about a minute.
+
 ## 0.5.138
 
 - Added the optional `page_change_request_flag` ControlFlags hook for
