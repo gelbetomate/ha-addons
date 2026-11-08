@@ -280,7 +280,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             return options  # Already in new format
 
         # Convert old format to new format
-        return {
+        migrated = {
             CONF_REFRESH_INTERVAL: options.get(CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL),
             CONF_SCREEN_CYCLE_INTERVAL: DEFAULT_SCREEN_CYCLE_INTERVAL,
             CONF_SCREENS: [
@@ -291,6 +291,8 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
                 }
             ],
         }
+        migrated.update(options)
+        return migrated
 
     def _setup_screens(self) -> None:
         """Set up all screens with their layouts and widgets.

@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.46
+
+- Preserve stream settings when migrating entries without configured display views.
+
 ## 0.2.45
 
 - Render the fallback clock across the complete display instead of the welcome tiles.
