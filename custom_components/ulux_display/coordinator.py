@@ -1432,9 +1432,10 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             return
         self._stream_refresh_in_progress = True
         try:
-            # Bypass DataUpdateCoordinator's request debouncer: the configured
-            # stream rate is intentionally more frequent than normal polling.
-            await self.async_refresh()
+            # Run the upload path directly: DataUpdateCoordinator's polling
+            # lifecycle can suppress refreshes that are faster than polling.
+            data = await self._async_update_data()
+            self.async_set_updated_data(data)
         finally:
             self._stream_refresh_in_progress = False
 

@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.40
+
+- Run configured stream uploads directly instead of through the coordinator
+  polling lifecycle, which could stop after the first image.
+
 ## 0.2.39
 
 - Bypass the coordinator request debouncer for configured display streams so
