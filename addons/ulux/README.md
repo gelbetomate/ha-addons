@@ -65,9 +65,9 @@ api_port: 8099
 log_level: info
 ```
 
-`stream.video_ack_timeout_ms` defaults to `150`. Increase it only when the
-switch needs more time to acknowledge video chunks; a missing ACK no longer
-blocks a snapshot stream for the full legacy timeout.
+`stream.video_ack_timeout_ms` defaults to `150` for explicit video commands.
+HTTP snapshot uploads do not wait for per-chunk ACKs, so missing acknowledgements
+cannot slow down the snapshot stream.
 
 Im Supervisor-Betrieb wird `SUPERVISOR_TOKEN` automatisch in den Node-Prozess
 übernommen und für den Home-Assistant-Core-WebSocket-Proxy verwendet. Ein

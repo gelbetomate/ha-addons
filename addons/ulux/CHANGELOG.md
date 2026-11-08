@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.140
+
+- Send HTTP snapshot frames without waiting for per-chunk video ACKs; the
+  explicit video command keeps ACK-based pacing.
+
 ## 0.5.139
 
 - Shortened the default per-chunk video ACK timeout so a missing ACK cannot

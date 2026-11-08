@@ -81,6 +81,7 @@ async function streamImageToSwitch({
   linesPerPacket = DEFAULT_LINES_PER_PACKET,
   interPacketDelayMs = DEFAULT_INTER_PACKET_DELAY_MS,
   videoAckTimeoutMs = 150,
+  waitForAck = true,
   sequenceId,
   shouldStop = () => false,
 }) {
@@ -142,7 +143,7 @@ async function streamImageToSwitch({
       frameVersion,
     });
 
-    const ackPromise = typeof waitForVideoAck === 'function'
+    const ackPromise = waitForAck && typeof waitForVideoAck === 'function'
       ? waitForVideoAck(remoteHost, videoAckTimeoutMs)
       : null;
     udpSend(remoteHost, remotePort, streamTelegram);
