@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import logging
 import time
@@ -13,7 +14,6 @@ if TYPE_CHECKING:
 from homeassistant.const import __version__ as ha_version
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -212,7 +212,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._live_leds: list[dict[str, Any]] = []
         self._stream_page_active = False
         self._last_stream_sent: float = 0
-        self._stream_refresh_unsub = None
+        self._stream_refresh_task: asyncio.Task[None] | None = None
         self._stream_refresh_in_progress = False
 
         # Device state (updated on refresh)
@@ -1393,10 +1393,10 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             await self.device.stop_stream()
 
     def _stop_stream_refresh_loop(self) -> None:
-        """Stop the scheduled snapshot refresh."""
-        if self._stream_refresh_unsub is not None:
-            self._stream_refresh_unsub()
-            self._stream_refresh_unsub = None
+        """Stop the dedicated snapshot refresh task."""
+        if self._stream_refresh_task is not None:
+            self._stream_refresh_task.cancel()
+            self._stream_refresh_task = None
 
     async def async_start_configured_stream(self) -> None:
         """Start the configured snapshot stream after integration startup."""
@@ -1413,21 +1413,32 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         await self.async_request_refresh()
 
     def _start_stream_refresh_loop(self) -> None:
-        """Start a Home Assistant scheduled snapshot refresh."""
-        if self._stream_refresh_unsub is not None:
+        """Start a dedicated snapshot refresh task."""
+        if self._stream_refresh_task is not None and not self._stream_refresh_task.done():
             return
-        rate = max(
-            0.1,
-            float(self.options.get(CONF_STREAM_REFRESH_RATE, DEFAULT_STREAM_REFRESH_RATE)),
-        )
-        self._stream_refresh_unsub = async_track_time_interval(
-            self.hass,
-            self._async_stream_refresh_tick,
-            timedelta(seconds=1 / rate),
-        )
+        self._stream_refresh_task = asyncio.create_task(self._async_stream_refresh_loop())
 
-    async def _async_stream_refresh_tick(self, _now) -> None:
-        """Request a new HACS snapshot while the stream page is active."""
+    async def _async_stream_refresh_loop(self) -> None:
+        """Render and upload snapshots at the configured rate."""
+        while self._stream_page_active:
+            rate = max(
+                0.1,
+                float(self.options.get(CONF_STREAM_REFRESH_RATE, DEFAULT_STREAM_REFRESH_RATE)),
+            )
+            started = time.monotonic()
+            try:
+                await self._async_stream_refresh_tick()
+            except asyncio.CancelledError:
+                raise
+            except UpdateFailed as err:
+                _LOGGER.warning("Configured display stream update failed: %s", err)
+            except Exception:
+                _LOGGER.exception("Unexpected configured display stream failure")
+            delay = max(0.0, (1 / rate) - (time.monotonic() - started))
+            await asyncio.sleep(delay)
+
+    async def _async_stream_refresh_tick(self) -> None:
+        """Render and upload one configured snapshot."""
         if not self._stream_page_active or self._stream_refresh_in_progress:
             return
         self._stream_refresh_in_progress = True

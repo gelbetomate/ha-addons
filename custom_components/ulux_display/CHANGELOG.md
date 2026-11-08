@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.41
+
+- Replace the Home Assistant interval callback with a dedicated stream task so
+  periodic image uploads continue after the initial snapshot.
+
 ## 0.2.40
 
 - Run configured stream uploads directly instead of through the coordinator
