@@ -213,6 +213,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._stream_page_active = False
         self._last_stream_sent: float = 0
         self._stream_refresh_task: asyncio.Task[None] | None = None
+        self._stream_page_monitor_task: asyncio.Task[None] | None = None
         self._stream_refresh_in_progress = False
 
         # Device state (updated on refresh)
@@ -1342,6 +1343,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             return
         self._stream_page_active = active
         if active:
+            self._start_stream_page_monitor()
             self._display_mode = "custom"
             await self.device.set_theme_custom()
             self._last_stream_sent = 0
@@ -1374,6 +1376,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         await self.device.set_theme_custom()
         await self.device.set_page(stream_page - 1)
         await self.device.set_active(True)
+        self._start_stream_page_monitor()
         if self.options.get("stream_video_test", False):
             await self.device.start_test_video(
                 page_index=stream_page - 1,
@@ -1382,6 +1385,36 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             return
         self._start_stream_refresh_loop()
         await self.async_request_refresh()
+
+    def _start_stream_page_monitor(self) -> None:
+        """Monitor the physical page without relying on HA bridge events."""
+        if (
+            self._stream_page_monitor_task is None
+            or self._stream_page_monitor_task.done()
+        ):
+            self._stream_page_monitor_task = asyncio.create_task(
+                self._async_stream_page_monitor()
+            )
+
+    def _stop_stream_page_monitor(self) -> None:
+        """Stop the independent physical page monitor."""
+        if self._stream_page_monitor_task is not None:
+            self._stream_page_monitor_task.cancel()
+            self._stream_page_monitor_task = None
+
+    async def _async_stream_page_monitor(self) -> None:
+        """Start or stop page-bound streaming from bridge registry state."""
+        while True:
+            try:
+                registry = await self.device.get_registry_device()
+                page_index = registry.get("current_page")
+                if page_index is not None:
+                    await self.async_handle_device_page(int(page_index) + 1)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                _LOGGER.debug("Unable to poll physical display page", exc_info=True)
+            await asyncio.sleep(1)
 
     def _start_stream_refresh_loop(self) -> None:
         """Start a dedicated snapshot refresh task."""

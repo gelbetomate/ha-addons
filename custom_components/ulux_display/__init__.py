@@ -421,7 +421,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok and entry.entry_id in hass.data.get(DOMAIN, {}):
-        hass.data[DOMAIN][entry.entry_id]._stop_stream_refresh_loop()
+        coordinator = hass.data[DOMAIN][entry.entry_id]
+        coordinator._stop_stream_refresh_loop()
+        coordinator._stop_stream_page_monitor()
         del hass.data[DOMAIN][entry.entry_id]
 
     return unload_ok

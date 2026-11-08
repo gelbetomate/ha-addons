@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.48
+
+- Poll the bridge registry for physical page changes independently of HA events.
+
 ## 0.2.47
 
 - Recalculate layout slots from the renderer dimensions before every draw.
