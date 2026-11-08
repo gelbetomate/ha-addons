@@ -213,6 +213,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         self._stream_page_active = False
         self._last_stream_sent: float = 0
         self._stream_refresh_unsub = None
+        self._stream_refresh_in_progress = False
 
         # Device state (updated on refresh)
         self._device_state: DeviceState | None = None
@@ -1427,8 +1428,15 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
 
     async def _async_stream_refresh_tick(self, _now) -> None:
         """Request a new HACS snapshot while the stream page is active."""
-        if self._stream_page_active:
-            await self.async_request_refresh()
+        if not self._stream_page_active or self._stream_refresh_in_progress:
+            return
+        self._stream_refresh_in_progress = True
+        try:
+            # Bypass DataUpdateCoordinator's request debouncer: the configured
+            # stream rate is intentionally more frequent than normal polling.
+            await self.async_refresh()
+        finally:
+            self._stream_refresh_in_progress = False
 
     async def async_reload_views(self) -> None:
         """Reload views from store and refresh display.

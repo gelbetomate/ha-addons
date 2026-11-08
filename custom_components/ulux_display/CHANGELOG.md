@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.39
+
+- Bypass the coordinator request debouncer for configured display streams so
+  the refresh rate is applied reliably.
+
 ## 0.2.38
 
 - Updated Marketplace installation documentation for Home Assistant 2026.11.
