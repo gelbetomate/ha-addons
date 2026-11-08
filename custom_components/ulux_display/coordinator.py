@@ -980,6 +980,8 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
 
             if stream_page and not self._stream_page_active:
                 return {"success": True, "stream_inactive": True}
+            if stream_page and self._stream_page_active and self.options.get("stream_video_test", False):
+                return {"success": True, "stream_video_test": True}
             if stream_page:
                 rate = max(
                     0.1,

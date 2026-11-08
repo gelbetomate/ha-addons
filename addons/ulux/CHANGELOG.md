@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.142
+
+- Send test-video frames without ACK waits so the stream starts promptly.
+
 ## 0.5.141
 
 - Added an animated color-bar test-video endpoint for repeatable FPS and

@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.44
+
+- Prevent the regular renderer from overwriting the active video test stream.
+- Ensure the test stream's first frame is sent without per-packet ACK delays.
+
 ## 0.2.43
 
 - Preserve existing integration options when saving the options form.

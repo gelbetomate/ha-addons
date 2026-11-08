@@ -419,7 +419,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
             linesPerPacket: streamCfg.lines_per_packet || 4,
             interPacketDelayMs: streamCfg.inter_packet_delay_ms ?? 5,
             videoAckTimeoutMs: streamCfg.video_ack_timeout_ms ?? 150,
-            waitForAck: true,
+            waitForAck: false,
           });
           await sleep(1000 / frameRate);
         }
