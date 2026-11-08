@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.45
+
+- Render the fallback clock across the complete display instead of the welcome tiles.
+- Use Home Assistant's configured timezone for the clock.
+
 ## 0.2.44
 
 - Prevent the regular renderer from overwriting the active video test stream.

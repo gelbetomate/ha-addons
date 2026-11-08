@@ -374,14 +374,13 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         return self.hass.data.get(DOMAIN, {}).get("store")
 
     def _create_welcome_layout(self) -> Layout:
-        """Create a welcome layout showcasing widgets with HA info.
+        """Create a full-screen clock for an unconfigured display.
 
         Returns:
-            A HeroLayout with clock, HA version, and entity stats.
+            A FullscreenLayout containing the current time.
         """
-        layout = HeroLayout(footer_slots=3, hero_ratio=0.65, padding=8, gap=8)
+        layout = FullscreenLayout()
 
-        # Hero: Clock widget showing current time
         clock = ClockWidget(
             WidgetConfig(
                 widget_type="clock",
@@ -391,54 +390,6 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             )
         )
         layout.set_widget(0, clock)
-
-        # Footer slot 1: HA version
-        ha_version = TextWidget(
-            WidgetConfig(
-                widget_type="text",
-                slot=1,
-                label="HA",
-                color=COLOR_CYAN,
-                options={
-                    "text": self._get_ha_version(),
-                    "size": "small",
-                    "align": "center",
-                },
-            )
-        )
-        layout.set_widget(1, ha_version)
-
-        # Footer slot 2: Entity count
-        entity_count = TextWidget(
-            WidgetConfig(
-                widget_type="text",
-                slot=2,
-                label="Entities",
-                color=COLOR_LIME,
-                options={
-                    "text": str(self._get_entity_count()),
-                    "size": "small",
-                    "align": "center",
-                },
-            )
-        )
-        layout.set_widget(2, entity_count)
-
-        # Footer slot 3: Setup hint
-        setup_hint = TextWidget(
-            WidgetConfig(
-                widget_type="text",
-                slot=3,
-                color=COLOR_GRAY,
-                options={
-                    "text": "Configure →",
-                    "size": "small",
-                    "align": "center",
-                },
-            )
-        )
-        layout.set_widget(3, setup_hint)
-
         return layout
 
     def _get_ha_version(self) -> str:
@@ -615,7 +566,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         states: dict[int, WidgetState] = {}
 
         # Get current time with HA timezone
-        tz = getattr(self.hass.config, "time_zone_obj", None) or UTC
+        tz = dt_util.get_time_zone(self.hass.config.time_zone) or UTC
         now = datetime.now(tz=tz)
 
         for slot in layout.slots:
