@@ -658,6 +658,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         # Render current screen's layout
         if self._layouts and 0 <= self._current_screen < len(self._layouts):
             layout = self._layouts[self._current_screen]
+            layout.set_dimensions(self.renderer.width, self.renderer.height)
 
             # Check for active notification
             if time.time() < self._notification_expiry and self._notification_data:
@@ -677,6 +678,7 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("No screens configured, rendering welcome screen")
             # Recreate welcome layout each time to get fresh HA stats
             welcome_layout = self._create_welcome_layout()
+            welcome_layout.set_dimensions(self.renderer.width, self.renderer.height)
             widget_states = self._build_widget_states(welcome_layout)
             welcome_layout.render(self.renderer, draw, widget_states)
 

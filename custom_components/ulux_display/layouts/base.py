@@ -47,6 +47,12 @@ class Layout(ABC):
     def _calculate_slots(self) -> None:
         """Calculate the slot rectangles. Override in subclasses."""
 
+    def set_dimensions(self, width: int, height: int) -> None:
+        """Set the layout dimensions and recalculate its slots."""
+        self.width = width
+        self.height = height
+        self._calculate_slots()
+
     def _available_space(self) -> tuple[int, int]:
         return (
             self.width - 2 * self.padding,

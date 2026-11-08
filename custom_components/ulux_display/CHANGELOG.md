@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.47
+
+- Recalculate layout slots from the renderer dimensions before every draw.
+
 ## 0.2.46
 
 - Preserve stream settings when migrating entries without configured display views.
