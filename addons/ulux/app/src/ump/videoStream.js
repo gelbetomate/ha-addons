@@ -91,6 +91,8 @@ async function streamImageToSwitch({
 
   const image = source.solidColor
     ? await createSolidImage(width, height, source.solidColor)
+    : source.testPattern
+      ? await createTestPatternImage(width, height, source.testPattern.frame || 0)
     : await Jimp.read(await resolveImageBuffer(source));
   image.resize(width, height, Jimp.RESIZE_BILINEAR);
 
@@ -241,6 +243,28 @@ function createSolidImage(width, height, color = {}) {
       else resolve(image);
     });
   });
+}
+
+function createTestPatternImage(width, height, frame = 0) {
+  const image = new Jimp(width, height, 0x000000FF);
+  const phase = Math.abs(Number(frame) || 0) % 6;
+  const colors = [
+    0xE61919FF,
+    0xE6C619FF,
+    0x19E64FFF,
+    0x19B9E6FF,
+    0x4919E6FF,
+    0xE619B9FF,
+  ];
+  const barWidth = Math.max(1, Math.ceil(width / colors.length));
+  const offset = phase * Math.ceil(barWidth / 2);
+  for (let x = 0; x < width; x += 1) {
+    const colorIndex = Math.floor((x + offset) / barWidth) % colors.length;
+    for (let y = 0; y < height; y += 1) {
+      image.setPixelColor(colors[colorIndex], x, y);
+    }
+  }
+  return Promise.resolve(image);
 }
 
 function rgb888To565(r, g, b) {

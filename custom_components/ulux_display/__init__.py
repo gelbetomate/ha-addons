@@ -287,6 +287,19 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         for coordinator in coordinators_for_call(call):
             await coordinator.device.set_active(bool(call.data["active"]))
 
+    async def async_handle_start_video_test(call) -> None:
+        for coordinator in coordinators_for_call(call):
+            configured_page = int(coordinator.options.get("stream_page", 1) or 1)
+            page = int(call.data.get("page_index", configured_page - 1))
+            await coordinator.device.start_test_video(
+                page_index=page,
+                fps=float(call.data.get("fps", 1.0)),
+            )
+
+    async def async_handle_stop_video_test(call) -> None:
+        for coordinator in coordinators_for_call(call):
+            await coordinator.device.stop_stream()
+
     async def async_handle_set_led(call) -> None:
         leds = call.data.get("leds", [])
         if isinstance(leds, str):
@@ -317,6 +330,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.services.async_register(DOMAIN, "set_volume", async_handle_set_volume)
     hass.services.async_register(DOMAIN, "set_page", async_handle_set_page)
     hass.services.async_register(DOMAIN, "set_active", async_handle_set_active)
+    hass.services.async_register(DOMAIN, "start_video_test", async_handle_start_video_test)
+    hass.services.async_register(DOMAIN, "stop_video_test", async_handle_stop_video_test)
     hass.services.async_register(DOMAIN, "set_led", async_handle_set_led)
     hass.services.async_register(DOMAIN, "set_text", async_handle_set_text)
 

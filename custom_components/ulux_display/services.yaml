@@ -194,6 +194,46 @@ set_active:
       selector:
         boolean:
 
+start_video_test:
+  name: Start video test
+  description: Start an animated color-bar video test on the configured stream page.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+    page_index:
+      name: Page index
+      description: Zero-based page index. Defaults to the configured Stream Page.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+    fps:
+      name: FPS
+      default: 1
+      selector:
+        number:
+          min: 0.1
+          max: 10
+          step: 0.1
+          mode: box
+
+stop_video_test:
+  name: Stop video test
+  description: Stop the animated video test.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ulux_display
+
 set_led:
   name: Set u::lux LEDs
   description: Set up to four switch LEDs. Values use color 0-7, blink mode 0-7, and override true.

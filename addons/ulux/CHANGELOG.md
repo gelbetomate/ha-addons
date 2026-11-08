@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.141
+
+- Added an animated color-bar test-video endpoint for repeatable FPS and
+  multi-frame transport tests.
+
 ## 0.5.140
 
 - Send HTTP snapshot frames without waiting for per-chunk video ACKs; the

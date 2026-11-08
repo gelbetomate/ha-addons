@@ -86,6 +86,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
   const autoProbeInFlight = new Set();
   const autoProbeLastAttempt = new Map();
   const streamManager = createStreamManager({ udpSend, waitForVideoAck, log });
+  const testVideoLoops = new Map();
   const audioWebSocket = new WebSocket.Server({ noServer: true });
 
   audioWebSocket.on('connection', (ws, request, context) => {
@@ -369,12 +370,62 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
       const switchId = decodeURIComponent(streamStopMatch[1]);
       const sw = getSwitchTarget(switchId);
       if (!sw) return respond(res, 404, { error: `Unknown switch_id: ${switchId}` });
+      const testLoop = testVideoLoops.get(switchId);
+      if (testLoop) {
+        testLoop.stop = true;
+        testVideoLoops.delete(switchId);
+      }
       streamManager.stop(
         switchId,
         sw.ip,
         sw.port || config.listen_port || 34988,
       );
       return respond(res, 200, { ok: true, switch_id: switchId });
+    }
+
+    const testVideoMatch = pathname.match(/^\/api\/display\/test-video\/([^/]+)$/);
+    if (method === 'POST' && testVideoMatch) {
+      const switchId = decodeURIComponent(testVideoMatch[1]);
+      const sw = getSwitchTarget(switchId);
+      if (!sw) return respond(res, 404, { error: `Unknown switch_id: ${switchId}` });
+      const body = await readJsonBody(req);
+      const oldLoop = testVideoLoops.get(switchId);
+      if (oldLoop) oldLoop.stop = true;
+      const frameRate = Math.min(10, Math.max(0.1, Number(body.fps) || 1));
+      const loop = { stop: false, frame: 0 };
+      testVideoLoops.set(switchId, loop);
+      const remotePort = sw.port || config.listen_port || 34988;
+      const pageIndex = Number.isInteger(Number(body.page_index)) ? Number(body.page_index) : null;
+      if (pageIndex !== null) {
+        udpSend(sw.ip, remotePort, buildTelegramForDevice(
+          sw.ump_device_id || 0x5d,
+          sw.ump_frame_version || 0x0232,
+          buildPageIndexMessage(pageIndex),
+        ));
+      }
+      const run = async () => {
+        while (!loop.stop) {
+          await streamManager.streamImageToSwitch(switchId, {
+            source: { testPattern: { frame: loop.frame++ } },
+            remoteHost: sw.ip,
+            remotePort,
+            deviceId: sw.ump_device_id || 0x5d,
+            frameVersion: sw.ump_frame_version || 0x0232,
+            udpSend,
+            log,
+            width: body.width || streamCfg.width || 176,
+            height: body.height || streamCfg.height || 184,
+            actorId: body.actor_id || streamCfg.actor_id || 1,
+            linesPerPacket: streamCfg.lines_per_packet || 4,
+            interPacketDelayMs: streamCfg.inter_packet_delay_ms ?? 5,
+            videoAckTimeoutMs: streamCfg.video_ack_timeout_ms ?? 150,
+            waitForAck: true,
+          });
+          await sleep(1000 / frameRate);
+        }
+      };
+      run().catch((err) => log.error(`Test video failed for ${switchId}: ${err.message}`));
+      return respond(res, 202, { ok: true, switch_id: switchId, fps: frameRate, page_index: pageIndex });
     }
 
     // --- GET /api/discovery/devices ---

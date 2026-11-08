@@ -364,5 +364,6 @@ class UluxDisplayOptionsFlow(OptionsFlow):
             step_id="init",
             data_schema=vol.Schema({
                 vol.Optional(CONF_MQTT_DISCOVERY, default=False): bool,
+                vol.Optional("stream_video_test", default=False): bool,
             }),
         )

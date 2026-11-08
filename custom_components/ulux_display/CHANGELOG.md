@@ -1,5 +1,10 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.42
+
+- Added an animated video test pattern with a frame-changing color-bar pattern.
+- Added page-triggered and service-triggered video test controls.
+
 ## 0.2.41
 
 - Replace the Home Assistant interval callback with a dedicated stream task so

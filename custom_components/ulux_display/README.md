@@ -86,6 +86,12 @@ versions, open **HACS** instead.
 3. Find **u::lux Display** and install it
 4. **Restart Home Assistant**
 
+For transport testing, enable **Stream video test** in the integration options.
+When the configured Stream Page becomes active, the bridge sends an animated
+color-bar test pattern with a changing frame. The same test can be started
+manually with the `ulux_display.start_video_test` service and stopped with
+`ulux_display.stop_video_test`.
+
 ### Step 2: Prepare the bridge
 
 1. Confirm that the **u::Lux UMP Bridge** add-on is running.

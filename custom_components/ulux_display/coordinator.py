@@ -1386,6 +1386,12 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
             self._display_mode = "custom"
             await self.device.set_theme_custom()
             self._last_stream_sent = 0
+            if self.options.get("stream_video_test", False):
+                await self.device.start_test_video(
+                    page_index=stream_page - 1,
+                    fps=float(self.options.get(CONF_STREAM_REFRESH_RATE, DEFAULT_STREAM_REFRESH_RATE)),
+                )
+                return
             self._start_stream_refresh_loop()
             await self.async_request_refresh()
         else:
@@ -1409,6 +1415,12 @@ class UluxDisplayCoordinator(DataUpdateCoordinator):
         await self.device.set_theme_custom()
         await self.device.set_page(stream_page - 1)
         await self.device.set_active(True)
+        if self.options.get("stream_video_test", False):
+            await self.device.start_test_video(
+                page_index=stream_page - 1,
+                fps=float(self.options.get(CONF_STREAM_REFRESH_RATE, DEFAULT_STREAM_REFRESH_RATE)),
+            )
+            return
         self._start_stream_refresh_loop()
         await self.async_request_refresh()
 

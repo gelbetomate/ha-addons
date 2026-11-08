@@ -134,6 +134,13 @@ class UluxDevice:
         """Stop the bridge video stream for this switch."""
         await self._post_json(f"/api/display/stream/{self.switch_id}/stop", {})
 
+    async def start_test_video(self, page_index: int, fps: float = 1.0) -> None:
+        """Start the bridge's changing test-pattern video on a page."""
+        await self._post_json(
+            f"/api/display/test-video/{self.switch_id}",
+            {"page_index": page_index, "fps": fps},
+        )
+
     async def get_registry_device(self) -> dict:
         """Fetch the bridge registry record for this u::lux."""
         import aiohttp  # noqa: PLC0415
@@ -310,5 +317,4 @@ class UluxDevice:
 
     async def detect_model(self) -> None:
         pass
-
 
