@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.143
+
+- Keep the bridge release aligned with integration `0.2.49`; the Devices-panel
+  video test uses the existing `/api/display/test-video` endpoint.
+
 ## 0.5.142
 
 - Send test-video frames without ACK waits so the stream starts promptly.
