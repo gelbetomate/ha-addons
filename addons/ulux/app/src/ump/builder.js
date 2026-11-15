@@ -127,7 +127,7 @@ function getDateParts(date, timeZone) {
  * @param {number} sequenceId - Stream sequence identifier
  * @returns {Buffer} 12-byte message buffer
  */
-function buildVideoStartMessage(sequenceId, actorId = 1) {
+function buildVideoStartMessage(sequenceId, actorId = 0) {
   const buf = Buffer.alloc(12, 0);
   buf.writeUInt8(0x0C, 0);                         // MessageLength
   buf.writeUInt8(MessageIds.VideoStart, 1);        // MessageID = 0xA2

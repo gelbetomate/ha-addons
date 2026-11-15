@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.161
+
+- Match the reference `XAMUmpVideoStart` message and send it as a global
+  message with ActorID 0.
+
 ## 0.5.160
 
 - Align UMP header decoding with the reference implementation and retain
