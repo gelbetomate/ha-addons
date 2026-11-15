@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.150
+
+- Run the built-in Centaur MPG button as a video-only transport test, avoiding
+  the optional audio branch while UMP video delivery is verified.
+
 ## 0.5.149
 
 - Fix the video streamer passing its configured audio transport to FFmpeg
