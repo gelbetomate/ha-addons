@@ -641,18 +641,18 @@ function buildTelegram(...messageBuffers) {
 }
 
 /**
- * Build a legacy-compatible UMP video stream telegram.
+ * Build a UMP VideoStream telegram.
  *
  * Frame layout (little-endian):
  *   16-byte frame header:
- *     0:    Frame type (0x03 for video data)
+ *     0:    Frame type (0x02 for video data)
  *     1:    UMP marker (0x86)
  *     2-3:  FrameLength (header + stream payload)
  *     4-5:  FrameVersion (0x0201)
  *     6-7:  PacketID
  *     8-15: Project/Firmware/Switch/Design IDs (all zero)
  *   16-byte stream header:
- *     16-19: StreamFlags (bit0 = Acknowledge)
+ *     16-19: StreamFlags (bit0 = direct display, bit1 = Acknowledge)
  *     20-23: SequenceID (UInt32LE)
  *     24-25: StartLine (UInt16LE)
  *     26-27: LineCount (UInt16LE)
@@ -667,16 +667,18 @@ function buildTelegram(...messageBuffers) {
  * @param {number} [opts.startColumn=0]
  * @param {number} [opts.columnCount=0]
  * @param {Buffer} opts.videoData
- * @param {boolean} [opts.acknowledge=false]
+ * @param {boolean} [opts.acknowledge=false] - Request an ACK after processing
+ * @param {boolean} [opts.directDisplay=true] - Bypass design elements
  * @param {number} [opts.deviceId=0x5d]
  * @param {number} [opts.frameVersion=0x0232]
  * @returns {Buffer}
  */
-function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColumn = 0, columnCount = 0, videoData, acknowledge = false, deviceId = 0x5d, frameVersion = 0x0232 }) {
+function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColumn = 0, columnCount = 0, videoData, acknowledge = false, directDisplay = true, deviceId = 0x5d, frameVersion = 0x0232 }) {
   const data = Buffer.isBuffer(videoData) ? videoData : Buffer.from(videoData || []);
 
   const streamHeader = Buffer.alloc(16, 0);
-  streamHeader.writeUInt32LE(acknowledge ? 0x01 : 0x00, 0);
+  const streamFlags = (directDisplay ? 0x01 : 0x00) | (acknowledge ? 0x02 : 0x00);
+  streamHeader.writeUInt32LE(streamFlags, 0);
   streamHeader.writeUInt32LE(sequenceId >>> 0, 4);
   streamHeader.writeUInt16LE(startLine & 0xFFFF, 8);
   streamHeader.writeUInt16LE(lineCount & 0xFFFF, 10);
@@ -685,9 +687,7 @@ function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColum
 
   const frameLength = 16 + streamHeader.length + data.length;
   const frameHeader = Buffer.from('01861000320225000000000001000100', 'hex');
-  // The tested display accepts the legacy VideoStream frame marker 0x03.
-  // Using 0x02 produces valid UDP traffic but no visible frame.
-  frameHeader[0] = 0x03;
+  frameHeader[0] = 0x02;
   frameHeader.writeUInt16LE(frameLength, 2);
   frameHeader.writeUInt16LE(frameVersion & 0xFFFF, 4);
   frameHeader.writeUInt16LE(nextPacketId(), 6);

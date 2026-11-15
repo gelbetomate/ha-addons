@@ -2,6 +2,11 @@
 
 ## 0.5.158
 
+- Correct VideoStream flags: direct display is bit 0 and ACK request is bit 1.
+- Use the specification's `0x8602` VideoStream descriptor and honor ACK pacing.
+
+## 0.5.158
+
 - Make device discovery and MAC address resolution fully non-blocking (asynchronous ARP/ping).
 - Devices are now immediately registered in memory upon the first UDP packet (<50ms).
 - Fix frontend polling race condition in registry UI where in-flight responses were discarded.

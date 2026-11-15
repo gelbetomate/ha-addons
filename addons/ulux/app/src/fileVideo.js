@@ -152,7 +152,7 @@ async function runVideo({
           log,
           linesPerPacket: streamConfig.lines_per_packet || 4,
           interPacketDelayMs: streamConfig.inter_packet_delay_ms ?? 5,
-          waitForAck: false,
+          waitForAck: true,
           skipSessionReset: videoSessionStarted,
         });
         videoSessionStarted = true;

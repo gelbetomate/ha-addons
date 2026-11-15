@@ -143,7 +143,8 @@ async function streamImageToSwitch({
       startColumn: 0,
       columnCount: width,
       videoData: chunk,
-      acknowledge: false,
+      acknowledge: true,
+      directDisplay: true,
       deviceId,
       frameVersion,
     });

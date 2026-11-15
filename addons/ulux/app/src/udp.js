@@ -28,7 +28,7 @@ function createUdpServer({ host, port, switches, onPacket, log }) {
 
     // Video replies use the special 0x03 0x86 frame and are not normal UMP
     // telegrams. Consume them here so they do not become raw parse errors.
-    if (msg[0] === 0x03 && msg[1] === 0x86) {
+    if ((msg[0] === 0x02 || msg[0] === 0x03) && msg[1] === 0x86) {
       const waiters = videoAckWaiters.get(rinfo.address);
       if (waiters?.length) {
         const waiter = waiters.shift();
