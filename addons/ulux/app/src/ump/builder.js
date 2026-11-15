@@ -9,9 +9,12 @@
  *   16-byte header:
  *     Bytes  0-1  : TotalLength (UInt16LE) — header + all messages
  *     Bytes  2-3  : ProtocolVersion (0x0000)
- *     Bytes  4-9  : Source DeviceAddress (6 bytes, 0x000000000000 for our responses)
- *     Bytes 10-11 : PacketID (UInt16LE, incrementing)
- *     Bytes 12-15 : Reserved (0x00000000)
+ *     Bytes  4-5  : FrameVersion
+ *     Bytes  6-7  : PacketID (UInt16LE, incrementing)
+ *     Bytes  8-9  : ProjectID
+ *     Bytes 10-11 : FirmwareVersion
+ *     Bytes 12-13 : SwitchID
+ *     Bytes 14-15 : DesignID
  *   Followed by one or more messages.
  *
  * Message structure:

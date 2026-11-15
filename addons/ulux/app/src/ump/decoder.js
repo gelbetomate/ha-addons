@@ -8,11 +8,14 @@
  * Wire format (little-endian):
  *
  *   Telegram header (16 bytes):
- *     Bytes  0-1  : TotalLength (UInt16LE) — total size of telegram incl. header
- *     Bytes  2-3  : ProtocolVersion / reserved
- *     Bytes  4-9  : DeviceAddress (6-byte MAC of sender)
- *     Bytes 10-11 : PacketID (UInt16LE) — incrementing sequence counter
- *     Bytes 12-15 : Reserved
+ *   Bytes  0-1  : FrameID (0x8601 normal, 0x8602 video)
+ *   Bytes  2-3  : FrameLength (UInt16LE)
+ *   Bytes  4-5  : FrameVersion (UInt16LE)
+ *   Bytes  6-7  : PacketID (UInt16LE)
+ *   Bytes  8-9  : ProjectID (UInt16LE)
+ *   Bytes 10-11 : FirmwareVersion (UInt16LE)
+ *   Bytes 12-13 : SwitchID (UInt16LE)
+ *   Bytes 14-15 : DesignID (UInt16LE)
  *
  *   Then one or more messages, each:
  *     Byte  0     : MessageLength — total length of this message including this byte
@@ -34,7 +37,8 @@ const MIN_TELEGRAM_SIZE    = TELEGRAM_HEADER_SIZE + 2; // header + at least leng
  *   valid: boolean,
  *   error?: string,
  *   totalLength?: number,
- *   deviceAddressHex?: string,
+ *   switchId?: number,
+ *   designId?: number,
  *   packetId?: number,
  *   messages?: Array<{
  *     msgId: number,
@@ -55,12 +59,21 @@ function parseTelegram(buf) {
     return { valid: false, error: `Telegram too short: ${buf.length} < ${MIN_TELEGRAM_SIZE} bytes` };
   }
 
+  const frameId = buf.readUInt16LE(0);
   const totalLength = buf.readUInt16LE(2);
   const frameVersion = buf.readUInt16LE(4);
-  const deviceAddrBytes = buf.slice(8, 14);
-  const deviceAddressHex = (deviceAddrBytes.toString('hex').toUpperCase().match(/.{2}/g) || []).join(':');
-  const deviceId = buf.readUInt16LE(12);
   const packetId = buf.readUInt16LE(6);
+  const projectId = buf.readUInt16LE(8);
+  const firmwareVersion = buf.readUInt16LE(10);
+  const switchId = buf.readUInt16LE(12);
+  const designId = buf.readUInt16LE(14);
+
+  if (totalLength !== buf.length) {
+    return {
+      valid: false,
+      error: `Telegram length mismatch: declared ${totalLength}, received ${buf.length}`,
+    };
+  }
 
   const messages = [];
   let offset = TELEGRAM_HEADER_SIZE;
@@ -91,10 +104,16 @@ function parseTelegram(buf) {
 
   return {
     valid: true,
+    frameId,
     totalLength,
     frameVersion,
-    deviceId,
-    deviceAddressHex,
+    projectId,
+    firmwareVersion,
+    switchId,
+    designId,
+    switchIdHex: switchId.toString(16).padStart(4, '0').toUpperCase(),
+    // Legacy alias retained for existing registry consumers.
+    deviceId: switchId,
     packetId,
     messages,
   };
@@ -111,7 +130,11 @@ function telegramSummary(telegram) {
     const name = m.msgName || `0x${m.msgId.toString(16).padStart(2, '0')}`;
     return `${name}(actor=0x${m.actorId.toString(16)})`;
   }).join(', ');
-  return `device=${telegram.deviceAddressHex} packetId=${telegram.packetId} messages=[${ids}]`;
+  return (
+    `frame=0x${telegram.frameId.toString(16).padStart(4, '0')} ` +
+    `switch=${telegram.switchId} design=${telegram.designId} ` +
+    `packetId=${telegram.packetId} messages=[${ids}]`
+  );
 }
 
 // Keep legacy exports so existing code that imports MESSAGE_IDS doesn't break.

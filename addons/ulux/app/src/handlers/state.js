@@ -162,6 +162,17 @@ function handleState(msg, ctx, { config, haClient, mqttClient, discoveryRegistry
       `to ${senderIp}:${senderPort}`,
     );
     udpSend(senderIp, senderPort, telegram);
+
+    // The reference XAMUmpStream requests the active page context during
+    // initialization before treating the device as fully connected.
+    const pageContextTelegram = buildTelegramForDevice(
+      ctx.telegram?.deviceId ?? 0x5D,
+      ctx.telegram?.frameVersion ?? 0x0232,
+      buildRequestMessage(0x0E),
+      buildRequestMessage(0x2E),
+    );
+    log.info(`Requesting PageCount/PageIndex from ${senderIp}:${senderPort}`);
+    udpSend(senderIp, senderPort, pageContextTelegram);
   }
 
   if (timeRequest || !timeSynced.has(senderIp)) {

@@ -70,7 +70,8 @@ function createDispatcher({ config, haClient, mqttClient, assistSession, discove
     log.debug(`UMP telegram: ${telegramSummary(telegram)}`);
 
     discoveryRegistry?.updateDiagnostics?.(senderIp, {
-      ump_device_address: telegram.deviceAddressHex,
+      ump_switch_id: telegram.switchId,
+      ump_design_id: telegram.designId,
       ump_device_id: telegram.deviceId,
       ump_frame_version: telegram.frameVersion,
       ump_packet_id: telegram.packetId,
@@ -85,12 +86,9 @@ function createDispatcher({ config, haClient, mqttClient, assistSession, discove
       ump_page_index: readMessageValue(telegram.messages, MessageIds.PageIndex),
     });
 
-      // Prefer the persistent registry record for this sender IP. The UMP header
-      // address is a protocol context ID, not necessarily the Ethernet MAC.
-        const registrySwitch = discoveryRegistry?.getStore?.()?.findByIp?.(senderIp);
-        const resolvedSwitch = registrySwitch
-        || resolveByDeviceAddress(telegram.deviceAddressHex, config.switches)
-        || sw;
+    // Prefer the persistent registry record for this sender IP.
+    const registrySwitch = discoveryRegistry?.getStore?.()?.findByIp?.(senderIp);
+    const resolvedSwitch = registrySwitch || sw;
       const displaySwitch = resolvedSwitch.serial_number
         ? { ...resolvedSwitch, name: `u::lux ${resolvedSwitch.serial_number}` }
         : resolvedSwitch;
@@ -108,7 +106,12 @@ function createDispatcher({ config, haClient, mqttClient, assistSession, discove
           configured: displaySwitch.name !== 'unknown' || Boolean(displaySwitch.switch_id),
         ump_device_id: telegram.deviceId,
         ump_frame_version: telegram.frameVersion,
-        ump_device_address: telegram.deviceAddressHex,
+        ump_project_id: telegram.projectId,
+        ump_firmware_version: telegram.firmwareVersion,
+        ump_switch_id: telegram.switchId,
+        ump_design_id: telegram.designId,
+        ump_switch_id: telegram.switchId,
+        ump_design_id: telegram.designId,
         ump_packet_id: telegram.packetId,
         ump_message_ids: telegram.messages.map((message) => message.msgId),
         ump_last_seen: timestamp,
@@ -166,25 +169,6 @@ function emitRawEvent({ hex, senderIp, sw, timestamp, haClient, mqttClient, conf
     const topic = `${config.mqtt.base_topic}/${mqttDeviceKey(sw)}/event/raw`;
     mqttClient.publish(topic, JSON.stringify(payload));
   }
-}
-
-/**
- * Try to resolve a configured switch by the device address from the UMP telegram header.
- * Normalises the address to uppercase colon-separated hex before comparing.
- *
- * @param {string}   deviceAddressHex - e.g. "01:23:45:67:89:AB"
- * @param {object[]} switches
- * @returns {object|null}
- */
-function resolveByDeviceAddress(deviceAddressHex, switches) {
-  if (!deviceAddressHex) return null;
-  const normalised = deviceAddressHex.toUpperCase();
-  // All-zeros means the field is absent; don't match that
-  if (normalised === '00:00:00:00:00:00') return null;
-  return switches.find((sw) => {
-    const swNorm = sw.switch_id ? sw.switch_id.toUpperCase() : '';
-    return swNorm === normalised;
-  }) || null;
 }
 
 module.exports = { createDispatcher };
