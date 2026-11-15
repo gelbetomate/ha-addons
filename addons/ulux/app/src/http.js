@@ -73,6 +73,10 @@ const {
  *     Response 404: { "error": "Unknown switch_id: <id>" }
  *     Response 500: { "error": "<message>" }
  *
+ *   POST /api/display/reference-test/:switchId
+ *     Sends one XAMControlUlux-compatible test frame. Defaults to 86x90,
+ *     five lines per packet and 5 ms between packets.
+ *
  * @param {object}   opts
  * @param {object}   opts.config   - Full add-on config
  * @param {Function} opts.udpSend  - udpSend(host, port, buf) from the UDP server
@@ -485,6 +489,79 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
       };
       run().catch((err) => log.error(`Test video failed for ${switchId}: ${err.message}`));
       return respond(res, 202, { ok: true, switch_id: switchId, fps: frameRate, page_index: pageIndex });
+    }
+
+    const referenceTestMatch = pathname.match(/^\/api\/display\/reference-test\/([^/]+)$/);
+    if (method === 'POST' && referenceTestMatch) {
+      const switchId = decodeURIComponent(referenceTestMatch[1]);
+      const sw = getSwitchTarget(switchId);
+      if (!sw) return respond(res, 404, { error: `Unknown switch_id: ${switchId}` });
+
+      const body = await readJsonBody(req);
+      const remotePort = sw.port || config.listen_port || 34988;
+      const deviceId = sw.ump_device_id || 0x5d;
+      const frameVersion = sw.ump_frame_version || 0x0232;
+      const width = Number.isInteger(Number(body.width)) ? Number(body.width) : 86;
+      const height = Number.isInteger(Number(body.height)) ? Number(body.height) : 90;
+      const linesPerPacket = Number.isInteger(Number(body.lines_per_packet))
+        ? Number(body.lines_per_packet)
+        : 5;
+      const interPacketDelayMs = Number.isInteger(Number(body.inter_packet_delay_ms))
+        ? Number(body.inter_packet_delay_ms)
+        : 5;
+      const actorId = Number.isInteger(Number(body.actor_id))
+        ? Number(body.actor_id)
+        : streamCfg.actor_id || 1;
+
+      if (width <= 0 || height <= 0 || linesPerPacket <= 0 || interPacketDelayMs < 0) {
+        return respond(res, 400, {
+          error: 'width, height and lines_per_packet must be positive; inter_packet_delay_ms cannot be negative',
+        });
+      }
+
+      const oldLoop = testVideoLoops.get(switchId);
+      if (oldLoop) oldLoop.stop = true;
+      fileVideoStreamer.stop(switchId);
+      displayStreamManager.stop(switchId, sw.ip, remotePort);
+
+      udpSend(
+        sw.ip,
+        remotePort,
+        buildTelegramForDevice(
+          deviceId,
+          frameVersion,
+          buildActivateMessage({ activate: true, deactivate: false }),
+        ),
+      );
+      await sleep(500);
+
+      try {
+        const result = await displayStreamManager.streamImageToSwitch(switchId, {
+          source: { testPattern: { frame: Number(body.frame) || 0 } },
+          remoteHost: sw.ip,
+          remotePort,
+          deviceId,
+          frameVersion,
+          actorId,
+          udpSend,
+          log,
+          width,
+          height,
+          linesPerPacket,
+          interPacketDelayMs,
+          videoAckTimeoutMs: streamCfg.video_ack_timeout_ms ?? 150,
+          waitForAck: body.wait_for_ack === true,
+        });
+        return respond(res, 200, {
+          ok: true,
+          switch_id: switchId,
+          reference: { width, height, lines_per_packet: linesPerPacket, inter_packet_delay_ms: interPacketDelayMs, actor_id: actorId },
+          result,
+        });
+      } catch (err) {
+        log.error(`Reference video test failed for ${switchId}: ${err.message}`);
+        return respond(res, 500, { error: err.message });
+      }
     }
 
     // --- GET /api/discovery/devices ---

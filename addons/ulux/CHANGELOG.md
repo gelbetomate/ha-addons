@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.168
+
+- Add a one-shot `/api/display/reference-test/:switchId` endpoint using the
+  reference 86x90, five-lines-per-packet and 5 ms pacing defaults.
+
 ## 0.5.167
 
 - Activate the display and wait for it to settle before starting file video.
