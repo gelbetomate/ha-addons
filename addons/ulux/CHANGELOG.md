@@ -1,5 +1,11 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.157
+
+- Keep one UMP video session open for the complete transcoded stream.
+- Reuse its negotiated sequence ID for subsequent frames and stop only when
+  playback ends.
+
 ## 0.5.156
 
 - Correct `VideoStop` to UMP message ID `0xA4`; `0xA3` is the VideoStream

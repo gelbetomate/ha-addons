@@ -7,6 +7,7 @@ const {
   buildAudioPlayRemoteMessage,
   buildAudioStopMessage,
   buildTelegramForDevice,
+  buildVideoStopMessage,
 } = require('./ump/builder');
 
 const DEFAULT_WIDTH = 176;
@@ -74,6 +75,7 @@ async function runVideo({
   }
 
   let sequenceId = (Date.now() >>> 0) & 0x7FFFFFFF;
+  let videoSessionStarted = false;
 
   while (!state.stop) {
     const isFile = !/^[a-z][a-z\d+\-.]*:\/\//i.test(input);
@@ -151,8 +153,9 @@ async function runVideo({
           linesPerPacket: streamConfig.lines_per_packet || 4,
           interPacketDelayMs: streamConfig.inter_packet_delay_ms ?? 5,
           waitForAck: false,
+          skipSessionReset: videoSessionStarted,
         });
-        sequenceId = (sequenceId + 1) & 0x7FFFFFFF;
+        videoSessionStarted = true;
         if (state.stop) break;
       }
     }
@@ -170,6 +173,14 @@ async function runVideo({
       await new Promise((resolve) => ffmpeg.once('close', resolve));
     }
     if (!loop) break;
+  }
+
+  if (videoSessionStarted) {
+    udpSend(
+      remoteHost,
+      remotePort,
+      buildTelegramForDevice(deviceId, frameVersion, buildVideoStopMessage(sequenceId)),
+    );
   }
 }
 
