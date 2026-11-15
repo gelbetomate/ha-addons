@@ -1,5 +1,13 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.160
+
+- Align UMP header decoding with the reference implementation and retain
+  ProjectID, FirmwareVersion, SwitchID, and DesignID.
+- Request PageCount and PageIndex during device initialization.
+- Restore full-screen video defaults and avoid waiting for unsupported video
+  ACKs during MPG playback.
+
 ## 0.5.159
 
 - Match the reference `XAMUmpVideoStreamTelegram` layout: 12-byte stream
