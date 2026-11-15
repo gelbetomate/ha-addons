@@ -1,8 +1,8 @@
 ---
-name: Test HA App
+name: test-ha-app
 description: "Test a Home Assistant app in this repository using repeatable checks and clear reporting"
+disable-model-invocation: true
 argument-hint: "App path or name (for example: addons/ulux) and optional focus (lint, build, runtime, smoke)"
-agent: agent
 ---
 You are validating a Home Assistant app in this repository.
 

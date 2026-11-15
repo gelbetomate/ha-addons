@@ -811,6 +811,15 @@ export class UluxDisplayPanel extends LitElement {
       margin-right: 8px;
     }
 
+    .device-actions {
+      display: flex;
+      margin: 12px 0 4px;
+    }
+
+    .device-actions ha-icon {
+      margin-right: 6px;
+    }
+
     /* Empty states */
     .empty-state {
       text-align: center;
@@ -1039,6 +1048,18 @@ export class UluxDisplayPanel extends LitElement {
     }
   }
 
+  private async _startVideoTest(device: DeviceConfig): Promise<void> {
+    try {
+      await this.hass.connection.sendMessagePromise({
+        type: "ulux_display/devices/start_video_test",
+        entry_id: device.entry_id,
+        fps: 1,
+      });
+    } catch (err) {
+      console.error(`Failed to start video test for ${device.name}:`, err);
+    }
+  }
+
   render() {
     if (this._loading) {
       return html`
@@ -1093,6 +1114,15 @@ export class UluxDisplayPanel extends LitElement {
                           <span class="device-status ${device.online ? "online" : "offline"}">
                             <a href="http://${device.host}" target="_blank" rel="noopener noreferrer">${device.online ? "Online" : "Offline"}</a>
                           </span>
+                        </div>
+                        <div class="device-actions">
+                          <ha-button
+                            outlined
+                            @click=${() => this._startVideoTest(device)}
+                          >
+                            <ha-icon icon="mdi:play-circle-outline"></ha-icon>
+                            Video stream test
+                          </ha-button>
                         </div>
                         <div class="views-checkboxes">
                           ${this._views.length === 0

@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.49
+
+- Add a Video stream test button to each device card in the Devices panel.
+
 ## 0.2.48
 
 - Poll the bridge registry for physical page changes independently of HA events.
