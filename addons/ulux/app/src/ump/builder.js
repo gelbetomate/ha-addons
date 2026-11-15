@@ -464,33 +464,40 @@ function buildAudioPlayLocalMessage({
  * Build an ID-AudioPlayRemote message (MessageID=0x99, 32 bytes).
  *
  * The tested V2.32 stream uses 882-byte PCM frames at 20 ms intervals.
- * The AMSNetID is zeroed when StreamFlags bit 1 permits IP-only matching.
+ * The field layout follows XAMUmpAudioPlayRemote exactly.
  */
 function buildAudioPlayRemoteMessage({
   volume = 100,
-  streamFlags = 0x02,
+  equalizer = 0,
+  playFlags = 0x02,
+  streamFlags,
+  incVolumeTime = 0,
   sequenceId = 3,
   bytesPerFrame = 882,
   delayBetweenFrames = 20000,
   listenIp = '255.255.255.255',
-  amsNetId = [0, 0, 0, 0, 0, 0],
+  amsNetIp = '255.255.255.255',
+  amsNetId = [1, 1],
 } = {}) {
   const octets = parseIPv4(listenIp);
-  if (!Array.isArray(amsNetId) || amsNetId.length !== 6) {
-    throw new TypeError('amsNetId must contain six bytes');
+  const amsOctets = parseIPv4(amsNetIp);
+  if (!Array.isArray(amsNetId) || amsNetId.length !== 2) {
+    throw new TypeError('amsNetId must contain two bytes');
   }
   const buf = Buffer.alloc(32, 0);
   buf.writeUInt8(0x20, 0);
   buf.writeUInt8(MessageIds.AudioPlayRemote, 1);
   buf.writeUInt16LE(0, 2);
   buf.writeUInt8(clampByteRange(volume, 0, 100), 4);
-  buf.writeUInt8(0, 5);
-  buf.writeUInt16LE(streamFlags & 0xFFFF, 6);
-  buf.writeUInt32LE(sequenceId >>> 0, 8);
-  buf.writeUInt32LE(bytesPerFrame >>> 0, 12);
+  buf.writeUInt8(equalizer & 0xFF, 5);
+  buf.writeUInt16LE((streamFlags ?? playFlags) & 0xFFFF, 6);
+  buf.writeInt16LE(incVolumeTime, 8);
+  buf.writeInt16LE(sequenceId, 10);
+  buf.writeUInt16LE(bytesPerFrame & 0xFFFF, 12);
   buf.writeUInt32LE(delayBetweenFrames >>> 0, 16);
   octets.forEach((octet, index) => buf.writeUInt8(octet, 20 + index));
-  amsNetId.forEach((value, index) => buf.writeUInt8(Number(value) & 0xFF, 24 + index));
+  amsOctets.forEach((octet, index) => buf.writeUInt8(octet, 24 + index));
+  amsNetId.forEach((value, index) => buf.writeUInt8(Number(value) & 0xFF, 28 + index));
   return buf;
 }
 
