@@ -1,9 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
-## 0.5.161
+## 0.5.162
 
-- Match the reference `XAMUmpVideoStart` message and send it as a global
-  message with ActorID 0.
+- Keep the configured display actor for `VideoStart`; Actor IDs are
+  design-specific even though the reference sample uses ActorID 0.
 
 ## 0.5.160
 

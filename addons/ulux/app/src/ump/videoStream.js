@@ -74,6 +74,7 @@ async function streamImageToSwitch({
   remotePort,
   deviceId = 0x5d,
   frameVersion = 0x0232,
+  actorId = 1,
   udpSend,
   waitForVideoAck,
   log,
@@ -115,9 +116,11 @@ async function streamImageToSwitch({
     await sleep(50);
 
     // Start stream session so the switch can prepare its framebuffer.
-    // XAMUmpVideoStart is a global message in the reference implementation;
-    // the display actor is selected by the stream bounds, not this message.
-    const startTelegram = buildTelegramForDevice(deviceId, frameVersion, buildVideoStartMessage(seqId));
+    const startTelegram = buildTelegramForDevice(
+      deviceId,
+      frameVersion,
+      buildVideoStartMessage(seqId, actorId),
+    );
     udpSend(remoteHost, remotePort, startTelegram);
     await sleep(1000);
   }
