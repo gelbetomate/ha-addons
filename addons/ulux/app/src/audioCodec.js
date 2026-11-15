@@ -4,6 +4,7 @@ const CODECS = Object.freeze({
   PCM_16K: 0x01,
   PCM_8K: 0x02,
   G711_ALAW: 0x03,
+  PCM_22K: 0x04,
 });
 
 const FRAME_DURATION_MS = 20;
@@ -16,6 +17,8 @@ function codecInfo(codec) {
       return { codec, sampleRate: 8000, bytesPerSample: 2, payloadBytes: 320 };
     case CODECS.G711_ALAW:
       return { codec, sampleRate: 8000, bytesPerSample: 1, payloadBytes: 160 };
+    case CODECS.PCM_22K:
+      return { codec, sampleRate: 22050, bytesPerSample: 2, payloadBytes: 882 };
     default:
       return null;
   }
@@ -44,6 +47,7 @@ function parseAudioDatagram(data) {
     if (data.length === 640) codec = CODECS.PCM_16K;
     else if (data.length === 320) codec = CODECS.PCM_8K;
     else if (data.length === 160) codec = CODECS.G711_ALAW;
+    else if (data.length === 882) codec = CODECS.PCM_22K;
     else throw new Error(`Unsupported audio datagram length: ${data.length}`);
   }
 

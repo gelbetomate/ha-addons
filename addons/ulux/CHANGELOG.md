@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.154
+
+- Add the UMP `AudioPlayRemote` lifecycle for transcoded audio.
+- Stream 22.05 kHz mono PCM as raw 882-byte frames at 20 ms intervals.
+
 ## 0.5.153
 
 - Correct the VideoStream descriptor to `0x8602`.

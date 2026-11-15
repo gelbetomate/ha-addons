@@ -2,6 +2,12 @@
 
 const { spawn } = require('child_process');
 const path = require('path');
+const { CODECS } = require('./audioCodec');
+const {
+  buildAudioPlayRemoteMessage,
+  buildAudioStopMessage,
+  buildTelegramForDevice,
+} = require('./ump/builder');
 
 const DEFAULT_WIDTH = 176;
 const DEFAULT_HEIGHT = 184;
@@ -88,7 +94,7 @@ async function runVideo({
         '-map', '0:a?',
         '-vn',
         '-f', 's16le',
-        '-ar', '16000',
+        '-ar', '22050',
         '-ac', '1',
         'pipe:3',
       ] : []),
@@ -100,8 +106,25 @@ async function runVideo({
     });
     state.process = ffmpeg;
     const audioSender = audio && audioTransport
-      ? audioTransport.createSender({ remoteHost, remotePort: audioPort })
+      ? audioTransport.createSender({
+        remoteHost,
+        remotePort: audioPort,
+        codec: CODECS.PCM_22K,
+        includeHeader: false,
+      })
       : null;
+    if (audioSender) {
+      const control = buildTelegramForDevice(
+        deviceId,
+        frameVersion,
+        buildAudioPlayRemoteMessage({
+          sequenceId: 3,
+          bytesPerFrame: 882,
+          delayBetweenFrames: 20000,
+        }),
+      );
+      udpSend(remoteHost, remotePort, control);
+    }
     audioSender?.start();
     ffmpeg.stdio[3]?.on('data', (chunk) => audioSender?.push(chunk));
 
@@ -135,6 +158,13 @@ async function runVideo({
     }
 
     audioSender?.stop();
+    if (audioSender) {
+      udpSend(
+        remoteHost,
+        remotePort,
+        buildTelegramForDevice(deviceId, frameVersion, buildAudioStopMessage()),
+      );
+    }
     state.process = null;
     if (!state.stop && ffmpeg.exitCode === null) {
       await new Promise((resolve) => ffmpeg.once('close', resolve));

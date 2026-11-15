@@ -461,6 +461,49 @@ function buildAudioPlayLocalMessage({
 }
 
 /**
+ * Build an ID-AudioPlayRemote message (MessageID=0x99, 32 bytes).
+ *
+ * The tested V2.32 stream uses 882-byte PCM frames at 20 ms intervals.
+ * The AMSNetID is zeroed when StreamFlags bit 1 permits IP-only matching.
+ */
+function buildAudioPlayRemoteMessage({
+  volume = 100,
+  streamFlags = 0x02,
+  sequenceId = 3,
+  bytesPerFrame = 882,
+  delayBetweenFrames = 20000,
+  listenIp = '255.255.255.255',
+  amsNetId = [0, 0, 0, 0, 0, 0],
+} = {}) {
+  const octets = parseIPv4(listenIp);
+  if (!Array.isArray(amsNetId) || amsNetId.length !== 6) {
+    throw new TypeError('amsNetId must contain six bytes');
+  }
+  const buf = Buffer.alloc(32, 0);
+  buf.writeUInt8(0x20, 0);
+  buf.writeUInt8(MessageIds.AudioPlayRemote, 1);
+  buf.writeUInt16LE(0, 2);
+  buf.writeUInt8(clampByteRange(volume, 0, 100), 4);
+  buf.writeUInt8(0, 5);
+  buf.writeUInt16LE(streamFlags & 0xFFFF, 6);
+  buf.writeUInt32LE(sequenceId >>> 0, 8);
+  buf.writeUInt32LE(bytesPerFrame >>> 0, 12);
+  buf.writeUInt32LE(delayBetweenFrames >>> 0, 16);
+  octets.forEach((octet, index) => buf.writeUInt8(octet, 20 + index));
+  amsNetId.forEach((value, index) => buf.writeUInt8(Number(value) & 0xFF, 24 + index));
+  return buf;
+}
+
+function parseIPv4(value) {
+  if (typeof value !== 'string') throw new TypeError('listenIp must be an IPv4 address');
+  const octets = value.split('.').map((part) => Number(part));
+  if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+    throw new TypeError(`Invalid IPv4 listenIp: ${value}`);
+  }
+  return octets;
+}
+
+/**
  * Build the 16-byte ULUX audio control frame for UDP port 35004.
  *
  * The control frame is not a regular UMP telegram: its fields are network
@@ -675,6 +718,7 @@ module.exports = {
   buildAudioVolumeMessage,
   buildAudioStopMessage,
   buildAudioPlayLocalMessage,
+  buildAudioPlayRemoteMessage,
   buildAudioControlMessage,
   buildRequestMessage,
   buildTemperatureRequest,

@@ -129,13 +129,13 @@ function createAudioTransport({
     },
     send,
     subscribe,
-    createSender({ remoteHost, remotePort = port, codec = CODECS.PCM_16K }) {
-      return createPcmSender({ send, remoteHost, remotePort, codec, log });
+    createSender({ remoteHost, remotePort = port, codec = CODECS.PCM_16K, includeHeader = true }) {
+      return createPcmSender({ send, remoteHost, remotePort, codec, includeHeader, log });
     },
   };
 }
 
-function createPcmSender({ send, remoteHost, remotePort, codec, log }) {
+function createPcmSender({ send, remoteHost, remotePort, codec, includeHeader = true, log }) {
   const info = codecInfo(codec);
   if (!info || codec === CODECS.G711_ALAW) {
     throw new Error('Outbound sender currently supports PCM 16-bit codecs only');
@@ -149,11 +149,13 @@ function createPcmSender({ send, remoteHost, remotePort, codec, log }) {
     if (pending.length < info.payloadBytes) return;
     const payload = pending.subarray(0, info.payloadBytes);
     pending = pending.subarray(info.payloadBytes);
-    const packet = Buffer.alloc(4 + payload.length);
-    packet.writeUInt16BE(sequence, 0);
-    packet.writeUInt8(codec, 2);
-    packet.writeUInt8(0, 3);
-    payload.copy(packet, 4);
+    const packet = includeHeader ? Buffer.alloc(4 + payload.length) : Buffer.from(payload);
+    if (includeHeader) {
+      packet.writeUInt16BE(sequence, 0);
+      packet.writeUInt8(codec, 2);
+      packet.writeUInt8(0, 3);
+      payload.copy(packet, 4);
+    }
     sequence = (sequence + 1) & 0xFFFF;
     send(remoteHost, packet, remotePort);
   }
