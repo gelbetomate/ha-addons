@@ -67,7 +67,6 @@ async function runVideo({
     throw new Error('Video source must be a file path or URL');
   }
 
-  let sessionStarted = false;
   let sequenceId = (Date.now() >>> 0) & 0x7FFFFFFF;
 
   while (!state.stop) {
@@ -124,14 +123,12 @@ async function runVideo({
           width,
           height,
           sequenceId,
-          skipSessionReset: sessionStarted,
           udpSend,
           log,
           linesPerPacket: streamConfig.lines_per_packet || 4,
           interPacketDelayMs: streamConfig.inter_packet_delay_ms ?? 5,
           waitForAck: false,
         });
-        sessionStarted = true;
         sequenceId = (sequenceId + 1) & 0x7FFFFFFF;
         if (state.stop) break;
       }

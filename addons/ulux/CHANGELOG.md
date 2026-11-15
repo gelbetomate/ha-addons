@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.152
+
+- Restart the UMP video session for each transcoded frame so displays that
+  require a fresh `VideoStart` accept subsequent frames.
+
 ## 0.5.151
 
 - Advance the UMP video sequence ID for every transcoded frame while keeping
