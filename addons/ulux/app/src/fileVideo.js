@@ -6,6 +6,7 @@ const { CODECS } = require('./audioCodec');
 const {
   buildAudioPlayRemoteMessage,
   buildAudioStopMessage,
+  buildActivateMessage,
   buildTelegramForDevice,
   buildVideoStopMessage,
 } = require('./ump/builder');
@@ -87,6 +88,17 @@ async function runVideo({
     throw new Error('Video source must be a file path or URL');
   }
 
+  udpSend(
+    remoteHost,
+    remotePort,
+    buildTelegramForDevice(
+      deviceId,
+      frameVersion,
+      buildActivateMessage({ activate: true, deactivate: false }),
+    ),
+  );
+  await sleep(500);
+
   if (typeof requestVideoState === 'function') {
     requestVideoState({ switchId, deviceId, frameVersion, actorId });
     await sleep(250);
@@ -109,8 +121,8 @@ async function runVideo({
     }
   }
 
-  let sequenceId = (Date.now() >>> 0) & 0x7FFFFFFF;
-  let activeSequenceId = null;
+  const sequenceId = (Date.now() >>> 0) & 0x7FFFFFFF;
+  let videoSessionStarted = false;
 
   while (!state.stop) {
     const isFile = !/^[a-z][a-z\d+\-.]*:\/\//i.test(input);
@@ -173,8 +185,6 @@ async function runVideo({
       while ((end = findJpegEnd(buffer)) >= 0) {
         const frame = buffer.subarray(0, end + 2);
         buffer = buffer.subarray(end + 2);
-        const frameSequenceId = sequenceId;
-        sequenceId = (sequenceId + 1) & 0x7FFFFFFF;
         await streamManager.streamImageToSwitch(switchId, {
           source: { buffer: frame },
           remoteHost,
@@ -184,16 +194,15 @@ async function runVideo({
           actorId,
           width,
           height,
-          sequenceId: frameSequenceId,
+          sequenceId,
           udpSend,
           log,
           linesPerPacket: streamConfig.lines_per_packet || 4,
           interPacketDelayMs: streamConfig.inter_packet_delay_ms ?? 5,
           waitForAck: true,
-          skipSessionReset: false,
-          stopSequenceId: activeSequenceId,
+          skipSessionReset: videoSessionStarted,
         });
-        activeSequenceId = frameSequenceId;
+        videoSessionStarted = true;
         const frameDelayMs = Number(streamConfig.inter_frame_delay_ms ?? 750);
         if (!state.stop && frameDelayMs > 0) {
           await new Promise((resolve) => setTimeout(resolve, frameDelayMs));
@@ -217,15 +226,11 @@ async function runVideo({
     if (!loop) break;
   }
 
-  if (Number.isInteger(activeSequenceId)) {
+  if (videoSessionStarted) {
     udpSend(
       remoteHost,
       remotePort,
-      buildTelegramForDevice(
-        deviceId,
-        frameVersion,
-        buildVideoStopMessage(activeSequenceId),
-      ),
+      buildTelegramForDevice(deviceId, frameVersion, buildVideoStopMessage(sequenceId)),
     );
   }
 }

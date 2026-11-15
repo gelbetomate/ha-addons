@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.167
+
+- Activate the display and wait for it to settle before starting file video.
+  The device reported `displayActive=false` during the affected stream.
+
 ## 0.5.166
 
 - Start each video frame with a new sequence ID and `VideoStart` cycle.
