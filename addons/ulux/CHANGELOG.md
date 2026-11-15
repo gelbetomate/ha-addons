@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.164
+
+- Query `VideoState` before MPG playback and use valid negotiated bounds and
+  actor IDs instead of assuming the configured full-screen geometry.
+
 ## 0.5.163
 
 - Pace MPG frames with a configurable 750 ms inter-frame delay to prevent

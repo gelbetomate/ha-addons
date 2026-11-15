@@ -52,6 +52,7 @@ const DEFAULTS = {
     inter_packet_delay_ms: 5,
     inter_frame_delay_ms: 750,
     video_ack_timeout_ms: 150,
+    use_video_state_bounds: true,
   },
   api_port: 8099,
   log_level: 'info',

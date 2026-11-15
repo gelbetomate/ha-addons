@@ -14,6 +14,7 @@ const {
   buildIdListRequest,
   buildPageIndexMessage,
   buildActivateMessage,
+  buildVideoStateRequest,
   buildLedMessage,
   buildLedColorValue,
   sendLedMessagesPaced,
@@ -95,6 +96,22 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
     streamConfig: streamCfg,
     audioTransport,
     audioPort: config.audio_port || 35000,
+    requestVideoState: ({ switchId, deviceId, frameVersion, actorId }) => {
+      const target = getSwitchTarget(switchId);
+      if (!target) return;
+      const targetPort = target.port || config.listen_port || 34988;
+      udpSend(
+        target.ip,
+        targetPort,
+        buildTelegramForDevice(
+          deviceId,
+          frameVersion,
+          buildVideoStateRequest(actorId),
+        ),
+      );
+      log.info(`Requested VideoState from ${target.ip}:${targetPort}`);
+    },
+    getVideoState: (switchId) => discoveryRegistry?.getStore?.()?.get?.(switchId)?.video_state || null,
   });
   const audioWebSocket = new WebSocket.Server({ noServer: true });
 

@@ -39,6 +39,7 @@ function handleVideoState(msg, ctx, { config, haClient, mqttClient, discoveryReg
 
   if (discoveryRegistry) {
     discoveryRegistry.updateVideoState?.(senderIp, {
+      actor_id: msg.actorId,
       video_possible: videoPossible,
       video_active: videoActive,
       bounds,

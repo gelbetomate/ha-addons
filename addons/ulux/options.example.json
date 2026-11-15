@@ -18,7 +18,8 @@
     "actor_id": 1,
     "lines_per_packet": 4,
     "inter_packet_delay_ms": 5,
-    "inter_frame_delay_ms": 750
+    "inter_frame_delay_ms": 750,
+    "use_video_state_bounds": true
   },
 
   "_mode_comment": "--- Mode A: HA WebSocket events (requires a long-lived access token) ---",

@@ -13,7 +13,16 @@ const {
 const DEFAULT_WIDTH = 176;
 const DEFAULT_HEIGHT = 184;
 
-function createVideoStreamer({ streamManager, udpSend, log, streamConfig, audioTransport, audioPort = 35000 }) {
+function createVideoStreamer({
+  streamManager,
+  udpSend,
+  log,
+  streamConfig,
+  audioTransport,
+  audioPort = 35000,
+  requestVideoState,
+  getVideoState,
+}) {
   const active = new Map();
 
   return {
@@ -30,6 +39,8 @@ function createVideoStreamer({ streamManager, udpSend, log, streamConfig, audioT
         streamConfig,
         audioTransport,
         audioPort,
+        requestVideoState,
+        getVideoState,
         ...options,
       })
         .catch((err) => {
@@ -64,14 +75,38 @@ async function runVideo({
   deviceId,
   frameVersion,
   actorId,
+  requestVideoState,
+  getVideoState,
   loop = true,
   audio = true,
 }) {
-  const width = streamConfig.width || DEFAULT_WIDTH;
-  const height = streamConfig.height || DEFAULT_HEIGHT;
+  let width = streamConfig.width || DEFAULT_WIDTH;
+  let height = streamConfig.height || DEFAULT_HEIGHT;
   const input = filePath || source?.path || source?.url || source;
   if (!input || typeof input !== 'string') {
     throw new Error('Video source must be a file path or URL');
+  }
+
+  if (typeof requestVideoState === 'function') {
+    requestVideoState({ switchId, deviceId, frameVersion, actorId });
+    await sleep(250);
+    const videoState = getVideoState?.(switchId);
+    if (
+      streamConfig.use_video_state_bounds !== false &&
+      videoState?.video_possible &&
+      Number.isInteger(videoState.width) &&
+      Number.isInteger(videoState.height) &&
+      videoState.width > 0 &&
+      videoState.height > 0
+    ) {
+      width = videoState.width;
+      height = videoState.height;
+      actorId = Number.isInteger(videoState.actor_id) ? videoState.actor_id : actorId;
+      log.info(
+        `Using negotiated video bounds for ${switchId}: ` +
+        `${width}x${height}, actor=${actorId}`
+      );
+    }
   }
 
   let sequenceId = (Date.now() >>> 0) & 0x7FFFFFFF;
@@ -197,6 +232,10 @@ function findJpegEnd(buffer) {
 
 function defaultVideoPath() {
   return path.join(__dirname, '..', 'assets', 'centaur_1.mpg');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 module.exports = {
