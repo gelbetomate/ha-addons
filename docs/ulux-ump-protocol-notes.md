@@ -649,10 +649,11 @@ All outbound telegrams are formatted inside the 16-byte UMP header using `buildT
 - `buildAudioPlayLocalMessage(soundId, volume)`: Plays internal chime (`0x98` on V2.32).
 - `buildAudioStopMessage()`: Stops playback immediately (`0x92` on V2.32).
 - `buildAudioVolumeMessage(volume)`: Sets master volume 0..100 (`0x91` on V2.32).
-- `buildVideoStartMessage(sequenceId, actorId)`: Starts video stream session (`0xA2`), default actor `23`.
+- `buildVideoStartMessage(sequenceId, actorId)`: Starts video stream session (`0xA2`), default actor `1`.
 - `buildVideoStopMessage()`: Stops video streaming session (`0xA4`).
-- `buildVideoStreamTelegram(...)`: Sends the 16-byte stream metadata header
-  with sequence, line range, column range, and RGB565 payload.
+- `buildVideoStreamTelegram(...)`: Sends the reference 12-byte stream metadata
+  header with sequence, line range, and RGB565 payload. The ACK request is
+  stream flag bit 0; a descriptor-only 16-byte `0x8602` telegram is the ACK.
 - Sensor & diagnostic queries: `buildReadTemperatureMessage()`, `buildReadHumidityMessage()`, `buildReadCo2Message()`, `buildReadVocMessage()`, `buildReadIn2Message()`, `buildReadLuxMessage()`, `buildReadPageCountMessage()`, `buildReadPageIndexMessage()`.
 
 ---

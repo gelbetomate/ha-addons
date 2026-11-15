@@ -76,8 +76,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, v
         deviceId,
         frameVersion,
         actorId: coercePositiveInt(payload.actor_id)
-          || coercePositiveInt(config.stream?.actor_id)
-          || 1,
+          ?? coercePositiveInt(config.stream?.actor_id)
+          ?? 1,
         audio: payload.audio !== false,
       });
       log.info(`MQTT: started video stream for ${sw.ip}:${remotePort}`);
@@ -94,8 +94,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, v
       }
       const streamConfig = config.stream || {};
       const streamActorId = coercePositiveInt(payload.actor_id)
-        || coercePositiveInt(streamConfig.actor_id)
-        || 1;
+        ?? coercePositiveInt(streamConfig.actor_id)
+        ?? 1;
       const targetPage = coerceNonNegativeInt(payload.page_index ?? payload.page);
       const prepareDisplay = targetPage !== null || payload.activate === true;
 

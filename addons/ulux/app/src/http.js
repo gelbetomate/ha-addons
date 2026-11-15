@@ -418,7 +418,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
         remotePort: sw.port || config.listen_port || 34988,
         deviceId: sw.ump_device_id || 0x5d,
         frameVersion: sw.ump_frame_version || 0x0232,
-        actorId: body.actor_id || streamCfg.actor_id || 1,
+        actorId: body.actor_id ?? streamCfg.actor_id ?? 1,
         audio: body.audio !== false,
       });
       return respond(res, 202, { ok: true, switch_id: switchId, page_index: pageIndex });
@@ -457,7 +457,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
             log,
             width: body.width || streamCfg.width || 176,
             height: body.height || streamCfg.height || 184,
-            actorId: body.actor_id || streamCfg.actor_id || 1,
+            actorId: body.actor_id ?? streamCfg.actor_id ?? 1,
             linesPerPacket: streamCfg.lines_per_packet || 4,
             interPacketDelayMs: streamCfg.inter_packet_delay_ms ?? 5,
             videoAckTimeoutMs: streamCfg.video_ack_timeout_ms ?? 150,
@@ -1047,7 +1047,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
           log,
           width:  payload.width  || streamCfg.width  || 176,
           height: payload.height || streamCfg.height || 184,
-          actorId: payload.actor_id || streamCfg.actor_id || 1,
+          actorId: payload.actor_id ?? streamCfg.actor_id ?? 1,
           linesPerPacket:      streamCfg.lines_per_packet      || 4,
           interPacketDelayMs:  streamCfg.inter_packet_delay_ms ?? 5,
           videoAckTimeoutMs:   streamCfg.video_ack_timeout_ms   ?? 150,

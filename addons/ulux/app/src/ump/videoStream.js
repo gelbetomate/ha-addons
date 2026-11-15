@@ -11,8 +11,8 @@ const {
   buildVideoStreamTelegram,
 } = require('./builder');
 
-const DEFAULT_WIDTH = 86;
-const DEFAULT_HEIGHT = 90;
+const DEFAULT_WIDTH = 176;
+const DEFAULT_HEIGHT = 184;
 const DEFAULT_LINES_PER_PACKET = 4;
 const DEFAULT_INTER_PACKET_DELAY_MS = 5;
 
@@ -35,6 +35,7 @@ function createStreamManager({ udpSend, waitForVideoAck, log }) {
           try {
             return await streamImageToSwitch({
               udpSend,
+              waitForVideoAck,
               log,
               ...options,
               shouldStop: () => generations.get(key) !== generation,
@@ -74,6 +75,7 @@ async function streamImageToSwitch({
   deviceId = 0x5d,
   frameVersion = 0x0232,
   udpSend,
+  waitForVideoAck,
   log,
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
@@ -116,6 +118,7 @@ async function streamImageToSwitch({
     // Start stream session so the switch can prepare its framebuffer.
     const startTelegram = buildTelegramForDevice(deviceId, frameVersion, buildVideoStartMessage(seqId, actorId));
     udpSend(remoteHost, remotePort, startTelegram);
+    await sleep(1000);
   }
 
   const rgb565 = toRgb565LE(image, width, height);
@@ -140,11 +143,8 @@ async function streamImageToSwitch({
       sequenceId: seqId,
       startLine,
       lineCount,
-      startColumn: 0,
-      columnCount: width,
       videoData: chunk,
       acknowledge: true,
-      directDisplay: true,
       deviceId,
       frameVersion,
     });

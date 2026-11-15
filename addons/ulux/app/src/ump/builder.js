@@ -651,39 +651,32 @@ function buildTelegram(...messageBuffers) {
  *     4-5:  FrameVersion (0x0201)
  *     6-7:  PacketID
  *     8-15: Project/Firmware/Switch/Design IDs (all zero)
- *   16-byte stream header:
- *     16-19: StreamFlags (bit0 = direct display, bit1 = Acknowledge)
+ *   12-byte stream header:
+ *     16-19: StreamFlags (bit0 = Acknowledge)
  *     20-23: SequenceID (UInt32LE)
  *     24-25: StartLine (UInt16LE)
  *     26-27: LineCount (UInt16LE)
- *     28-29: StartColumn (UInt16LE)
- *     30-31: ColumnCount (UInt16LE)
  *   followed by RGB565LE video bytes.
  *
  * @param {object} opts
  * @param {number} opts.sequenceId
  * @param {number} opts.startLine
  * @param {number} opts.lineCount
- * @param {number} [opts.startColumn=0]
- * @param {number} [opts.columnCount=0]
  * @param {Buffer} opts.videoData
  * @param {boolean} [opts.acknowledge=false] - Request an ACK after processing
- * @param {boolean} [opts.directDisplay=true] - Bypass design elements
  * @param {number} [opts.deviceId=0x5d]
  * @param {number} [opts.frameVersion=0x0232]
  * @returns {Buffer}
  */
-function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColumn = 0, columnCount = 0, videoData, acknowledge = false, directDisplay = true, deviceId = 0x5d, frameVersion = 0x0232 }) {
+function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, videoData, acknowledge = false, deviceId = 0x5d, frameVersion = 0x0232 }) {
   const data = Buffer.isBuffer(videoData) ? videoData : Buffer.from(videoData || []);
 
-  const streamHeader = Buffer.alloc(16, 0);
-  const streamFlags = (directDisplay ? 0x01 : 0x00) | (acknowledge ? 0x02 : 0x00);
+  const streamHeader = Buffer.alloc(12, 0);
+  const streamFlags = acknowledge ? 0x01 : 0x00;
   streamHeader.writeUInt32LE(streamFlags, 0);
   streamHeader.writeUInt32LE(sequenceId >>> 0, 4);
   streamHeader.writeUInt16LE(startLine & 0xFFFF, 8);
   streamHeader.writeUInt16LE(lineCount & 0xFFFF, 10);
-  streamHeader.writeUInt16LE(startColumn & 0xFFFF, 12);
-  streamHeader.writeUInt16LE(columnCount & 0xFFFF, 14);
 
   const frameLength = 16 + streamHeader.length + data.length;
   const frameHeader = Buffer.from('01861000320225000000000001000100', 'hex');

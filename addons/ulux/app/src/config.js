@@ -77,11 +77,11 @@ function loadConfig() {
 
   const config = deepMerge(DEFAULTS, options);
 
-  // Migrate the former placeholder stream defaults to the HA Stream layout.
+  // Migrate the previous experimental tile layout to the HA full-screen stream.
   if (
     config.stream.width === 86 &&
     config.stream.height === 90 &&
-    config.stream.actor_id === 23
+    config.stream.actor_id === 0
   ) {
     config.stream.width = 176;
     config.stream.height = 184;

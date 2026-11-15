@@ -26,9 +26,9 @@ function createUdpServer({ host, port, switches, onPacket, log }) {
     const hex = msg.toString('hex');
     log.debug(`UDP packet from ${rinfo.address}:${rinfo.port} (${msg.length} bytes): ${hex}`);
 
-    // Video replies use the special 0x03 0x86 frame and are not normal UMP
-    // telegrams. Consume them here so they do not become raw parse errors.
-    if ((msg[0] === 0x02 || msg[0] === 0x03) && msg[1] === 0x86) {
+    // Video ACKs are the 16-byte descriptor-only 0x8602 frame, not normal
+    // UMP messages. Consume them here so they do not become raw parse errors.
+    if (msg.length === 16 && msg[0] === 0x02 && msg[1] === 0x86) {
       const waiters = videoAckWaiters.get(rinfo.address);
       if (waiters?.length) {
         const waiter = waiters.shift();

@@ -1,5 +1,12 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.159
+
+- Match the reference `XAMUmpVideoStreamTelegram` layout: 12-byte stream
+  header and ACK on stream flag bit 0. Keep the HA full-screen stream at
+  176x184 with actor 1 and four lines per packet.
+- Recognize only descriptor-only 16-byte `0x8602` telegrams as video ACKs.
+
 ## 0.5.158
 
 - Correct VideoStream flags: direct display is bit 0 and ACK request is bit 1.
