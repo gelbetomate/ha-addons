@@ -633,8 +633,7 @@ function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColum
   const data = Buffer.isBuffer(videoData) ? videoData : Buffer.from(videoData || []);
 
   const streamHeader = Buffer.alloc(16, 0);
-  // The legacy implementation marks every video chunk with state flag 1.
-  streamHeader.writeUInt32LE(0x01, 0);
+  streamHeader.writeUInt32LE(acknowledge ? 0x01 : 0x00, 0);
   streamHeader.writeUInt32LE(sequenceId >>> 0, 4);
   streamHeader.writeUInt16LE(startLine & 0xFFFF, 8);
   streamHeader.writeUInt16LE(lineCount & 0xFFFF, 10);
@@ -643,7 +642,9 @@ function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColum
 
   const frameLength = 16 + streamHeader.length + data.length;
   const frameHeader = Buffer.from('01861000320225000000000001000100', 'hex');
-  frameHeader[0] = 0x03;
+  // VideoStream frames use the fixed 0x8602 descriptor, not the 0x8601
+  // descriptor used by regular UMP telegrams.
+  frameHeader[0] = 0x02;
   frameHeader.writeUInt16LE(frameLength, 2);
   frameHeader.writeUInt16LE(frameVersion & 0xFFFF, 4);
   frameHeader.writeUInt16LE(nextPacketId(), 6);

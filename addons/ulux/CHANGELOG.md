@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.153
+
+- Correct the VideoStream descriptor to `0x8602`.
+- Set the VideoStream acknowledge flag only when requested.
+
 ## 0.5.152
 
 - Restart the UMP video session for each transcoded frame so displays that
