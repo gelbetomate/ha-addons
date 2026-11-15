@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.165
+
+- Wire the active file-video streamer to the VideoState request and registry
+  callbacks so negotiated bounds are actually used during playback.
+
 ## 0.5.164
 
 - Query `VideoState` before MPG playback and use valid negotiated bounds and

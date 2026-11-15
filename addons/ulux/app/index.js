@@ -15,6 +15,10 @@ const { createDiscoveryScanner } = require('./src/discovery');
 const { RegistryStore } = require('./src/registry/store');
 const { createStreamManager } = require('./src/ump/videoStream');
 const { createVideoStreamer } = require('./src/fileVideo');
+const {
+  buildTelegramForDevice,
+  buildVideoStateRequest,
+} = require('./src/ump/builder');
 
 async function main() {
   const config = loadConfig();
@@ -118,6 +122,22 @@ async function main() {
     streamConfig: config.stream || {},
     audioTransport,
     audioPort: config.audio_port || 35000,
+    requestVideoState: ({ switchId, deviceId, frameVersion, actorId }) => {
+      const target = registryStore.get(switchId);
+      if (!target?.ip) return;
+      const targetPort = target.port || config.listen_port || 34988;
+      udpServer.send(
+        target.ip,
+        targetPort,
+        buildTelegramForDevice(
+          deviceId,
+          frameVersion,
+          buildVideoStateRequest(actorId),
+        ),
+      );
+      log.info(`Requested VideoState from ${target.ip}:${targetPort}`);
+    },
+    getVideoState: (switchId) => registryStore.get(switchId)?.video_state || null,
   });
 
   const assistSession = createAssistSessionManager({
