@@ -184,6 +184,17 @@ The reference project uses a hard-coded control block:
 
 Therefore the current default `ControlFlags` is `0x16`, but this should remain configurable until verified against more devices.
 
+### Video frame lifecycle
+
+The switch acknowledges individual `VideoStream` line packets, but the
+acknowledgement does not mark a complete display frame. In particular, the
+tested switch did not accept later frames when they reused the first frame's
+`SequenceID` inside one open session. The bridge therefore starts each video
+frame with a new `VideoStart`/`SequenceID` cycle and stops the preceding cycle
+before sending the next frame. This is slower than a persistent session, but it
+matches the observed device behaviour and prevents the display from remaining
+on the first frame.
+
 The working project confirms this practical order: bind the controller socket to
 UDP `34988`, receive `ID-State`, send `ID-Control` with `ControlFlags=0x16` for
 InitRequest, send `ID-DateTime` for TimeRequest, wait for the dummy/target page

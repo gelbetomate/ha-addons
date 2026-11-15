@@ -86,6 +86,7 @@ async function streamImageToSwitch({
   waitForAck = true,
   sequenceId,
   skipSessionReset = false,
+  stopSequenceId,
   shouldStop = () => false,
 }) {
   if (!remoteHost || typeof udpSend !== 'function') {
@@ -110,7 +111,9 @@ async function streamImageToSwitch({
     const stopTelegram = buildTelegramForDevice(
       deviceId,
       frameVersion,
-      buildVideoStopMessage(seqId),
+      buildVideoStopMessage(
+        Number.isInteger(stopSequenceId) ? stopSequenceId : seqId,
+      ),
     );
     udpSend(remoteHost, remotePort, stopTelegram);
     await sleep(50);

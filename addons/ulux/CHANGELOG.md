@@ -1,5 +1,11 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.166
+
+- Start each video frame with a new sequence ID and `VideoStart` cycle.
+  The u::lux switch otherwise keeps treating subsequent frames as part of
+  the already completed first frame.
+
 ## 0.5.165
 
 - Wire the active file-video streamer to the VideoState request and registry
