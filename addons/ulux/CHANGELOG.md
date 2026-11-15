@@ -6,6 +6,10 @@
   header and ACK on stream flag bit 0. Keep the HA full-screen stream at
   176x184 with actor 1 and four lines per packet.
 - Recognize only descriptor-only 16-byte `0x8602` telegrams as video ACKs.
+- Migrate any persisted 86x90 tile settings back to the HA full-screen
+  176x184 stream.
+- Do not block MPG playback on video ACKs; the tested device does not return
+  ACK telegrams for the stream packets.
 
 ## 0.5.158
 
