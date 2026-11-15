@@ -141,6 +141,13 @@ class UluxDevice:
             {"page_index": page_index, "fps": fps},
         )
 
+    async def start_file_video(self, page_index: int) -> None:
+        """Start the bundled MPG video on a page."""
+        await self._post_json(
+            f"/api/display/file-video/{self.switch_id}",
+            {"page_index": page_index},
+        )
+
     async def get_registry_device(self) -> dict:
         """Fetch the bridge registry record for this u::lux."""
         import aiohttp  # noqa: PLC0415

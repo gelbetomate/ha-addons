@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.144
+
+- Add FFmpeg-backed MPG frame streaming at the configured display resolution.
+
 ## 0.5.143
 
 - Keep the bridge release aligned with integration `0.2.49`; the Devices-panel

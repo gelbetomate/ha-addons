@@ -439,6 +439,37 @@ async def ws_devices_start_video_test(
 
 @websocket_api.websocket_command(
     {
+        vol.Required("type"): "ulux_display/devices/start_file_video",
+        vol.Required("entry_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_devices_start_file_video(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Start the bundled MPG video for a device card."""
+    coordinator = _get_coordinator(hass, msg["entry_id"])
+    if coordinator is None:
+        connection.send_error(msg["id"], "not_found", "Device coordinator not found")
+        return
+
+    stream_page = int(coordinator.options.get("stream_page", 0) or 0)
+    if stream_page <= 0:
+        connection.send_error(
+            msg["id"],
+            "stream_page_not_configured",
+            "Configure a Stream Page before starting the file video",
+        )
+        return
+
+    await coordinator.device.start_file_video(page_index=stream_page - 1)
+    connection.send_result(msg["id"], {"success": True, "page_index": stream_page - 1})
+
+
+@websocket_api.websocket_command(
+    {
         vol.Required("type"): "ulux_display/devices/settings",
         vol.Required("entry_id"): str,
         vol.Optional("brightness"): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),

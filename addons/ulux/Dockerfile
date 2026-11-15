@@ -2,7 +2,7 @@ ARG BUILD_FROM=ghcr.io/hassio-addons/base:16.3.2
 FROM $BUILD_FROM
 
 # Install Node.js and npm
-RUN apk add --no-cache nodejs npm tzdata
+RUN apk add --no-cache nodejs npm tzdata ffmpeg
 
 WORKDIR /app
 

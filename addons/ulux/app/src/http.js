@@ -5,6 +5,7 @@ const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
 const { createStreamManager } = require('./ump/videoStream');
+const { createFileVideoStreamer, defaultVideoPath } = require('./fileVideo');
 const {
   buildTelegramForDevice,
   buildRequestMessage,
@@ -87,6 +88,12 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
   const autoProbeLastAttempt = new Map();
   const streamManager = createStreamManager({ udpSend, waitForVideoAck, log });
   const testVideoLoops = new Map();
+  const fileVideoStreamer = createFileVideoStreamer({
+    streamManager,
+    udpSend,
+    log,
+    streamConfig: streamCfg,
+  });
   const audioWebSocket = new WebSocket.Server({ noServer: true });
 
   audioWebSocket.on('connection', (ws, request, context) => {
@@ -375,12 +382,41 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
         testLoop.stop = true;
         testVideoLoops.delete(switchId);
       }
+      fileVideoStreamer.stop(switchId);
       streamManager.stop(
         switchId,
         sw.ip,
         sw.port || config.listen_port || 34988,
       );
       return respond(res, 200, { ok: true, switch_id: switchId });
+    }
+
+    const fileVideoMatch = pathname.match(/^\/api\/display\/file-video\/([^/]+)$/);
+    if (method === 'POST' && fileVideoMatch) {
+      const switchId = decodeURIComponent(fileVideoMatch[1]);
+      const sw = getSwitchTarget(switchId);
+      if (!sw) return respond(res, 404, { error: `Unknown switch_id: ${switchId}` });
+      const body = await readJsonBody(req);
+      const oldLoop = testVideoLoops.get(switchId);
+      if (oldLoop) oldLoop.stop = true;
+      testVideoLoops.delete(switchId);
+      const pageIndex = Number.isInteger(Number(body.page_index)) ? Number(body.page_index) : null;
+      if (pageIndex !== null) {
+        udpSend(sw.ip, sw.port || config.listen_port || 34988, buildTelegramForDevice(
+          sw.ump_device_id || 0x5d,
+          sw.ump_frame_version || 0x0232,
+          buildPageIndexMessage(pageIndex),
+        ));
+      }
+      fileVideoStreamer.start(switchId, {
+        filePath: defaultVideoPath(),
+        remoteHost: sw.ip,
+        remotePort: sw.port || config.listen_port || 34988,
+        deviceId: sw.ump_device_id || 0x5d,
+        frameVersion: sw.ump_frame_version || 0x0232,
+        actorId: body.actor_id || streamCfg.actor_id || 1,
+      });
+      return respond(res, 202, { ok: true, switch_id: switchId, page_index: pageIndex });
     }
 
     const testVideoMatch = pathname.match(/^\/api\/display\/test-video\/([^/]+)$/);
@@ -391,6 +427,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
       const body = await readJsonBody(req);
       const oldLoop = testVideoLoops.get(switchId);
       if (oldLoop) oldLoop.stop = true;
+      fileVideoStreamer.stop(switchId);
       const frameRate = Math.min(10, Math.max(0.1, Number(body.fps) || 1));
       const loop = { stop: false, frame: 0 };
       testVideoLoops.set(switchId, loop);

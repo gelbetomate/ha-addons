@@ -1060,6 +1060,17 @@ export class UluxDisplayPanel extends LitElement {
     }
   }
 
+  private async _startFileVideo(device: DeviceConfig): Promise<void> {
+    try {
+      await this.hass.connection.sendMessagePromise({
+        type: "ulux_display/devices/start_file_video",
+        entry_id: device.entry_id,
+      });
+    } catch (err) {
+      console.error(`Failed to start file video for ${device.name}:`, err);
+    }
+  }
+
   render() {
     if (this._loading) {
       return html`
@@ -1122,6 +1133,13 @@ export class UluxDisplayPanel extends LitElement {
                           >
                             <ha-icon icon="mdi:play-circle-outline"></ha-icon>
                             Video stream test
+                          </ha-button>
+                          <ha-button
+                            outlined
+                            @click=${() => this._startFileVideo(device)}
+                          >
+                            <ha-icon icon="mdi:movie-play-outline"></ha-icon>
+                            Centaur MPG
                           </ha-button>
                         </div>
                         <div class="views-checkboxes">

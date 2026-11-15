@@ -1,5 +1,9 @@
 # u::lux Display HACS Integration Changelog
 
+## 0.2.50
+
+- Add a Devices-panel button for the bundled Centaur MPG video stream.
+
 ## 0.2.49
 
 - Add a Video stream test button to each device card in the Devices panel.
