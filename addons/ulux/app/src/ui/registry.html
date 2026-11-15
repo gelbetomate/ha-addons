@@ -217,6 +217,27 @@
       color: var(--ha-text-primary);
     }
 
+    .diagnostic-details {
+      margin-top: 8px;
+      border-top: 1px solid var(--ha-border-soft);
+      padding-top: 8px;
+    }
+
+    .diagnostic-details summary {
+      color: var(--ha-text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+      user-select: none;
+    }
+
+    .diagnostic-details summary:hover {
+      color: var(--ha-text-primary);
+    }
+
+    .diagnostic-details[open] summary {
+      margin-bottom: 8px;
+    }
+
     .mac-unavailable {
       color: var(--ha-warning);
     }
@@ -1042,10 +1063,13 @@
             ${dev.ump_last_seen ? `<div class="timestamp">UMP response: ${new Date(dev.ump_last_seen).toLocaleString()}</div>` : ''}
             <div class="device-info"><strong>UMP probe:</strong> <span class="probe-${(dev.ump_probe_status || 'not-tested').replace(/\s+/g, '-')}" >${escapeHtml(dev.ump_probe_status || 'not tested')}</span></div>
             ${dev.ump_probe_error ? `<div class="timestamp">${escapeHtml(dev.ump_probe_error)}</div>` : ''}
-            ${dev.ump_tx_hex || dev.ump_rx_hex ? `<div class="ump-hex-panel">
-              ${dev.ump_tx_hex ? `<div><span class="ump-hex-label">TX</span> ${escapeHtml(formatHex(dev.ump_tx_hex))}</div>` : ''}
-              ${dev.ump_rx_hex ? `<div><span class="ump-hex-label">RX</span> ${escapeHtml(formatHex(dev.ump_rx_hex))}</div>` : ''}
-            </div>` : ''}
+            ${dev.ump_tx_hex || dev.ump_rx_hex ? `<details class="diagnostic-details">
+              <summary>UMP messages (TX/RX)</summary>
+              <div class="ump-hex-panel">
+                ${dev.ump_tx_hex ? `<div><span class="ump-hex-label">TX</span> ${escapeHtml(formatHex(dev.ump_tx_hex))}</div>` : ''}
+                ${dev.ump_rx_hex ? `<div><span class="ump-hex-label">RX</span> ${escapeHtml(formatHex(dev.ump_rx_hex))}</div>` : ''}
+              </div>
+            </details>` : ''}
             ${dev.linked_entry_id
               ? `<div class="linked-badge">✓ Linked to HA</div>`
               : `<div class="registry-only-badge">Bridge registry only</div>`}
@@ -1416,14 +1440,26 @@
               <strong>IP:</strong> ${dev.ip || 'Unknown'}
             </div>
             <div class="device-info"><strong>MAC:</strong> ${dev.mac_address ? escapeHtml(dev.mac_address) : '<span class="mac-unavailable">not available from UDP discovery</span>'}</div>
-            ${dev.sync_detail?.detail_response_01_hex ? `<div class="timestamp">Sync 0x80/01: ${escapeHtml(formatHex(dev.sync_detail.detail_response_01_hex))}</div>` : ''}
-            ${dev.sync_detail?.detail_response_01 ? `<div class="timestamp">Decoded 0x80/01: ${escapeHtml(formatSyncPacket(dev.sync_detail.detail_response_01))}</div>` : ''}
-            ${dev.sync_detail?.detail_response_0204_hex ? `<div class="timestamp">Sync 0x80/02/04: ${escapeHtml(formatHex(dev.sync_detail.detail_response_0204_hex))}</div>` : ''}
-            ${dev.sync_detail?.detail_response_0204 ? `<div class="timestamp">Decoded 0x80/02/04: ${escapeHtml(formatSyncPacket(dev.sync_detail.detail_response_0204))}</div>` : ''}
-            ${dev.sync_detail?.detail_response_0200_hex ? `<div class="timestamp">Sync 0x80/02/00: ${escapeHtml(formatHex(dev.sync_detail.detail_response_0200_hex))}</div>` : ''}
-            ${dev.sync_detail?.detail_response_0200 ? `<div class="timestamp">Decoded 0x80/02/00: ${escapeHtml(formatSyncPacket(dev.sync_detail.detail_response_0200))}</div>` : ''}
-            ${dev.sync_detail?.device_info_response_83_hex ? `<div class="timestamp">Sync 0x83/01: ${escapeHtml(formatHex(dev.sync_detail.device_info_response_83_hex))}</div>` : ''}
-            ${dev.sync_detail?.device_info_response_83 ? `<div class="timestamp">Decoded 0x83/01: ${escapeHtml(formatSyncPacket(dev.sync_detail.device_info_response_83))}</div>` : ''}
+            ${dev.sync_detail && (
+              dev.sync_detail.detail_response_01_hex ||
+              dev.sync_detail.detail_response_01 ||
+              dev.sync_detail.detail_response_0204_hex ||
+              dev.sync_detail.detail_response_0204 ||
+              dev.sync_detail.detail_response_0200_hex ||
+              dev.sync_detail.detail_response_0200 ||
+              dev.sync_detail.device_info_response_83_hex ||
+              dev.sync_detail.device_info_response_83
+            ) ? `<details class="diagnostic-details">
+              <summary>Discovery messages</summary>
+              ${dev.sync_detail.detail_response_01_hex ? `<div class="timestamp">Sync 0x80/01: ${escapeHtml(formatHex(dev.sync_detail.detail_response_01_hex))}</div>` : ''}
+              ${dev.sync_detail.detail_response_01 ? `<div class="timestamp">Decoded 0x80/01: ${escapeHtml(formatSyncPacket(dev.sync_detail.detail_response_01))}</div>` : ''}
+              ${dev.sync_detail.detail_response_0204_hex ? `<div class="timestamp">Sync 0x80/02/04: ${escapeHtml(formatHex(dev.sync_detail.detail_response_0204_hex))}</div>` : ''}
+              ${dev.sync_detail.detail_response_0204 ? `<div class="timestamp">Decoded 0x80/02/04: ${escapeHtml(formatSyncPacket(dev.sync_detail.detail_response_0204))}</div>` : ''}
+              ${dev.sync_detail.detail_response_0200_hex ? `<div class="timestamp">Sync 0x80/02/00: ${escapeHtml(formatHex(dev.sync_detail.detail_response_0200_hex))}</div>` : ''}
+              ${dev.sync_detail.detail_response_0200 ? `<div class="timestamp">Decoded 0x80/02/00: ${escapeHtml(formatSyncPacket(dev.sync_detail.detail_response_0200))}</div>` : ''}
+              ${dev.sync_detail.device_info_response_83_hex ? `<div class="timestamp">Sync 0x83/01: ${escapeHtml(formatHex(dev.sync_detail.device_info_response_83_hex))}</div>` : ''}
+              ${dev.sync_detail.device_info_response_83 ? `<div class="timestamp">Decoded 0x83/01: ${escapeHtml(formatSyncPacket(dev.sync_detail.device_info_response_83))}</div>` : ''}
+            </details>` : ''}
             <div class="device-info">
               <strong>Port:</strong> ${dev.port || '34988'}
             </div>

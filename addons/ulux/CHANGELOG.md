@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.146
+
+- Make Discovery protocol messages and Devices TX/RX diagnostics collapsible
+  in the bridge UI.
+
 ## 0.5.145
 
 - Add standalone Centaur MPG playback to the bridge UI.
