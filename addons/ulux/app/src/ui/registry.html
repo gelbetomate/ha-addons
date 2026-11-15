@@ -841,6 +841,7 @@
       currentEditingDevice: null,
       discoveryScanInProgress: false,
       discoveryRequestSequence: 0,
+      latestRenderedDiscoverySequence: 0,
     };
 
     function applyThemeMap(themeMap) {
@@ -1392,7 +1393,8 @@
       const requestSequence = ++UI_STATE.discoveryRequestSequence;
       try {
         const data = await fetchJson(`${API_BASE}/discovery/devices`);
-        if (requestSequence !== UI_STATE.discoveryRequestSequence) return;
+        if (requestSequence < (UI_STATE.latestRenderedDiscoverySequence || 0)) return;
+        UI_STATE.latestRenderedDiscoverySequence = requestSequence;
         const activeElement = document.activeElement;
         const editingDiscovery = activeElement?.classList?.contains('discovery-serial');
         const hasSelection = UI_STATE.selectedDiscoveryDevices.size > 0;

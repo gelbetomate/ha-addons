@@ -1,5 +1,11 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.158
+
+- Make device discovery and MAC address resolution fully non-blocking (asynchronous ARP/ping).
+- Devices are now immediately registered in memory upon the first UDP packet (<50ms).
+- Fix frontend polling race condition in registry UI where in-flight responses were discarded.
+
 ## 0.5.157
 
 - Keep one UMP video session open for the complete transcoded stream.

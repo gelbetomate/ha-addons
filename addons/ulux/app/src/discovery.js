@@ -3,7 +3,7 @@
 const dgram = require('dgram');
 const fs = require('fs');
 const crypto = require('crypto');
-const { execFileSync } = require('child_process');
+const { execFile } = require('child_process');
 
 const DISCOVERY_PORT = 34984;
 const UMP_PORT = 34988;
@@ -39,7 +39,7 @@ function parseDiscoveryResponse(message, remote, discoveryPort = DISCOVERY_PORT)
   };
 }
 
-function lookupMacAddress(ip) {
+function readArpTable(ip) {
   try {
     const lines = fs.readFileSync('/proc/net/arp', 'utf8').split(/\r?\n/).slice(1);
     for (const line of lines) {
@@ -51,44 +51,42 @@ function lookupMacAddress(ip) {
   } catch {
     // ARP lookup is best effort; discovery still works without it.
   }
-
-  if (!probedIps.has(ip)) {
-    probedIps.add(ip);
-    try {
-      execFileSync('ping', ['-c', '1', '-W', '1', ip], {
-        encoding: 'utf8',
-        timeout: 1500,
-        stdio: 'ignore',
-      });
-    } catch {
-      // A failed ping can still populate the neighbor table on some systems.
-    }
-
-    try {
-      const arp = fs.readFileSync('/proc/net/arp', 'utf8').split(/\r?\n/).slice(1);
-      for (const line of arp) {
-        const fields = line.trim().split(/\s+/);
-        if (fields.length >= 4 && fields[0] === ip && /^[0-9a-f]{2}(?::[0-9a-f]{2}){5}$/i.test(fields[3])) {
-          return fields[3].toUpperCase();
-        }
-      }
-    } catch {
-      // Continue without a MAC when the platform exposes no ARP table.
-    }
-  }
-
-  for (const command of ['ip', 'arp']) {
-    try {
-      const args = command === 'ip' ? ['neigh', 'show', ip] : ['-n', ip];
-      const output = execFileSync(command, args, { encoding: 'utf8', timeout: 500 });
-      const match = output.match(/(?:lladdr\s+)?([0-9a-f]{2}(?::[0-9a-f]{2}){5})/i);
-      if (match) return match[1].toUpperCase();
-    } catch {
-      // The command may not exist in the add-on image.
-    }
-  }
-
   return null;
+}
+
+function lookupMacAddress(ip) {
+  return readArpTable(ip);
+}
+
+function resolveMacAddressAsync(ip, callback) {
+  const existing = readArpTable(ip);
+  if (existing) {
+    callback?.(existing);
+    return;
+  }
+  if (probedIps.has(ip)) return;
+  probedIps.add(ip);
+
+  execFile('ping', ['-c', '1', '-W', '1', ip], { encoding: 'utf8', timeout: 1500 }, () => {
+    const fromArp = readArpTable(ip);
+    if (fromArp) {
+      callback?.(fromArp);
+      return;
+    }
+    execFile('ip', ['neigh', 'show', ip], { encoding: 'utf8', timeout: 500 }, (errIp, stdoutIp) => {
+      const matchIp = stdoutIp ? stdoutIp.match(/(?:lladdr\s+)?([0-9a-f]{2}(?::[0-9a-f]{2}){5})/i) : null;
+      if (matchIp) {
+        callback?.(matchIp[1].toUpperCase());
+        return;
+      }
+      execFile('arp', ['-n', ip], { encoding: 'utf8', timeout: 500 }, (errArp, stdoutArp) => {
+        const matchArp = stdoutArp ? stdoutArp.match(/(?:lladdr\s+)?([0-9a-f]{2}(?::[0-9a-f]{2}){5})/i) : null;
+        if (matchArp) {
+          callback?.(matchArp[1].toUpperCase());
+        }
+      });
+    });
+  });
 }
 
 function inferSerialNumber(macAddress) {
@@ -147,6 +145,7 @@ function createDiscoveryScanner({
 
   function scanAndWait(waitMs = 10000) {
     return new Promise((resolve) => {
+      probedIps.clear();
       let settled = false;
       let quietTimer = null;
       const finish = () => {
@@ -282,19 +281,36 @@ function createDiscoveryScanner({
       return;
     }
 
-    const macAddress = lookupMacAddress(discovered.ip);
-    const configured = switches.find(
-      (item) => String(item.ip || '') === discovered.ip
-    );
-    const inferredSerial = inferSerialNumber(macAddress);
-    const serialNumber = configured?.serial_number || null;
-    const serialNumberCandidate = configured?.serial_number ? null : inferredSerial;
-    const serialNumberSource = configured?.serial_number ? 'configured' : null;
-    const switchId = configured?.switch_id || macAddress || null;
-    const name = configured?.name || (serialNumber
-      ? `u::lux Switch (${serialNumber})`
-      : (macAddress ? `u::lux ${macAddress}` : null));
+    function createDevicePayload(discoveredInfo, mac) {
+      const configured = switches.find(
+        (item) => String(item.ip || '') === discoveredInfo.ip
+      );
+      const inferredSerial = inferSerialNumber(mac);
+      const serialNumber = configured?.serial_number || null;
+      const serialNumberCandidate = configured?.serial_number ? null : inferredSerial;
+      const serialNumberSource = configured?.serial_number ? 'configured' : null;
+      const switchId = configured?.switch_id || mac || null;
+      const name = configured?.name || (serialNumber
+        ? `u::lux Switch (${serialNumber})`
+        : (mac ? `u::lux ${mac}` : null));
 
+      return {
+        ...discoveredInfo,
+        mac_address: mac,
+        serial_number: serialNumber,
+        serial_number_candidate: serialNumberCandidate,
+        serial_number_source: serialNumberSource,
+        ump_device_id: configured?.serial_number ? inferUmpDeviceId(configured.serial_number) : null,
+        senderIp: discoveredInfo.ip,
+        senderPort: port,
+        umpPort: UMP_PORT,
+        switchId,
+        switchName: name,
+        configured: Boolean(configured),
+      };
+    }
+
+    const initialMac = lookupMacAddress(discovered.ip);
     const sync = syncSessions.get(discovered.ip) || { next: discovered.sequence };
     sync.discovery_response = message;
     sync.next = discovered.sequence;
@@ -306,29 +322,25 @@ function createDiscoveryScanner({
     syncSessions.set(discovered.ip, sync);
     scheduleDirectDeviceInfoFallback(discovered.ip, sync);
 
+    const initialDevice = createDevicePayload(discovered, initialMac);
     onDevice?.({
-      ...discovered,
-      mac_address: macAddress,
-      serial_number: serialNumber,
-      serial_number_candidate: serialNumberCandidate,
-      serial_number_source: serialNumberSource,
-      ump_device_id: configured?.serial_number ? inferUmpDeviceId(configured.serial_number) : null,
-      senderIp: discovered.ip,
-      senderPort: port,
-      umpPort: UMP_PORT,
-      switchId,
-      switchName: name,
-      configured: Boolean(configured),
+      ...initialDevice,
       sync_detail: {
         discovery_response_hex: message.toString('hex'),
         detail_request_01_hex: sendSyncRequest(discovered.ip, 0x01, 0x00).toString('hex'),
       },
     });
 
+    if (!initialMac) {
+      resolveMacAddressAsync(discovered.ip, (resolvedMac) => {
+        onDevice?.(createDevicePayload(discovered, resolvedMac));
+      });
+    }
+
     log?.info(
       `Discovery response from ${discovered.ip} ` +
       `(protocol_id=${discovered.protocol_id}, ${message.length} bytes, ` +
-      `serial=${serialNumber || 'not decoded'})`
+      `mac=${initialMac || 'resolving'}, serial=${initialDevice.serial_number || initialDevice.serial_number_candidate || 'not decoded'})`
     );
   });
 
