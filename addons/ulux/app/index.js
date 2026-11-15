@@ -116,6 +116,8 @@ async function main() {
     udpSend: udpServer.send,
     log,
     streamConfig: config.stream || {},
+    audioTransport,
+    audioPort: config.audio_port || 35000,
   });
 
   const assistSession = createAssistSessionManager({

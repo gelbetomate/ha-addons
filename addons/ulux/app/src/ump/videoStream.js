@@ -83,6 +83,7 @@ async function streamImageToSwitch({
   videoAckTimeoutMs = 150,
   waitForAck = true,
   sequenceId,
+  skipSessionReset = false,
   shouldStop = () => false,
 }) {
   if (!remoteHost || typeof udpSend !== 'function') {
@@ -100,20 +101,22 @@ async function streamImageToSwitch({
     ? sequenceId >>> 0
     : ((Date.now() >>> 0) & 0x7FFFFFFF);
 
-  // Reset a previous session before starting the next snapshot. The switch
-  // keeps the last video session open and may ignore a new VideoStart until
-  // the previous session has been stopped.
-  const stopTelegram = buildTelegramForDevice(
-    deviceId,
-    frameVersion,
-    buildVideoStopMessage(seqId),
-  );
-  udpSend(remoteHost, remotePort, stopTelegram);
-  await sleep(50);
+  if (!skipSessionReset) {
+    // Reset a previous session before starting the next snapshot. The switch
+    // keeps the last video session open and may ignore a new VideoStart until
+    // the previous session has been stopped.
+    const stopTelegram = buildTelegramForDevice(
+      deviceId,
+      frameVersion,
+      buildVideoStopMessage(seqId),
+    );
+    udpSend(remoteHost, remotePort, stopTelegram);
+    await sleep(50);
 
-  // Start stream session so the switch can prepare its framebuffer.
-  const startTelegram = buildTelegramForDevice(deviceId, frameVersion, buildVideoStartMessage(seqId, actorId));
-  udpSend(remoteHost, remotePort, startTelegram);
+    // Start stream session so the switch can prepare its framebuffer.
+    const startTelegram = buildTelegramForDevice(deviceId, frameVersion, buildVideoStartMessage(seqId, actorId));
+    udpSend(remoteHost, remotePort, startTelegram);
+  }
 
   const rgb565 = toRgb565LE(image, width, height);
   const bytesPerLine = width * 2;

@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.148
+
+- Keep one UMP video session open while successive transcoded frames arrive.
+- Forward video audio as 16 kHz mono PCM through the bridge audio transport.
+
 ## 0.5.147
 
 - Fix the Centaur MPG button action in the bridge Devices tab.

@@ -6,7 +6,7 @@ const path = require('path');
 const DEFAULT_WIDTH = 176;
 const DEFAULT_HEIGHT = 184;
 
-function createVideoStreamer({ streamManager, udpSend, log, streamConfig }) {
+function createVideoStreamer({ streamManager, udpSend, log, streamConfig, audioTransport, audioPort = 35000 }) {
   const active = new Map();
 
   return {
@@ -48,6 +48,7 @@ async function runVideo({
   frameVersion,
   actorId,
   loop = true,
+  audio = true,
 }) {
   const width = streamConfig.width || DEFAULT_WIDTH;
   const height = streamConfig.height || DEFAULT_HEIGHT;
@@ -56,21 +57,44 @@ async function runVideo({
     throw new Error('Video source must be a file path or URL');
   }
 
+  let sessionStarted = false;
+  const sequenceId = (Date.now() >>> 0) & 0x7FFFFFFF;
+
   while (!state.stop) {
     const isFile = !/^[a-z][a-z\d+\-.]*:\/\//i.test(input);
     const ffmpeg = spawn('ffmpeg', [
       '-hide_banner',
       '-loglevel', 'error',
+      '-nostdin',
       ...(isFile ? ['-re'] : []),
       ...(isFile && loop ? ['-stream_loop', '-1'] : []),
       '-i', input,
+      '-map', '0:v:0',
       '-vf', `scale=${width}:${height}`,
       '-f', 'image2pipe',
       '-vcodec', 'mjpeg',
       '-q:v', '5',
       'pipe:1',
-    ], { windowsHide: true });
+      ...(audio && audioTransport ? [
+        '-map', '0:a?',
+        '-vn',
+        '-f', 's16le',
+        '-ar', '16000',
+        '-ac', '1',
+        'pipe:3',
+      ] : []),
+    ], {
+      windowsHide: true,
+      stdio: audio && audioTransport
+        ? ['ignore', 'pipe', 'pipe', 'pipe']
+        : ['ignore', 'pipe', 'pipe'],
+    });
     state.process = ffmpeg;
+    const audioSender = audio && audioTransport
+      ? audioTransport.createSender({ remoteHost, remotePort: audioPort })
+      : null;
+    audioSender?.start();
+    ffmpeg.stdio[3]?.on('data', (chunk) => audioSender?.push(chunk));
 
     let buffer = Buffer.alloc(0);
     for await (const chunk of ffmpeg.stdout) {
@@ -89,16 +113,20 @@ async function runVideo({
           actorId,
           width,
           height,
+          sequenceId,
+          skipSessionReset: sessionStarted,
           udpSend,
           log,
           linesPerPacket: streamConfig.lines_per_packet || 4,
           interPacketDelayMs: streamConfig.inter_packet_delay_ms ?? 5,
           waitForAck: false,
         });
+        sessionStarted = true;
         if (state.stop) break;
       }
     }
 
+    audioSender?.stop();
     state.process = null;
     if (!state.stop && ffmpeg.exitCode === null) {
       await new Promise((resolve) => ffmpeg.once('close', resolve));

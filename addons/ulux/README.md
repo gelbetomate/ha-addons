@@ -484,7 +484,9 @@ mosquitto_pub -t ulux/00:11:22:33:44:55/cmd/display/video -m '{
 ```
 
 `source` may be a bridge-local file path or an FFmpeg-supported network URL.
-HA is not involved in either path.
+HA is not involved in either path. If the source contains an audio track, it
+is sent as 16 kHz mono PCM through the bridge audio transport by default;
+set `"audio": false` to disable that.
 
 ---
 

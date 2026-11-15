@@ -93,6 +93,8 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
     udpSend,
     log,
     streamConfig: streamCfg,
+    audioTransport,
+    audioPort: config.audio_port || 35000,
   });
   const audioWebSocket = new WebSocket.Server({ noServer: true });
 
@@ -417,6 +419,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
         deviceId: sw.ump_device_id || 0x5d,
         frameVersion: sw.ump_frame_version || 0x0232,
         actorId: body.actor_id || streamCfg.actor_id || 1,
+        audio: body.audio !== false,
       });
       return respond(res, 202, { ok: true, switch_id: switchId, page_index: pageIndex });
     }

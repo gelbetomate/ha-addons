@@ -78,6 +78,7 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, v
         actorId: coercePositiveInt(payload.actor_id)
           || coercePositiveInt(config.stream?.actor_id)
           || 1,
+        audio: payload.audio !== false,
       });
       log.info(`MQTT: started video stream for ${sw.ip}:${remotePort}`);
       break;
