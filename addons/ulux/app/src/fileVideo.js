@@ -68,7 +68,7 @@ async function runVideo({
   }
 
   let sessionStarted = false;
-  const sequenceId = (Date.now() >>> 0) & 0x7FFFFFFF;
+  let sequenceId = (Date.now() >>> 0) & 0x7FFFFFFF;
 
   while (!state.stop) {
     const isFile = !/^[a-z][a-z\d+\-.]*:\/\//i.test(input);
@@ -132,6 +132,7 @@ async function runVideo({
           waitForAck: false,
         });
         sessionStarted = true;
+        sequenceId = (sequenceId + 1) & 0x7FFFFFFF;
         if (state.stop) break;
       }
     }

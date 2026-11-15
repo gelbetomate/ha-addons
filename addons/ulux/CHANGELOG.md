@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.151
+
+- Advance the UMP video sequence ID for every transcoded frame while keeping
+  the video session open.
+
 ## 0.5.150
 
 - Run the built-in Centaur MPG button as a video-only transport test, avoiding
