@@ -152,10 +152,14 @@ async function runVideo({
           log,
           linesPerPacket: streamConfig.lines_per_packet || 4,
           interPacketDelayMs: streamConfig.inter_packet_delay_ms ?? 5,
-          waitForAck: false,
+          waitForAck: true,
           skipSessionReset: videoSessionStarted,
         });
         videoSessionStarted = true;
+        const frameDelayMs = Number(streamConfig.inter_frame_delay_ms ?? 750);
+        if (!state.stop && frameDelayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, frameDelayMs));
+        }
         if (state.stop) break;
       }
     }

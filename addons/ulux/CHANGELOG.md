@@ -1,5 +1,11 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.163
+
+- Pace MPG frames with a configurable 750 ms inter-frame delay to prevent
+  filling the device framebuffer faster than the display can process it.
+- Re-enable video ACK waiting now that the tested device returns ACKs.
+
 ## 0.5.162
 
 - Keep the configured display actor for `VideoStart`; Actor IDs are
