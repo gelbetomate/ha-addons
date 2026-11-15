@@ -13,6 +13,8 @@ const { createWyomingServer } = require('./src/wyoming');
 const { createDiscoveryRegistry } = require('./src/discoveryRegistry');
 const { createDiscoveryScanner } = require('./src/discovery');
 const { RegistryStore } = require('./src/registry/store');
+const { createStreamManager } = require('./src/ump/videoStream');
+const { createVideoStreamer } = require('./src/fileVideo');
 
 async function main() {
   const config = loadConfig();
@@ -104,6 +106,18 @@ async function main() {
     jitterDepth: config.audio_jitter_depth || 3,
   });
 
+  const streamManager = createStreamManager({
+    udpSend: udpServer.send,
+    waitForVideoAck: udpServer.waitForVideoAck,
+    log,
+  });
+  const videoStreamer = createVideoStreamer({
+    streamManager,
+    udpSend: udpServer.send,
+    log,
+    streamConfig: config.stream || {},
+  });
+
   const assistSession = createAssistSessionManager({
     config,
     udpSend: udpServer.send,
@@ -147,7 +161,13 @@ async function main() {
       config.mqtt,
       config.switches,
       log,
-      (cmd) => handleCommandMessage(cmd, { config, udpSend: udpServer.send, discoveryRegistry, log }),
+      (cmd) => handleCommandMessage(cmd, {
+        config,
+        udpSend: udpServer.send,
+        discoveryRegistry,
+        videoStreamer,
+        log,
+      }),
       handleMqttRegistryCommand
     );
     if (config.mode.mqtt) mqttClient.connect(); // non-blocking; reconnects on failure
@@ -183,6 +203,8 @@ async function main() {
     mqttClient,
     persistConfig: () => persistRuntimeOptions(config),
     log,
+    streamManager,
+    videoStreamer,
   });
   apiServer.start();
 

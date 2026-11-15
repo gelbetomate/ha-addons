@@ -5,7 +5,7 @@ const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
 const { createStreamManager } = require('./ump/videoStream');
-const { createFileVideoStreamer, defaultVideoPath } = require('./fileVideo');
+const { createVideoStreamer, defaultVideoPath } = require('./fileVideo');
 const {
   buildTelegramForDevice,
   buildRequestMessage,
@@ -80,16 +80,16 @@ const {
  * @param {object}   opts.log      - Logger
  * @returns {{ start: Function, close: Function }}
  */
-function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, discoveryRegistry, discoveryScanner, haClient, mqttClient, persistConfig, log }) {
+function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, discoveryRegistry, discoveryScanner, haClient, mqttClient, persistConfig, log, streamManager, videoStreamer }) {
   const apiPort = config.api_port || 8099;
   const streamCfg = config.stream || {};
   let discoveryScanState = { status: 'idle', started_at: null, completed_at: null };
   const autoProbeInFlight = new Set();
   const autoProbeLastAttempt = new Map();
-  const streamManager = createStreamManager({ udpSend, waitForVideoAck, log });
+  const displayStreamManager = streamManager || createStreamManager({ udpSend, waitForVideoAck, log });
   const testVideoLoops = new Map();
-  const fileVideoStreamer = createFileVideoStreamer({
-    streamManager,
+  const fileVideoStreamer = videoStreamer || createVideoStreamer({
+    streamManager: displayStreamManager,
     udpSend,
     log,
     streamConfig: streamCfg,
@@ -369,7 +369,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
     const streamStatusMatch = pathname.match(/^\/api\/display\/stream\/([^/]+)$/);
     if (method === 'GET' && streamStatusMatch) {
       const switchId = decodeURIComponent(streamStatusMatch[1]);
-      return respond(res, 200, { switch_id: switchId, stream: streamManager.status(switchId) });
+      return respond(res, 200, { switch_id: switchId, stream: displayStreamManager.status(switchId) });
     }
 
     const streamStopMatch = pathname.match(/^\/api\/display\/stream\/([^/]+)\/stop$/);
@@ -383,7 +383,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
         testVideoLoops.delete(switchId);
       }
       fileVideoStreamer.stop(switchId);
-      streamManager.stop(
+      displayStreamManager.stop(
         switchId,
         sw.ip,
         sw.port || config.listen_port || 34988,
@@ -391,9 +391,9 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
       return respond(res, 200, { ok: true, switch_id: switchId });
     }
 
-    const fileVideoMatch = pathname.match(/^\/api\/display\/file-video\/([^/]+)$/);
-    if (method === 'POST' && fileVideoMatch) {
-      const switchId = decodeURIComponent(fileVideoMatch[1]);
+    const videoMatch = pathname.match(/^\/api\/display\/(?:video|file-video)\/([^/]+)$/);
+    if (method === 'POST' && videoMatch) {
+      const switchId = decodeURIComponent(videoMatch[1]);
       const sw = getSwitchTarget(switchId);
       if (!sw) return respond(res, 404, { error: `Unknown switch_id: ${switchId}` });
       const body = await readJsonBody(req);
@@ -408,8 +408,10 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
           buildPageIndexMessage(pageIndex),
         ));
       }
+      const source = body.source || body.url || body.path || defaultVideoPath();
       fileVideoStreamer.start(switchId, {
-        filePath: defaultVideoPath(),
+        source,
+        loop: body.loop !== false,
         remoteHost: sw.ip,
         remotePort: sw.port || config.listen_port || 34988,
         deviceId: sw.ump_device_id || 0x5d,
@@ -442,7 +444,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
       }
       const run = async () => {
         while (!loop.stop) {
-          await streamManager.streamImageToSwitch(switchId, {
+          await displayStreamManager.streamImageToSwitch(switchId, {
             source: { testPattern: { frame: loop.frame++ } },
             remoteHost: sw.ip,
             remotePort,
@@ -1032,7 +1034,7 @@ function createApiServer({ config, udpSend, waitForVideoAck, audioTransport, dis
           );
           await sleep(Number(payload.activate_settle_ms) || 500);
         }
-        await streamManager.streamImageToSwitch(switchId, {
+        await displayStreamManager.streamImageToSwitch(switchId, {
           source: { base64: payload.base64 },
           remoteHost: sw.ip,
           remotePort,

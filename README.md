@@ -30,7 +30,8 @@ The two components work together to provide a unified device management and rend
 │  APIs exposed:                                            │
 │    - /api/registry/* (device CRUD)                        │
 │    - /api/discovery/devices (observed devices)            │
-│    - /api/display/image/:switchId (image streaming)       │
+│    - /api/display/image/:switchId (image streaming)
+- /api/display/video/:switchId (file or network video streaming)       │
 │    - MQTT topics: registry/add_device, etc.               │
 └──────────────┬─────────────────────────────┬──────────────┘
                │ HTTP (localhost:8099)       │ MQTT
@@ -150,7 +151,7 @@ Use this when filling the bridge add-on configuration form in Home Assistant.
 | `ha.ws_url` | default | Ignored unless `mode.ha_events` is true. |
 | `ha.token` | empty | Usually optional in Supervisor; token is auto-resolved when needed. |
 | `mqtt.host` / `mqtt.port` / `mqtt.username` / `mqtt.password` / `mqtt.base_topic` | defaults | Only relevant when `mode.mqtt` is true. |
-| `stream.width` / `stream.height` | defaults (`86` / `90`) | Advanced tuning only; usually leave unchanged. |
+| `stream.width` / `stream.height` | defaults (`176` / `184`) | Advanced tuning only; usually leave unchanged. |
 | `stream.lines_per_packet` / `stream.inter_packet_delay_ms` | defaults (`5` / `5`) | Advanced UDP streaming tuning; usually leave unchanged. |
 | `api_port` | `8099` | Change only if needed; then also update integration bridge URL. |
 | `log_level` | `info` | Use `debug` temporarily for troubleshooting. |

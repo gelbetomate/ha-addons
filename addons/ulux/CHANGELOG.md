@@ -1,5 +1,12 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.145
+
+- Add standalone Centaur MPG playback to the bridge UI.
+- Expose a generic FFmpeg video streamer for local files and network streams
+  through HTTP and MQTT, without requiring Home Assistant.
+- Preserve the configured `176x184` display dimensions for video frames.
+
 ## 0.5.144
 
 - Add FFmpeg-backed MPG frame streaming at the configured display resolution.

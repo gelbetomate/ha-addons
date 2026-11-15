@@ -6,7 +6,7 @@ const path = require('path');
 const DEFAULT_WIDTH = 176;
 const DEFAULT_HEIGHT = 184;
 
-function createFileVideoStreamer({ streamManager, udpSend, log, streamConfig }) {
+function createVideoStreamer({ streamManager, udpSend, log, streamConfig }) {
   const active = new Map();
 
   return {
@@ -14,7 +14,7 @@ function createFileVideoStreamer({ streamManager, udpSend, log, streamConfig }) 
       this.stop(switchId);
       const state = { stop: false, process: null };
       active.set(String(switchId), state);
-      runFileVideo({ switchId, state, streamManager, udpSend, log, streamConfig, ...options })
+      runVideo({ switchId, state, streamManager, udpSend, log, streamConfig, ...options })
         .catch((err) => {
           if (!state.stop) log.error(`File video failed for ${switchId}: ${err.message}`);
         })
@@ -33,7 +33,7 @@ function createFileVideoStreamer({ streamManager, udpSend, log, streamConfig }) 
   };
 }
 
-async function runFileVideo({
+async function runVideo({
   switchId,
   state,
   streamManager,
@@ -41,21 +41,29 @@ async function runFileVideo({
   log,
   streamConfig,
   filePath,
+  source,
   remoteHost,
   remotePort,
   deviceId,
   frameVersion,
   actorId,
+  loop = true,
 }) {
   const width = streamConfig.width || DEFAULT_WIDTH;
   const height = streamConfig.height || DEFAULT_HEIGHT;
+  const input = filePath || source?.path || source?.url || source;
+  if (!input || typeof input !== 'string') {
+    throw new Error('Video source must be a file path or URL');
+  }
 
   while (!state.stop) {
+    const isFile = !/^[a-z][a-z\d+\-.]*:\/\//i.test(input);
     const ffmpeg = spawn('ffmpeg', [
       '-hide_banner',
       '-loglevel', 'error',
-      '-re',
-      '-i', filePath,
+      ...(isFile ? ['-re'] : []),
+      ...(isFile && loop ? ['-stream_loop', '-1'] : []),
+      '-i', input,
       '-vf', `scale=${width}:${height}`,
       '-f', 'image2pipe',
       '-vcodec', 'mjpeg',
@@ -79,6 +87,8 @@ async function runFileVideo({
           deviceId,
           frameVersion,
           actorId,
+          width,
+          height,
           udpSend,
           log,
           linesPerPacket: streamConfig.lines_per_packet || 4,
@@ -93,6 +103,7 @@ async function runFileVideo({
     if (!state.stop && ffmpeg.exitCode === null) {
       await new Promise((resolve) => ffmpeg.once('close', resolve));
     }
+    if (!loop) break;
   }
 }
 
@@ -107,4 +118,8 @@ function defaultVideoPath() {
   return path.join(__dirname, '..', 'assets', 'centaur_1.mpg');
 }
 
-module.exports = { createFileVideoStreamer, defaultVideoPath };
+module.exports = {
+  createVideoStreamer,
+  createFileVideoStreamer: createVideoStreamer,
+  defaultVideoPath,
+};

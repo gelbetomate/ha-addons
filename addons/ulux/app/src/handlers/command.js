@@ -21,12 +21,14 @@ const {
 } = require('../ump/builder');
 
 const DISPLAY_IMAGE_COMMAND = 'display/image';
+const DISPLAY_VIDEO_COMMAND = 'display/video';
 
 /**
  * Handle MQTT command payloads and dispatch UMP actions.
  *
  * Supported command topic suffixes:
  *   <base_topic>/<switch_id>/cmd/display/image
+ *   <base_topic>/<switch_id>/cmd/display/video
  *   <base_topic>/<switch_id>/cmd/page
  *   <base_topic>/<switch_id>/cmd/activate
  *   <base_topic>/<switch_id>/cmd/set_led
@@ -37,7 +39,7 @@ const DISPLAY_IMAGE_COMMAND = 'display/image';
  *   <base_topic>/<switch_id>/cmd/audio/volume
  *   <base_topic>/<switch_id>/cmd/raw
  */
-async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, log }) {
+async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, videoStreamer, log }) {
   if (!cmd || !cmd.command) return;
 
   const sw = findSwitchTarget(cmd.switchId, config.switches, discoveryRegistry);
@@ -51,6 +53,36 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
   const frameVersion = sw.ump_frame_version || 0x0232;
 
   switch (cmd.command) {
+    case DISPLAY_VIDEO_COMMAND: {
+      const payload = normalisePayload(cmd.payload);
+      const source = payload.source || payload.url || payload.path;
+      if (!source || !videoStreamer) {
+        log.warning('display/video command requires a video source and an active video streamer');
+        return;
+      }
+      const targetPage = coerceNonNegativeInt(payload.page_index ?? payload.page);
+      if (targetPage !== null) {
+        udpSend(sw.ip, remotePort, buildTelegramForDevice(
+          deviceId,
+          frameVersion,
+          buildPageIndexMessage(targetPage),
+        ));
+      }
+      videoStreamer.start(cmd.switchId, {
+        source,
+        loop: payload.loop !== false,
+        remoteHost: sw.ip,
+        remotePort,
+        deviceId,
+        frameVersion,
+        actorId: coercePositiveInt(payload.actor_id)
+          || coercePositiveInt(config.stream?.actor_id)
+          || 1,
+      });
+      log.info(`MQTT: started video stream for ${sw.ip}:${remotePort}`);
+      break;
+    }
+
     case DISPLAY_IMAGE_COMMAND:
     case 'video': {
       const payload = normalisePayload(cmd.payload);
@@ -107,8 +139,8 @@ async function handleCommandMessage(cmd, { config, udpSend, discoveryRegistry, l
         frameVersion,
         udpSend,
         log,
-        width: coercePositiveInt(payload.width) || coercePositiveInt(streamConfig.width) || 86,
-        height: coercePositiveInt(payload.height) || coercePositiveInt(streamConfig.height) || 90,
+        width: coercePositiveInt(payload.width) || coercePositiveInt(streamConfig.width) || 176,
+        height: coercePositiveInt(payload.height) || coercePositiveInt(streamConfig.height) || 184,
         actorId: streamActorId,
         linesPerPacket: coercePositiveInt(payload.lines_per_packet) || coercePositiveInt(streamConfig.lines_per_packet) || 4,
         interPacketDelayMs: coerceNonNegativeInt(payload.inter_packet_delay_ms)

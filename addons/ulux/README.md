@@ -184,6 +184,7 @@ Manage devices via:
    - `POST /api/registry/devices` — create/update
    - `PUT /api/registry/devices/:switchId` — update
    - `DELETE /api/registry/devices/:switchId` — delete
+   - `POST /api/display/video/:switchId` — stream a local video file or network URL
 
 3. **MQTT Topics** (if enabled)
    - `<base_topic>/registry/add_device` — create/update
@@ -457,6 +458,33 @@ DELETE /api/registry/devices/00:11:22:33:44:55
 ```
 
 Response: `204 No Content` on success, or `404 Not Found`.
+
+---
+
+## Standalone video streaming
+
+The bridge can stream video without Home Assistant. The Devices tab contains a
+**Centaur MPG** button for the bundled test video. The generic HTTP endpoint
+accepts a local file path or a network URL and converts it with FFmpeg:
+
+```bash
+curl -X POST http://BRIDGE:8099/api/display/video/00:11:22:33:44:55 \
+  -H "Content-Type: application/json" \
+  -d '{"source":"http://camera.local/live.mjpeg","loop":true}'
+```
+
+The same streamer is available through MQTT:
+
+```bash
+mosquitto_pub -t ulux/00:11:22:33:44:55/cmd/display/video -m '{
+  "source": "/app/assets/centaur_1.mpg",
+  "loop": true,
+  "page_index": 0
+}'
+```
+
+`source` may be a bridge-local file path or an FFmpeg-supported network URL.
+HA is not involved in either path.
 
 ---
 
