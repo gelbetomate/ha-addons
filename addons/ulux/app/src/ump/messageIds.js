@@ -36,7 +36,7 @@ const MessageIds = {
   AudioRecord:      0x9A,
   VideoState:       0xA1,
   VideoStart:       0xA2,
-  VideoStop:        0xA3,
+  VideoStop:        0xA4,
 };
 
 /** Reverse map: ID value → name string (for logging). */

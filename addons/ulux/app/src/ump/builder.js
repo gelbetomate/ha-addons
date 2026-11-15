@@ -135,7 +135,7 @@ function buildVideoStartMessage(sequenceId, actorId = 1) {
 }
 
 /**
- * Build a VideoStop message (MessageID=0xA3, 12 bytes).
+ * Build a VideoStop message (MessageID=0xA4, 12 bytes).
  *
  * @param {number} [sequenceId=1] - Stream sequence identifier to stop
  * @returns {Buffer} 12-byte message buffer
@@ -143,7 +143,7 @@ function buildVideoStartMessage(sequenceId, actorId = 1) {
 function buildVideoStopMessage(sequenceId = 1) {
   const buf = Buffer.alloc(12, 0);
   buf.writeUInt8(0x0C, 0);                         // MessageLength = 12
-  buf.writeUInt8(MessageIds.VideoStop, 1);        // MessageID = 0xA3
+  buf.writeUInt8(MessageIds.VideoStop, 1);        // MessageID = 0xA4
   buf.writeUInt16LE(0x0000, 2);                    // ActorID = 0
   buf.writeUInt32LE(0, 4);                         // StopFlags = 0
   buf.writeUInt32LE(sequenceId >>> 0, 8);          // SequenceID

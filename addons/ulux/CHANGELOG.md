@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.156
+
+- Correct `VideoStop` to UMP message ID `0xA4`; `0xA3` is the VideoStream
+  message type and left each previous video session open.
+
 ## 0.5.155
 
 - Restore the tested `0x03` VideoStream frame marker; `0x02` was accepted by
