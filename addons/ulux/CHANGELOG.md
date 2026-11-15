@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.155
+
+- Restore the tested `0x03` VideoStream frame marker; `0x02` was accepted by
+  the UDP transport but produced no visible image on the tested display.
+
 ## 0.5.154
 
 - Add the UMP `AudioPlayRemote` lifecycle for transcoded audio.

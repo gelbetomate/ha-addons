@@ -685,9 +685,9 @@ function buildVideoStreamTelegram({ sequenceId, startLine, lineCount, startColum
 
   const frameLength = 16 + streamHeader.length + data.length;
   const frameHeader = Buffer.from('01861000320225000000000001000100', 'hex');
-  // VideoStream frames use the fixed 0x8602 descriptor, not the 0x8601
-  // descriptor used by regular UMP telegrams.
-  frameHeader[0] = 0x02;
+  // The tested display accepts the legacy VideoStream frame marker 0x03.
+  // Using 0x02 produces valid UDP traffic but no visible frame.
+  frameHeader[0] = 0x03;
   frameHeader.writeUInt16LE(frameLength, 2);
   frameHeader.writeUInt16LE(frameVersion & 0xFFFF, 4);
   frameHeader.writeUInt16LE(nextPacketId(), 6);
