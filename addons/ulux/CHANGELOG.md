@@ -1,5 +1,10 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.149
+
+- Fix the video streamer passing its configured audio transport to FFmpeg
+  playback.
+
 ## 0.5.148
 
 - Keep one UMP video session open while successive transcoded frames arrive.

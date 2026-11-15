@@ -14,7 +14,17 @@ function createVideoStreamer({ streamManager, udpSend, log, streamConfig, audioT
       this.stop(switchId);
       const state = { stop: false, process: null };
       active.set(String(switchId), state);
-      runVideo({ switchId, state, streamManager, udpSend, log, streamConfig, ...options })
+      runVideo({
+        switchId,
+        state,
+        streamManager,
+        udpSend,
+        log,
+        streamConfig,
+        audioTransport,
+        audioPort,
+        ...options,
+      })
         .catch((err) => {
           if (!state.stop) log.error(`File video failed for ${switchId}: ${err.message}`);
         })
