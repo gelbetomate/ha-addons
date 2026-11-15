@@ -1,5 +1,9 @@
 # u::Lux UMP Bridge Changelog
 
+## 0.5.147
+
+- Fix the Centaur MPG button action in the bridge Devices tab.
+
 ## 0.5.146
 
 - Make Discovery protocol messages and Devices TX/RX diagnostics collapsible

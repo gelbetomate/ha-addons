@@ -1142,17 +1142,17 @@
       } catch (err) {
         // error already handled in fetchJson
       }
+    }
 
-      async function quickPlayVideo(switchId) {
-        try {
-          await fetchJson(`${API_BASE}/display/video/${encodeURIComponent(switchId)}`, {
-            method: 'POST',
-            body: JSON.stringify({ loop: true }),
-          });
-          showAlert('Centaur MPG stream started', 'success');
-        } catch (err) {
-          // error already handled in fetchJson
-        }
+    async function quickPlayVideo(switchId) {
+      try {
+        await fetchJson(`${API_BASE}/display/video/${encodeURIComponent(switchId)}`, {
+          method: 'POST',
+          body: JSON.stringify({ loop: true }),
+        });
+        showAlert('Centaur MPG stream started', 'success');
+      } catch (err) {
+        // error already handled in fetchJson
       }
     }
 
